@@ -1,7 +1,7 @@
 @Entry
 @Component
 struct Index {
-  @State message: string = 'Hello World';
+  @State message: string = 'The First Item';
 
   build() {
     RelativeContainer() {
@@ -14,7 +14,7 @@ struct Index {
           middle: { anchor: '__container__', align: HorizontalAlign.Center }
         })
         .onClick(() => {
-          this.message = 'Welcome';
+          this.message = "Let's go";
         })
     }
     .height('100%')
