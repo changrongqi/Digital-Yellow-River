@@ -90,9 +90,9 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 | 编号 | 子任务 | 内容 | 状态 |
 |---|---|---|---|
-| M1.1 | 工程骨架 + 数据模型 | model 目录 5 个文件（enum + 4 结构） | 🚧 |
-| M1.2 | 预置数据集 | rawfile heritage JSON（先 5 条样例，字段一次成型）+ data 解析 | ⬜ |
-| M1.3 | 主页 Tabs + 发现页列表 | Index 改 Tabs；发现页渲染 rawfile 数据列表 | ⬜ |
+| M1.1 | 工程骨架 + 数据模型 | model 目录 5 个文件（enum + 4 结构） | ✅ |
+| M1.2 | 预置数据集 | rawfile heritage_data.json（8 条真实遗址，字段一次成型）+ data/HeritageDataLoader 解析 | ✅ |
+| M1.3 | 主页 Tabs + 发现页列表 | Index 改 Tabs；发现页渲染 rawfile 数据列表 | 🚧 |
 | M1.4 | 三维度筛选 + 关键词检索 | 年代/类型/城市组合筛选 + 检索框 | ⬜ |
 | M1.5 | 详情页 | 五层级内容 + 跳转（Navigation/router） | ⬜ |
 

@@ -56,5 +56,5 @@ export function isValidType(value: string): boolean {
 export function isValidCity(value: string): boolean {
   return value === HeritageCity.SANMENXIA || value === HeritageCity.LUOYANG ||
     value === HeritageCity.ZHENGZHOU || value === HeritageCity.KAIFENG ||
-    value === HeritageCity.PUYANG;
+    value === HeritageCity.PUYANG || value === HeritageCity.ANYANG;
 }
