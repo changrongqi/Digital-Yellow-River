@@ -134,6 +134,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 10. **命令行构建三件套**：DEVECO_SDK_HOME / NODE_HOME 之外，**必须把 `E:\DevEco Studio\jbr\bin` 加进 PATH**。仅设 `JAVA_HOME` 不生效，会报 `spawn java ENOENT`（ArkTS 已编译通过但 PackageHap 失败）。
 11. PowerShell 里命令分隔用 `;`，`&&` 不是合法语句分隔符。
 12. 编辑计划书状态表（emoji 列）后务必 Read 回读校验，防止状态被误改。
+13. **build() 根节点前不允许写任何语句**：连 `const x = this.xxx()` 这类局部变量声明也会被编译器当作额外根节点，报「only one root node」+ Rollup Unexpected token。派生数据改为在 build 的 UI 描述里直接调用方法（如 `this.filterList()`），或放进 @Builder 参数。
 
 ## 7. 验收标准（M1 阶段）
 
@@ -169,3 +170,5 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-23 | M1.2 完成：heritage_data.json（8 条真实遗址）+ HeritageDataLoader 解析；城市枚举增补「安阳」（殷墟所在地）；数据集规模策略：M1.2 抽样 8 条跑通管道，M1.4/1.5 后扩充至每市 3~5 条并补齐龙山年代段 |
 | 2026-09-23 | 踩坑清单补充第 10~12 条（jbr 需入 PATH、PowerShell 分号、状态表回读校验） |
 | 2026-09-23 | M1.3 完成：Index 改 Tabs（发现/收藏/同步，后两者占位）+ 新增 pages/Discovery.ets 列表页（加载中/失败/空三态兜底）；修复 Types.ets 遗漏的 HeritageCity.ANYANG 枚举成员（M1.2 数据先行导致编译阻塞）；getContext 已废弃，组件内改用 getUIContext().getHostContext() |
+| 2026-09-23 | M1.3 增补：预览器无法读 rawfile，发现页加载失败时注入 mock 示例数据（顶部标注「示例数据」），真机不受影响 |
+| 2026-09-23 | M1.4 完成：发现页加检索框（名称/简介子串匹配）+ 年代/类型/城市三维 chips 组合筛选（默认「全部」）+ 无结果兜底态；新增踩坑第 13 条（build 根节点前禁写语句） |
