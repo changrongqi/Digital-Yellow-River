@@ -14,59 +14,14 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { router } from '@kit.ArkUI';
 import { Heritage } from '../model/Heritage';
 import { HeritageEra, HeritageType, HeritageCity } from '../model/Types';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
 const TAG = 'Discovery';
-
-/**
- * 预览环境兜底示例数据（与 heritage_data.json 字段一致）。
- * 仅在 rawfile 加载失败时注入（典型场景：预览器无资源访问能力）。
- */
-const MOCK_HERITAGES: Heritage[] = [
-  {
-    id: 'mock-yangshao',
-    name: '仰韶村遗址',
-    era: HeritageEra.YANGSHAO,
-    type: HeritageType.KILN_SITE,
-    city: HeritageCity.SANMENXIA,
-    coverImage: '',
-    summary: '中国现代考古学的诞生地，仰韶文化命名地，出土大量彩陶器物的新石器时代聚落遗址。',
-    detail: { intro: '', discovery: '', events: [], poems: [], tourism: '' }
-  },
-  {
-    id: 'mock-erlitou',
-    name: '二里头遗址',
-    era: HeritageEra.XIA_SHANG,
-    type: HeritageType.CAPITAL_SITE,
-    city: HeritageCity.LUOYANG,
-    coverImage: '',
-    summary: '被誉为「最早的中国」，学界公认的夏朝中晚期都城遗址，发现中国最早的宫城、青铜礼器群与绿松石龙形器。',
-    detail: { intro: '', discovery: '', events: [], poems: [], tourism: '' }
-  },
-  {
-    id: 'mock-yinxu',
-    name: '殷墟',
-    era: HeritageEra.XIA_SHANG,
-    type: HeritageType.CAPITAL_SITE,
-    city: HeritageCity.ANYANG,
-    coverImage: '',
-    summary: '商代晚期都城遗址，中国历史上第一个有文献可考并为考古证实的都城，甲骨文的发现地，世界文化遗产。',
-    detail: { intro: '', discovery: '', events: [], poems: [], tourism: '' }
-  },
-  {
-    id: 'mock-tokyo',
-    name: '北宋东京城遗址',
-    era: HeritageEra.SONG,
-    type: HeritageType.CAPITAL_SITE,
-    city: HeritageCity.KAIFENG,
-    coverImage: '',
-    summary: '北宋都城汴京故城遗址，州桥石壁浮雕与汴河遗址印证「东京梦华」，世界城市史上罕见的「城摞城」。',
-    detail: { intro: '', discovery: '', events: [], poems: [], tourism: '' }
-  }
-];
 
 @Component
 export struct Discovery {
@@ -263,6 +218,10 @@ export struct Discovery {
               ListItem() {
                 this.HeritageCard(item)
               }
+              .onClick(() => {
+                // M1.5：点击跳转详情页，传遗址 id，详情页按 id 重新取数
+                router.pushUrl({ url: 'pages/Detail', params: { id: item.id } });
+              })
             }, (item: Heritage) => item.id)
           }
           .layoutWeight(1)

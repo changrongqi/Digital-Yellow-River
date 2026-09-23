@@ -93,8 +93,8 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M1.1 | 工程骨架 + 数据模型 | model 目录 5 个文件（enum + 4 结构） | ✅ |
 | M1.2 | 预置数据集 | rawfile heritage_data.json（8 条真实遗址，字段一次成型）+ data/HeritageDataLoader 解析 | ✅ |
 | M1.3 | 主页 Tabs + 发现页列表 | Index 改 Tabs；发现页渲染 rawfile 数据列表 | ✅ |
-| M1.4 | 三维度筛选 + 关键词检索 | 年代/类型/城市组合筛选 + 检索框 | ⬜ |
-| M1.5 | 详情页 | 五层级内容 + 跳转（Navigation/router） | ⬜ |
+| M1.4 | 三维度筛选 + 关键词检索 | 年代/类型/城市组合筛选 + 检索框 | ✅ |
+| M1.5 | 详情页 | 五层级内容 + 跳转（Navigation/router） | ✅ |
 
 ### M2 收藏与笔记全流程（增删改查、标签管理）+ 本地持久化（重启不丢）
 
@@ -172,3 +172,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-23 | M1.3 完成：Index 改 Tabs（发现/收藏/同步，后两者占位）+ 新增 pages/Discovery.ets 列表页（加载中/失败/空三态兜底）；修复 Types.ets 遗漏的 HeritageCity.ANYANG 枚举成员（M1.2 数据先行导致编译阻塞）；getContext 已废弃，组件内改用 getUIContext().getHostContext() |
 | 2026-09-23 | M1.3 增补：预览器无法读 rawfile，发现页加载失败时注入 mock 示例数据（顶部标注「示例数据」），真机不受影响 |
 | 2026-09-23 | M1.4 完成：发现页加检索框（名称/简介子串匹配）+ 年代/类型/城市三维 chips 组合筛选（默认「全部」）+ 无结果兜底态；新增踩坑第 13 条（build 根节点前禁写语句） |
+| 2026-09-23 | M1.5 完成：新增 pages/Detail.ets 五层级详情页（intro/discovery/events/poems/tourism 分区卡片，空层占位兜底），发现页卡片 router.pushUrl 传 id 跳转，详情页按 id 从 HeritageDataLoader 重新取数；mock 兜底数据抽至 data/MockHeritages.ets 并补齐五层级内容（发现页/详情页共用，预览器可调试详情）；新增踩坑第 14 条（router 目标页须注册 main_pages.json）。M1 里程碑全部完成 |
