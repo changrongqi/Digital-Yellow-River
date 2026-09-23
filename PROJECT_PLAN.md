@@ -135,6 +135,8 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 11. PowerShell 里命令分隔用 `;`，`&&` 不是合法语句分隔符。
 12. 编辑计划书状态表（emoji 列）后务必 Read 回读校验，防止状态被误改。
 13. **build() 根节点前不允许写任何语句**：连 `const x = this.xxx()` 这类局部变量声明也会被编译器当作额外根节点，报「only one root node」+ Rollup Unexpected token。派生数据改为在 build 的 UI 描述里直接调用方法（如 `this.filterList()`），或放进 @Builder 参数。
+14. **router 跳转的目标页必须注册进 `resources/base/profile/main_pages.json`**，否则运行时报路由找不到；传参用 `router.pushUrl({ url, params })`，目标页用 `router.getParams()` 取（返回 Object，需显式 as 转换，禁 any）。
+15. **@Builder 默认「按值传递」，不能用来渲染需要跟随状态刷新的局部 UI**：多参数 @Builder 的参数在首次渲染时被拷贝，状态变量之后改变**不会**触发其内部 UI 刷新。症状是「列表已按新条件筛选，chips 高亮却停在初始值」，看起来像两套独立逻辑（因为列表在 build 里直连状态，@Builder 里的没有）。凡需随状态刷新的局部 UI 一律拆成独立 `@Component` 子组件，用 `@Prop`/`@Link` 绑定父组件状态；ForEach 项内部还依赖外部状态时，把该状态纳入键值生成函数以确保节点重建。
 
 ## 7. 验收标准（M1 阶段）
 
@@ -173,3 +175,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-23 | M1.3 增补：预览器无法读 rawfile，发现页加载失败时注入 mock 示例数据（顶部标注「示例数据」），真机不受影响 |
 | 2026-09-23 | M1.4 完成：发现页加检索框（名称/简介子串匹配）+ 年代/类型/城市三维 chips 组合筛选（默认「全部」）+ 无结果兜底态；新增踩坑第 13 条（build 根节点前禁写语句） |
 | 2026-09-23 | M1.5 完成：新增 pages/Detail.ets 五层级详情页（intro/discovery/events/poems/tourism 分区卡片，空层占位兜底），发现页卡片 router.pushUrl 传 id 跳转，详情页按 id 从 HeritageDataLoader 重新取数；mock 兜底数据抽至 data/MockHeritages.ets 并补齐五层级内容（发现页/详情页共用，预览器可调试详情）；新增踩坑第 14 条（router 目标页须注册 main_pages.json）。M1 里程碑全部完成 |
+| 2026-09-23 | 修复发现页筛选失联：切换维度时列表已按条件筛选、chips 高亮却停在初始值（根因：@Builder 按值传递不随状态刷新）；筛选行改为独立 @Component 子组件 + @Prop 绑定父组件状态，三维度统一用 ALL_FILTER 空串哨兵表示「全部」，chips 高亮/结果计数/列表内容同源派生；新增踩坑第 15 条 |

@@ -8,9 +8,11 @@
  *   便于预览器调试 UI；真机正常走 rawfile，不受影响），列表顶部标注「示例数据」。
  *
  * 筛选说明（M1.4）：
- * - 年代/类型/城市三个维度可组合，默认「全部」（null）；
+ * - 年代/类型/城市三个维度可组合，默认「全部」（哨兵值 ALL_FILTER，即空串）；
  * - 关键词匹配名称与简介（子串包含，忽略首尾空格）；
- * - 筛选选项直接取自枚举值（中文字符串），避免与 Types.ets 漂移。
+ * - 筛选选项直接取自枚举值（中文字符串），避免与 Types.ets 漂移；
+ * - 单一数据源：chips 高亮、结果计数、列表内容全部由同一组 @State 派生，
+ *   三者不会各自为政（详见 FilterRow 组件注释）。
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -23,6 +25,68 @@ import { MOCK_HERITAGES } from '../data/MockHeritages';
 const DOMAIN = 0x0000;
 const TAG = 'Discovery';
 
+/** 「全部」哨兵值：三个筛选维度统一用它表示未筛选，避免 null 与空串两套语义 */
+const ALL_FILTER: string = '';
+
+/**
+ * 单维度筛选行：维度标签 + 横向滚动 chips（含「全部」）。
+ *
+ * 为什么做成子组件而不是 @Builder（踩坑清单第 15 条）：
+ * @Builder 默认「按值传递」参数，状态变量的改变不会引起其内部 UI 刷新。
+ * 之前筛选逻辑放在 @Builder 里，导致列表已按新条件筛选、chips 高亮却停在初始值。
+ * 这里用 @Prop 把选中值与父组件状态单向绑定，父组件状态一变，子组件即可重新渲染，
+ * 从而保证「列表结果」与「按钮高亮」始终同源同步。
+ */
+@Component
+struct FilterRow {
+  label: string = '';
+  options: string[] = [];
+  /** 选中值，ALL_FILTER（空串）表示「全部」 */
+  @Prop selected: string = ALL_FILTER;
+  onSelect: (value: string) => void = () => {};
+
+  /** 选项列表：首位插入「全部」哨兵，与父组件筛选语义保持一致 */
+  private chipOptions(): string[] {
+    const result: string[] = [ALL_FILTER];
+    for (let i = 0; i < this.options.length; i++) {
+      result.push(this.options[i]);
+    }
+    return result;
+  }
+
+  build() {
+    Row() {
+      Text(this.label)
+        .fontSize(13)
+        .fontColor('#8D6E63')
+        .width(40)
+      Scroll() {
+        Row() {
+          ForEach(this.chipOptions(), (opt: string) => {
+            Text(opt === ALL_FILTER ? '全部' : opt)
+              .fontSize(13)
+              .fontColor(this.selected === opt ? '#FFFFFF' : '#6D4C41')
+              .backgroundColor(this.selected === opt ? '#6D4C41' : '#FFFFFF')
+              .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+              .borderRadius(14)
+              .border({ width: 1, color: this.selected === opt ? '#6D4C41' : '#E0D6CC' })
+              .margin({ right: 8 })
+              .onClick(() => {
+                this.onSelect(opt);
+              })
+          }, (opt: string) => `${opt}-${this.selected === opt}`)
+        }
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .align(Alignment.Start)
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
 @Component
 export struct Discovery {
   @State heritageList: Heritage[] = [];
@@ -31,10 +95,10 @@ export struct Discovery {
   @State isMockData: boolean = false;
   // 检索关键词（匹配名称/简介）
   @State keyword: string = '';
-  // 三维度筛选，null 表示「全部」；值为枚举的中文字符串
-  @State selectedEra: string | null = null;
-  @State selectedType: string | null = null;
-  @State selectedCity: string | null = null;
+  // 三维度筛选，ALL_FILTER（空串）表示「全部」；值为枚举的中文字符串
+  @State selectedEra: string = ALL_FILTER;
+  @State selectedType: string = ALL_FILTER;
+  @State selectedCity: string = ALL_FILTER;
 
   // 筛选选项直接取自枚举值，避免与 Types.ets 漂移
   private readonly eraOptions: string[] = [
@@ -86,13 +150,13 @@ export struct Discovery {
     const result: Heritage[] = [];
     for (let i = 0; i < this.heritageList.length; i++) {
       const item: Heritage = this.heritageList[i];
-      if (this.selectedEra !== null && item.era !== this.selectedEra) {
+      if (this.selectedEra !== ALL_FILTER && item.era !== this.selectedEra) {
         continue;
       }
-      if (this.selectedType !== null && item.type !== this.selectedType) {
+      if (this.selectedType !== ALL_FILTER && item.type !== this.selectedType) {
         continue;
       }
-      if (this.selectedCity !== null && item.city !== this.selectedCity) {
+      if (this.selectedCity !== ALL_FILTER && item.city !== this.selectedCity) {
         continue;
       }
       if (kw.length > 0 && !item.name.includes(kw) && !item.summary.includes(kw)) {
@@ -134,16 +198,31 @@ export struct Discovery {
       .padding({ left: 16, right: 16 })
       .margin({ bottom: 10 })
 
-      // 三维度筛选
+      // 三维度筛选：子组件 @Prop 绑定父组件状态，chips 高亮与列表结果同源
       Column({ space: 8 }) {
-        this.FilterRow('年代', this.eraOptions, this.selectedEra, (v: string | null) => {
-          this.selectedEra = v;
+        FilterRow({
+          label: '年代',
+          options: this.eraOptions,
+          selected: this.selectedEra,
+          onSelect: (v: string) => {
+            this.selectedEra = v;
+          }
         })
-        this.FilterRow('类型', this.typeOptions, this.selectedType, (v: string | null) => {
-          this.selectedType = v;
+        FilterRow({
+          label: '类型',
+          options: this.typeOptions,
+          selected: this.selectedType,
+          onSelect: (v: string) => {
+            this.selectedType = v;
+          }
         })
-        this.FilterRow('城市', this.cityOptions, this.selectedCity, (v: string | null) => {
-          this.selectedCity = v;
+        FilterRow({
+          label: '城市',
+          options: this.cityOptions,
+          selected: this.selectedCity,
+          onSelect: (v: string) => {
+            this.selectedCity = v;
+          }
         })
       }
       .width('100%')
@@ -234,50 +313,6 @@ export struct Discovery {
     .width('100%')
     .height('100%')
     .backgroundColor('#FAF6F0')
-  }
-
-  /**
-   * 单维度筛选行：维度标签 + 横向滚动 chips（含「全部」）。
-   */
-  @Builder
-  FilterRow(label: string, options: string[], selected: string | null, onSelect: (value: string | null) => void) {
-    Row() {
-      Text(label)
-        .fontSize(13)
-        .fontColor('#8D6E63')
-        .width(40)
-      Scroll() {
-        Row() {
-          this.FilterChip('全部', selected === null, () => {
-            onSelect(null);
-          })
-          ForEach(options, (opt: string) => {
-            this.FilterChip(opt, selected === opt, () => {
-              onSelect(opt);
-            })
-          }, (opt: string) => opt)
-        }
-      }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .align(Alignment.Start)
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .alignItems(VerticalAlign.Center)
-  }
-
-  @Builder
-  FilterChip(title: string, selected: boolean, onSelect: () => void) {
-    Text(title)
-      .fontSize(13)
-      .fontColor(selected ? '#FFFFFF' : '#6D4C41')
-      .backgroundColor(selected ? '#6D4C41' : '#FFFFFF')
-      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-      .borderRadius(14)
-      .border({ width: 1, color: selected ? '#6D4C41' : '#E0D6CC' })
-      .margin({ right: 8 })
-      .onClick(onSelect)
   }
 
   @Builder
