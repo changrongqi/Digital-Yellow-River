@@ -57,7 +57,7 @@ entry/src/main/
 ### 4.1 枚举（Types.ets）
 - `HeritageEra`：仰韶 / 龙山 / 夏商 / 周 / 汉唐 / 宋（年代轴线）
 - `HeritageType`：都城遗址 / 墓葬群 / 窑址 / 古建筑
-- `HeritageCity`：三门峡 / 洛阳 / 郑州 / 开封 / 濮阳
+- `HeritageCity`：三门峡 / 洛阳 / 郑州 / 开封 / 濮阳 / 安阳（M1.2 增补，殷墟所在地）
 
 ### 4.2 Heritage（只读预置数据）
 | 字段 | 类型 | 说明 |
@@ -92,7 +92,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 |---|---|---|---|
 | M1.1 | 工程骨架 + 数据模型 | model 目录 5 个文件（enum + 4 结构） | ✅ |
 | M1.2 | 预置数据集 | rawfile heritage_data.json（8 条真实遗址，字段一次成型）+ data/HeritageDataLoader 解析 | ✅ |
-| M1.3 | 主页 Tabs + 发现页列表 | Index 改 Tabs；发现页渲染 rawfile 数据列表 | 🚧 |
+| M1.3 | 主页 Tabs + 发现页列表 | Index 改 Tabs；发现页渲染 rawfile 数据列表 | ✅ |
 | M1.4 | 三维度筛选 + 关键词检索 | 年代/类型/城市组合筛选 + 检索框 | ⬜ |
 | M1.5 | 详情页 | 五层级内容 + 跳转（Navigation/router） | ⬜ |
 
@@ -168,3 +168,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-23 | M1.1 完成（model 5 文件编译通过）；新增命令行构建命令实录 |
 | 2026-09-23 | M1.2 完成：heritage_data.json（8 条真实遗址）+ HeritageDataLoader 解析；城市枚举增补「安阳」（殷墟所在地）；数据集规模策略：M1.2 抽样 8 条跑通管道，M1.4/1.5 后扩充至每市 3~5 条并补齐龙山年代段 |
 | 2026-09-23 | 踩坑清单补充第 10~12 条（jbr 需入 PATH、PowerShell 分号、状态表回读校验） |
+| 2026-09-23 | M1.3 完成：Index 改 Tabs（发现/收藏/同步，后两者占位）+ 新增 pages/Discovery.ets 列表页（加载中/失败/空三态兜底）；修复 Types.ets 遗漏的 HeritageCity.ANYANG 枚举成员（M1.2 数据先行导致编译阻塞）；getContext 已废弃，组件内改用 getUIContext().getHostContext() |

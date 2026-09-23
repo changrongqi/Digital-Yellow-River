@@ -35,7 +35,8 @@ export enum HeritageCity {
   LUOYANG = '洛阳',
   ZHENGZHOU = '郑州',
   KAIFENG = '开封',
-  PUYANG = '濮阳'
+  PUYANG = '濮阳',
+  ANYANG = '安阳'
 }
 
 /**
