@@ -131,6 +131,9 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 7. 预置数据集一次成型，标注准确，M1 后结构不再变更。
 8. rawfile 路径用 `$rawfile()` 或 `getContext().resourceManager` 获取，避免硬编码绝对路径。
 9. 分布式相关代码在单机调试阶段不要阻塞 M1/M2；M3 先本地读写 + 降级 UI。
+10. **命令行构建三件套**：DEVECO_SDK_HOME / NODE_HOME 之外，**必须把 `E:\DevEco Studio\jbr\bin` 加进 PATH**。仅设 `JAVA_HOME` 不生效，会报 `spawn java ENOENT`（ArkTS 已编译通过但 PackageHap 失败）。
+11. PowerShell 里命令分隔用 `;`，`&&` 不是合法语句分隔符。
+12. 编辑计划书状态表（emoji 列）后务必 Read 回读校验，防止状态被误改。
 
 ## 7. 验收标准（M1 阶段）
 
@@ -163,3 +166,5 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 |---|---|
 | 2026-09-23 | 初始建立：计划书总纲 + M1 细分（M1.1~M1.5）+ 踩坑清单 + Git 规范 |
 | 2026-09-23 | M1.1 完成（model 5 文件编译通过）；新增命令行构建命令实录 |
+| 2026-09-23 | M1.2 完成：heritage_data.json（8 条真实遗址）+ HeritageDataLoader 解析；城市枚举增补「安阳」（殷墟所在地）；数据集规模策略：M1.2 抽样 8 条跑通管道，M1.4/1.5 后扩充至每市 3~5 条并补齐龙山年代段 |
+| 2026-09-23 | 踩坑清单补充第 10~12 条（jbr 需入 PATH、PowerShell 分号、状态表回读校验） |
