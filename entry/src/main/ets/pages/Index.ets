@@ -40,6 +40,15 @@ struct Index {
     .backgroundColor('#FAF6F0')
   }
 
+  /**
+   * 底部标签。
+   *
+   * ⚠️ 硬约束（踩坑清单第 15 条）：active 状态必须在 @Builder 内部**直接读 this.currentIndex**，
+   * 禁止改成「把选中状态当参数传进来」（如 TabLabel(title, active)）—— @Builder 按值传递，
+   * 参数一旦是状态派生值，状态变化就不会引起标签刷新（发现页筛选 chips 曾因此高亮失灵）。
+   * 这里保留直读写法，是因为 tabBar 只接受 CustomBuilder，无法直接放自定义组件用 @Prop 绑定。
+   * 同理，新增标签时 index 必须与 TabContent 的先后顺序一致。
+   */
   @Builder
   TabLabel(title: string, index: number) {
     Column() {

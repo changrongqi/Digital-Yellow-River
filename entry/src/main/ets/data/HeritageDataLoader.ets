@@ -20,22 +20,54 @@ const DATA_FILE = 'heritage_data.json';
 
 export class HeritageDataLoader {
   /**
-   * 从 rawfile 读取并解析全部预置文化条目。
+   * 进程内缓存：rawfile 预置数据是只读的，一次解析全程复用。
+   * 详情页、M2 收藏页、M4 推荐都只走内存，避免重复读 rawfile + 全量解析（R2）。
+   * 注意：返回的是同一份数组引用，调用方只读、不得就地修改。
+   */
+  private static cachedList: Heritage[] | null = null;
+
+  /**
+   * 从 rawfile 读取并解析全部预置文化条目（带进程内缓存）。
    * 单条数据非法/解析失败时跳过该条并记录日志，不中断整体加载（UI 层兜底）。
    */
   static async loadHeritageList(context: common.Context): Promise<Heritage[]> {
+    const cached: Heritage[] | null = HeritageDataLoader.cachedList;
+    if (cached !== null) {
+      return cached;
+    }
     const resourceManager = context.resourceManager;
     const rawFile: Uint8Array = await resourceManager.getRawFileContent(DATA_FILE);
     const text: string = util.TextDecoder.create('utf-8').decodeToString(new Uint8Array(rawFile));
-    const parsed: object[] = JSON.parse(text) as object[];
+    const result: Heritage[] = HeritageDataLoader.parseHeritageList(text, DATA_FILE);
+    HeritageDataLoader.cachedList = result;
+    return result;
+  }
+
+  /**
+   * 唯一解析入口：JSON 文本 → Heritage[]。
+   *
+   * rawfile 数据与预览兜底数据（MockHeritages）都必须走这里：
+   * 这样两份数据共用同一套字段校验 / 兜底 / 枚举合法性检查，
+   * 结构一旦漂移会立刻在解析结果里暴露，不会出现「预览器能跑、真机不对」（R3）。
+   *
+   * @param source 数据来源标识，仅用于日志定位
+   */
+  static parseHeritageList(text: string, source: string): Heritage[] {
     const result: Heritage[] = [];
+    let parsed: object[] = [];
+    try {
+      parsed = JSON.parse(text) as object[];
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'json parse failed (%{public}s): %{public}s', source, JSON.stringify(err));
+      return result;
+    }
     for (let i = 0; i < parsed.length; i++) {
       const item = HeritageDataLoader.parseHeritage(parsed[i], i);
       if (item !== null) {
         result.push(item);
       }
     }
-    hilog.info(DOMAIN, TAG, 'loaded %{public}d heritages from %{public}s', result.length, DATA_FILE);
+    hilog.info(DOMAIN, TAG, 'loaded %{public}d heritages from %{public}s', result.length, source);
     return result;
   }
 

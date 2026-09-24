@@ -99,6 +99,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M1.3 | 主页 Tabs + 发现页列表 | Index 改 Tabs；发现页渲染 rawfile 数据列表 | ✅ |
 | M1.4 | 三维度筛选 + 关键词检索 | 年代/类型/城市组合筛选 + 检索框 | ✅ |
 | M1.5 | 详情页 | 五层级内容 + 跳转（Navigation/router） | ✅ |
+| M1.6 | 数据集扩充 + 加载缓存（M2 前置） | 补齐每市 3~5 条、填补龙山年代段；HeritageDataLoader 进程内缓存；mock 与真机共用同一解析路径 | ✅ |
 
 ### M2 收藏与笔记全流程（增删改查、标签管理）+ 本地持久化（重启不丢）
 
@@ -126,7 +127,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 ## 6. 踩坑清单（必须遵守，遇坑及时补充）
 
-> **使用纪律**：① 每个子任务开工前通读本清单全文；② 编码过程中逐条自查（尤其第 1~5、13、15 条属 ArkUI/ArkTS 声明式约束，最容易反复踩）；
+> **使用纪律**：① 每个子任务开工前通读本清单全文；② 编码过程中逐条自查（尤其第 1~5、13、15、16 条属 ArkUI/ArkTS 声明式约束，最容易反复踩）；
 > ③ 提交前再对照一次；④ 踩到新坑立即补条目并同步修订记录，禁止只改代码不改清单。
 >
 > 历史教训：第 14 条曾因文档编辑竞态被覆盖丢失，导致「代码已注册路由、清单却没有记录」，记录与实现不一致 —— 所以清单必须随手维护。
@@ -146,6 +147,30 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 13. **build() 根节点前不允许写任何语句**：连 `const x = this.xxx()` 这类局部变量声明也会被编译器当作额外根节点，报「only one root node」+ Rollup Unexpected token。派生数据改为在 build 的 UI 描述里直接调用方法（如 `this.filterList()`），或放进 @Builder 参数。
 14. **router 跳转的目标页必须注册进 `resources/base/profile/main_pages.json`**，否则运行时报路由找不到；传参用 `router.pushUrl({ url, params })`，目标页用 `router.getParams()` 取（返回 Object，需显式 as 转换，禁 any）。
 15. **@Builder 默认「按值传递」，不能用来渲染需要跟随状态刷新的局部 UI**：多参数 @Builder 的参数在首次渲染时被拷贝，状态变量之后改变**不会**触发其内部 UI 刷新。症状是「列表已按新条件筛选，chips 高亮却停在初始值」，看起来像两套独立逻辑（因为列表在 build 里直连状态，@Builder 里的没有）。凡需随状态刷新的局部 UI 一律拆成独立 `@Component` 子组件，用 `@Prop`/`@Link` 绑定父组件状态；ForEach 项内部还依赖外部状态时，把该状态纳入键值生成函数以确保节点重建。
+16. **`TabContent.tabBar()` 只接受 `string | Resource | CustomBuilder | TabBarOptions`**（SDK `tab_content.d.ts` 实测），**不能直接放入自定义组件**用 `@Prop` 绑定。所以底部标签的选中态只有两条路：① 维持 @Builder 并在其内部**直读**状态（`this.currentIndex === index`，禁止把选中态做成参数）；② 换 `SubTabBarStyle`/`BottomTabBarStyle` 等平台托管样式。别为了「优雅」把标签改成参数化子组件，那会直接复现第 15 条的高亮失灵。
+
+### 6.1 当前阶段遗留问题 / 风险（M2 开工前必须逐一清零）
+
+> 本节就是「M2 前置清单」：**开工 M2 之前必须全部清零**，清零后在状态列标 ✅ 并写明解决方式。
+> 新增问题随时追加；不允许「知道有问题但不登记」。
+
+| 编号 | 问题 | 影响 | 归属 | 状态 | 解决方式 / 结果 |
+|---|---|---|---|---|---|
+| R1 | 年代「龙山」0 条数据，点该 chip 必进「没有符合条件的遗产」空态；数据集仅 8 条，未达「每市 3~5 条」 | M1 验收第 4 条（筛选结果准确）与数据集丰富度 | M1.6 | ✅ | heritage_data.json 扩至 **23 条**真实遗址；年代覆盖 仰韶2/龙山2/夏商4/周3/汉唐7/宋5，类型 4 类、城市 6 市全覆盖（每市 3~5 条）；已用 PowerShell `ConvertFrom-Json` 校验：无解析错误、无重复 id、无缺字段 |
+| R2 | HeritageDataLoader 无缓存：详情页每次进入都重新读 rawfile 并全量解析 | 数据扩容、M2 收藏页 / M4 推荐复用后重复 IO | M1.6 | ✅ | `loadHeritageList` 增进程内静态缓存 `cachedList`，首次读 rawfile + 解析，之后全走内存（返回同一引用，约定调用方只读） |
+| R3 | MockHeritages.ets 与 heritage_data.json 是两份独立数据，字段结构可能漂移，导致预览器与真机表现分叉 | 预览调试失真、解析问题被掩盖 | M1.6 | ✅ | 抽出唯一解析入口 `HeritageDataLoader.parseHeritageList(text, source)`；MockHeritages 改为 JSON 文本（枚举用中文字面值），同样走该入口 → 两份数据共用同一套字段校验/兜底，漂移会立刻在解析结果中暴露 |
+| R4 | @Builder 按值传递同族隐患：Index.ets 的 TabLabel 靠「属性里直读 this.currentIndex」才正常，一旦改为参数传入即复现「高亮不跟随」 | 潜在 UI 状态失联（踩坑 15 同类） | M1.6 | ✅ | 经查 SDK `tab_content.d.ts`：tabBar 只接受 `string/Resource/CustomBuilder/TabBarOptions`，无法直接嵌入自定义组件用 @Prop 绑定，故保留「内部直读 this.currentIndex」写法，并在 TabLabel 上加硬约束注释（禁止把选中状态改成参数传入）；踩坑第 15 条同步记录该限制 |
+
+**观察项**（不阻塞 M2，持续跟踪）：
+
+- O1 `coverImage` 全为空且 rawfile 中无任何图片资源，列表用文字徽标占位，详情页「图文介绍」实际只有文 —— 待确定是否引入图片资源。
+- O2 详情页仅认 `id` 入参；M2 收藏页 / M4 推荐入口跳转必须统一带 id，否则落「未找到该遗产」。
+- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-25 实测，仅允许以下 4 条 + 1 条签名提示）**：
+  `data/HeritageDataLoader.ets:39 Function may throw exceptions`（getRawFileContent）、
+  `pages/Discovery.ets:302 'pushUrl' has been deprecated`、`pages/Detail.ets:34 'getParams' has been deprecated`、
+  `pages/Detail.ets:83 'back' has been deprecated`，外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  超出基线的告警一律视为新增问题，处理掉再提交。
+- O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
 
 ## 7. 验收标准（M1 阶段）
 
@@ -188,3 +213,6 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-23 | M1.5 完成：新增 pages/Detail.ets 五层级详情页（intro/discovery/events/poems/tourism 分区卡片，空层占位兜底），发现页卡片 router.pushUrl 传 id 跳转，详情页按 id 从 HeritageDataLoader 重新取数；mock 兜底数据抽至 data/MockHeritages.ets 并补齐五层级内容（发现页/详情页共用，预览器可调试详情）；新增踩坑第 14 条（router 目标页须注册 main_pages.json）。M1 里程碑全部完成 |
 | 2026-09-23 | 修复发现页筛选失联：切换维度时列表已按条件筛选、chips 高亮却停在初始值（根因：@Builder 按值传递不随状态刷新）；筛选行改为独立 @Component 子组件 + @Prop 绑定父组件状态，三维度统一用 ALL_FILTER 空串哨兵表示「全部」，chips 高亮/结果计数/列表内容同源派生；新增踩坑第 15 条 |
 | 2026-09-25 | 文档补充防重踩机制：文首加「开工前必读（硬性要求）」，第 6 节加「使用纪律 + 历史教训」，第 8 节工作流增列「开工前逐条对照踩坑清单」「同一文件禁止并行修改」两条硬约束 |
+| 2026-09-25 | 新增 6.1「当前阶段遗留问题 / 风险」小节：R1~R4 为 M2 开工前必须清零项（缺龙山年代与数据集规模、加载无缓存、mock 双份数据漂移、@Builder 同族隐患），O1~O4 为观察项；M1 表增列 M1.6（数据集扩充 + 加载缓存） |
+| 2026-09-25 | M1.6 完成（构建 BUILD SUCCESSFUL）：① heritage_data.json 由 8 条扩至 23 条真实遗址，年代/类型/城市全覆盖且每市 3~5 条，ConvertFrom-Json 校验无重复 id、无缺字段；② HeritageDataLoader 增进程内缓存 `cachedList`，并抽出唯一解析入口 `parseHeritageList(text, source)`；③ MockHeritages 改为 JSON 文本走同一解析入口，消除双份数据漂移；④ Index 的 TabLabel 加硬约束注释并新增踩坑第 16 条（tabBar 只接受 CustomBuilder）；⑤ 6.1 表 R1~R4 全部标 ✅ 并写明解决方式，O3 固化构建告警基线 |
+| 2026-09-25 | 6.1「M2 前置清单」清零完毕，M2 可开工（M1 全部子任务 ✅） |
