@@ -172,6 +172,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
   `pages/Detail.ets:83 'back' has been deprecated`，外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
+- O5 **预览器/模拟器的中文输入限制（环境问题，非代码问题）**：预览器软键盘是 DevEco 模拟的英文键盘，不支持中文输入法；模拟器物理键盘不支持中文（华为官方 FAQ），中文只能用鼠标点软键盘输入，且需在模拟器「设置 → 系统和更新 → 语言和输入法」把默认输入法设为小艺输入法。真机不受影响。已核对代码：Search/TextInput 未设置 type/inputFilter，无强制英文约束。检索功能的中文验证一律以模拟器（设好输入法）或真机为准。
 
 ## 7. 验收标准（M1 阶段）
 
@@ -219,3 +220,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-25 | 6.1「M2 前置清单」清零完毕，M2 可开工（M1 全部子任务 ✅） |
 | 2026-09-25 | M2.1 完成（构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）：新增 service/FavoriteService.ets —— ① Preferences 持久化（getPreferencesSync/putSync/flushSync 全同步 API，实测 API 12 SDK 均存在），收藏/笔记各占一个整表 JSON 键 + device_id 键；② 内存缓存为唯一数据源，查询返回拷贝（收藏按时间倒序、笔记按更新时间倒序），变更同步落盘；③ 收藏 CRUD（toggle/add/remove/updateTags，取消收藏不级联删笔记——笔记为独立用户数据）；④ 笔记 CRUD（add/update/delete/getNotesByItem，空正文拒绝）；⑤ 标签管理（内置三标签常量 + getAllTags 内置∪使用中自定义 + removeTag 只清使用处）；⑥ deviceId 首次生成 UUID 持久化（踩坑 3：createdAt/updatedAt/deviceId 全自动维护，M3 直接复用）；⑦ 读回 JSON 逐字段显式转换 + 逐条 try/catch 跳过非法数据（踩坑 1/2/4）；⑧ Preferences 初始化失败降级纯内存不崩溃。页面接入留待 M2.2~M2.4 |
 | 2026-09-25 | 修复 M1.6 引入的回归：预览器发现页/详情页列表全空（「预置数据为空」、mock 不注入）。根因：M1.6 抽出的 `parseHeritageList` 把 JSON.parse 异常 catch 成返回空数组，失败语义从「抛异常」变「返回空」，页面 catch 不到。修复：`loadHeritageList` 整表解析 0 条即抛异常且空结果不入缓存，恢复 M1.5 的失败传播语义；新增踩坑第 17 条（逐条容错在解析层、整表失败判定在加载层） |
+| 2026-09-25 | 排查「搜索框只能英文输入」：核对代码（Search 未设 type/inputFilter）与 SDK（默认 SearchType.NORMAL），确认非代码问题，为预览器/模拟器环境限制（预览器软键盘仅英文、模拟器物理键盘不支持中文、软键盘需设默认输入法为小艺输入法）；记入观察项 O5，无代码变更 |
