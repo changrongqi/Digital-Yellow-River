@@ -105,7 +105,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 | 编号 | 子任务 | 内容 | 状态 |
 |---|---|---|---|
-| M2.1 | FavoriteService + 本地持久化 | Preferences/RDB 存储收藏与笔记 | ⬜ |
+| M2.1 | FavoriteService + 本地持久化 | Preferences/RDB 存储收藏与笔记 | ✅ |
 | M2.2 | 收藏页 | 按标签分组列表 + 自定义标签 | ⬜ |
 | M2.3 | 笔记编辑页 | 文字 + 自动时间戳 + 标签 | ⬜ |
 | M2.4 | 详情页接入收藏/笔记 | 收藏按钮、笔记入口、列表联动 | ⬜ |
@@ -216,3 +216,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-25 | 新增 6.1「当前阶段遗留问题 / 风险」小节：R1~R4 为 M2 开工前必须清零项（缺龙山年代与数据集规模、加载无缓存、mock 双份数据漂移、@Builder 同族隐患），O1~O4 为观察项；M1 表增列 M1.6（数据集扩充 + 加载缓存） |
 | 2026-09-25 | M1.6 完成（构建 BUILD SUCCESSFUL）：① heritage_data.json 由 8 条扩至 23 条真实遗址，年代/类型/城市全覆盖且每市 3~5 条，ConvertFrom-Json 校验无重复 id、无缺字段；② HeritageDataLoader 增进程内缓存 `cachedList`，并抽出唯一解析入口 `parseHeritageList(text, source)`；③ MockHeritages 改为 JSON 文本走同一解析入口，消除双份数据漂移；④ Index 的 TabLabel 加硬约束注释并新增踩坑第 16 条（tabBar 只接受 CustomBuilder）；⑤ 6.1 表 R1~R4 全部标 ✅ 并写明解决方式，O3 固化构建告警基线 |
 | 2026-09-25 | 6.1「M2 前置清单」清零完毕，M2 可开工（M1 全部子任务 ✅） |
+| 2026-09-25 | M2.1 完成（构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）：新增 service/FavoriteService.ets —— ① Preferences 持久化（getPreferencesSync/putSync/flushSync 全同步 API，实测 API 12 SDK 均存在），收藏/笔记各占一个整表 JSON 键 + device_id 键；② 内存缓存为唯一数据源，查询返回拷贝（收藏按时间倒序、笔记按更新时间倒序），变更同步落盘；③ 收藏 CRUD（toggle/add/remove/updateTags，取消收藏不级联删笔记——笔记为独立用户数据）；④ 笔记 CRUD（add/update/delete/getNotesByItem，空正文拒绝）；⑤ 标签管理（内置三标签常量 + getAllTags 内置∪使用中自定义 + removeTag 只清使用处）；⑥ deviceId 首次生成 UUID 持久化（踩坑 3：createdAt/updatedAt/deviceId 全自动维护，M3 直接复用）；⑦ 读回 JSON 逐字段显式转换 + 逐条 try/catch 跳过非法数据（踩坑 1/2/4）；⑧ Preferences 初始化失败降级纯内存不崩溃。页面接入留待 M2.2~M2.4 |
