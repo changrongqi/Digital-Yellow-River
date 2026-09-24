@@ -148,6 +148,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 14. **router 跳转的目标页必须注册进 `resources/base/profile/main_pages.json`**，否则运行时报路由找不到；传参用 `router.pushUrl({ url, params })`，目标页用 `router.getParams()` 取（返回 Object，需显式 as 转换，禁 any）。
 15. **@Builder 默认「按值传递」，不能用来渲染需要跟随状态刷新的局部 UI**：多参数 @Builder 的参数在首次渲染时被拷贝，状态变量之后改变**不会**触发其内部 UI 刷新。症状是「列表已按新条件筛选，chips 高亮却停在初始值」，看起来像两套独立逻辑（因为列表在 build 里直连状态，@Builder 里的没有）。凡需随状态刷新的局部 UI 一律拆成独立 `@Component` 子组件，用 `@Prop`/`@Link` 绑定父组件状态；ForEach 项内部还依赖外部状态时，把该状态纳入键值生成函数以确保节点重建。
 16. **`TabContent.tabBar()` 只接受 `string | Resource | CustomBuilder | TabBarOptions`**（SDK `tab_content.d.ts` 实测），**不能直接放入自定义组件**用 `@Prop` 绑定。所以底部标签的选中态只有两条路：① 维持 @Builder 并在其内部**直读**状态（`this.currentIndex === index`，禁止把选中态做成参数）；② 换 `SubTabBarStyle`/`BottomTabBarStyle` 等平台托管样式。别为了「优雅」把标签改成参数化子组件，那会直接复现第 15 条的高亮失灵。
+17. **整表解析「返回空数组」≠「加载成功」**：解析入口为健壮性 catch 住 JSON.parse 错误返回 `[]` 是对的，但**加载入口必须把「整表 0 条」转为抛异常**，否则「加载失败」被静默成「空数据」——上游 catch 不到，预览器的 mock 注入永不触发，页面只显示「预置数据为空」（M1.6 重构时抽出的 `parseHeritageList` 吞掉了 M1.5 原本会传播的 parse 异常，导致预览器列表全空）。规则：逐条容错（单条非法跳过）在解析层，整表失败判定（0 条即抛）在加载层，且空结果**不入缓存**。
 
 ### 6.1 当前阶段遗留问题 / 风险（M2 开工前必须逐一清零）
 
@@ -217,3 +218,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-25 | M1.6 完成（构建 BUILD SUCCESSFUL）：① heritage_data.json 由 8 条扩至 23 条真实遗址，年代/类型/城市全覆盖且每市 3~5 条，ConvertFrom-Json 校验无重复 id、无缺字段；② HeritageDataLoader 增进程内缓存 `cachedList`，并抽出唯一解析入口 `parseHeritageList(text, source)`；③ MockHeritages 改为 JSON 文本走同一解析入口，消除双份数据漂移；④ Index 的 TabLabel 加硬约束注释并新增踩坑第 16 条（tabBar 只接受 CustomBuilder）；⑤ 6.1 表 R1~R4 全部标 ✅ 并写明解决方式，O3 固化构建告警基线 |
 | 2026-09-25 | 6.1「M2 前置清单」清零完毕，M2 可开工（M1 全部子任务 ✅） |
 | 2026-09-25 | M2.1 完成（构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）：新增 service/FavoriteService.ets —— ① Preferences 持久化（getPreferencesSync/putSync/flushSync 全同步 API，实测 API 12 SDK 均存在），收藏/笔记各占一个整表 JSON 键 + device_id 键；② 内存缓存为唯一数据源，查询返回拷贝（收藏按时间倒序、笔记按更新时间倒序），变更同步落盘；③ 收藏 CRUD（toggle/add/remove/updateTags，取消收藏不级联删笔记——笔记为独立用户数据）；④ 笔记 CRUD（add/update/delete/getNotesByItem，空正文拒绝）；⑤ 标签管理（内置三标签常量 + getAllTags 内置∪使用中自定义 + removeTag 只清使用处）；⑥ deviceId 首次生成 UUID 持久化（踩坑 3：createdAt/updatedAt/deviceId 全自动维护，M3 直接复用）；⑦ 读回 JSON 逐字段显式转换 + 逐条 try/catch 跳过非法数据（踩坑 1/2/4）；⑧ Preferences 初始化失败降级纯内存不崩溃。页面接入留待 M2.2~M2.4 |
+| 2026-09-25 | 修复 M1.6 引入的回归：预览器发现页/详情页列表全空（「预置数据为空」、mock 不注入）。根因：M1.6 抽出的 `parseHeritageList` 把 JSON.parse 异常 catch 成返回空数组，失败语义从「抛异常」变「返回空」，页面 catch 不到。修复：`loadHeritageList` 整表解析 0 条即抛异常且空结果不入缓存，恢复 M1.5 的失败传播语义；新增踩坑第 17 条（逐条容错在解析层、整表失败判定在加载层） |

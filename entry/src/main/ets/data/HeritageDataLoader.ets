@@ -39,6 +39,12 @@ export class HeritageDataLoader {
     const rawFile: Uint8Array = await resourceManager.getRawFileContent(DATA_FILE);
     const text: string = util.TextDecoder.create('utf-8').decodeToString(new Uint8Array(rawFile));
     const result: Heritage[] = HeritageDataLoader.parseHeritageList(text, DATA_FILE);
+    // 踩坑第 17 条：整表解析出 0 条 = 加载失败（rawfile 读不到/文件损坏/枚举整体漂移），
+    // 必须抛异常让调用方走兜底（预览器注入 mock），否则「失败」被静默成「空数据」，
+    // 页面只显示「预置数据为空」、mock 兜底永不触发（M1.6 曾因此回归）。空结果不入缓存。
+    if (result.length === 0) {
+      throw new Error(`parse 0 heritages from ${DATA_FILE}, treat as load failure`);
+    }
     HeritageDataLoader.cachedList = result;
     return result;
   }
