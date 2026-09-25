@@ -1,11 +1,11 @@
 /**
- * 业务服务层（M3.1）：分布式数据同步服务骨架。
+ * 业务服务层（M3.1~M3.3）：分布式数据同步服务。
  *
  * 职责边界（分层约定，计划书 §3）：
- * - 本服务只负责「传输 + 冲突判定原语 + 冲突台账 + 同步状态」；
+ * - 本服务只负责「传输 + 冲突判定原语 + 冲突台账 + 在线设备/手动同步 + 同步状态」；
  * - 收藏/笔记数据的唯一权威仍是 FavoriteService（M2.1 内存缓存 + Preferences），
  *   M3.2 起由其执行双写与远端变更合并（LWW 用本服务的判定原语）；
- * - API 用法对齐华为官方文档（@kit.ArkData distributedKVStore，API 12）。
+ * - API 用法对齐华为官方文档（@kit.ArkData distributedKVStore + @kit.DistributedServiceKit，API 12）。
  *
  * 设计说明：
  * 1. distributedKVStore 单版本 KV（SINGLE_VERSION）+ autoSync：
@@ -18,7 +18,8 @@
  * 4. LWW 冲突判定（updatedAt 谁新谁赢；相等时 deviceId 字典序小者胜，
  *    保证两端同时写入也能收敛到同一条，不来回覆盖）。判定是纯函数，
  *    由 FavoriteService 携带本地数据调用（踩坑 3 的字段在此兑现）。
- * 5. conflictLog 内存态（上限 50 条，超出丢最旧），同步面板（M3.3）经 getStatus 读取。
+ * 5. conflictLog 保持内存态（上限 50 条，超出丢最旧；M3.4 评估结论：冲突日志是
+ *    本端诊断信息，非需跨端同步的用户数据，重启清零可接受，不引入同步循环风险）。
  * 6. 踩坑 1/2/4：远端 JSON 逐字段显式转换，非法条目跳过记日志；全程不用 any。
  * 7. 所有可抛异常的 SDK 调用包 try/catch（对齐 O3 告警基线纪律）。
  */
@@ -77,7 +78,7 @@ export class SyncService {
   private static deviceManager: distributedDeviceManager.DeviceManager | null = null;
   /** DeviceManager 创建已失败标记（失败不重试，避免每次调用重复抛异常） */
   private static deviceManagerFailed: boolean = false;
-  /** 冲突台账（内存态，M3.4 评估是否持久化） */
+  /** 冲突台账（内存态，上限 50；M3.4 结论：本端诊断信息不持久化不同步，重启清零） */
   private static conflictLog: ConflictLogItem[] = [];
   private static lastSyncTime: number = 0;
   private static progress: number = 0;

@@ -126,12 +126,31 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M3.1 | 权限声明 + SyncService 骨架 | DISTRIBUTED_DATASYNC 权限；distributedKVStore 单版本 KV 初始化 + 降级（失败仅记日志不崩溃）；LWW 冲突判定 + conflictLog 维护；on('dataChange') 订阅骨架 | ✅ |
 | M3.2 | FavoriteService 双写改造 | 收藏/笔记变更时本地 Preferences + 分布式 KV 双写；收到远端变更回调后 LWW 合并进内存缓存并刷 UI；单机自动降级 | ✅ |
 | M3.3 | 同步面板 | Index 第 3 个 Tab：进度 / 最后同步时间 / 冲突记录数 / 在线设备数；单机降级「等待设备上线」；手动 sync 入口 | ✅ |
-| M3.4 | 编译自测基线 + 真机联调待办 | 构建 BUILD SUCCESSFUL + 告警基线比对；整理真机联调操作清单（签名配置、组网、验证步骤）写入计划书 | ⬜ |
+| M3.4 | 编译自测基线 + 真机联调待办 | 构建 BUILD SUCCESSFUL + 告警基线比对；整理真机联调操作清单（签名配置、组网、验证步骤）写入计划书 | ✅ |
 
 - 接入 `distributedKVStore` + `distributedDeviceManager`
 - put 后 autoSync + 手动 sync() 入口 + on('dataChange') 刷新 UI
 - LWW 冲突处理（比较 updatedAt + deviceId 兜底），冲突写入 conflictLog
 - 真机双端验证（同华为账号）；无真机则代码实现 + 编译自测作为基线
+
+**M3.4 真机联调操作清单（设备到位后按序执行，2026-09-26 整理）**
+
+> 前置：两台 HarmonyOS 真机（如华为手机/平板）。用户已有华为开发者账号并已登录 DevEco。
+
+1. **签名配置（一次性）**：DevEco Studio → File → Project Structure → Signing Configs，
+   勾选「Automatically generate signature」，确认自动证书生成成功（登录态下点几下即可，无需手工制作证书）。
+   之后 Run 直接装真机，不再跳过签名。
+2. **组网前提（三件套，缺一不可）**：两台设备登录**同一华为账号**；连接**同一 WLAN**；**开启蓝牙**；
+   另在「设置 → 更多连接」确认多设备协同/超级终端开关已打开。组网后同步面板「在线设备」应出现对端。
+3. **安装**：两台真机各安装同一签名包（同一 bundleName `com.example.first`，签名必须一致才能互通分布式数据）。
+4. **基础同步验证**：A 端收藏某遗址 + 写笔记 → 观察 B 端收藏页/详情页是否自动出现（autoSync）；
+   B 端反向操作验证双向。
+5. **手动同步验证**：同步面板「立即同步」→ 返回 true 提示 + 最后同步时间更新（syncComplete 回调）。
+6. **LWW 冲突验证**：两端同时（离线各自修改后组网）修改同一条笔记正文 → 组网同步后两端应一致收敛到
+   updatedAt 较新版本；同步面板「冲突记录」出现 1 条说明保留结果。
+7. **删除同步验证**：A 端取消收藏/删笔记 → B 端对应消失。
+8. **重启持久化**：两端各自杀进程重开 → 收藏/笔记仍在（Preferences 本地基线不受同步影响）。
+9. **降级路径回归**：单机（不组网）重复 M2 全部验收项 → 行为与 M2 阶段完全一致。
 
 ### M4 智能关联推荐
 - 条目特征向量（年代/类型/城市 one-hot）→ 余弦相似度 → Top-N
@@ -259,3 +278,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-26 | 新增工作流硬性规则（用户要求）：凡稍微复杂的代码/结构搭建（新 kit、不熟悉 API、架构接线、较大新逻辑）动手前必须先查真实官方文档、示例与教学，并与本机 SDK d.ts 双重核对，官方推荐模式优先于自创写法（与踩坑 18 配套） |
 | 2026-09-26 | M3.2 完成（构建 BUILD SUCCESSFUL，告警与 O3 基线一致零新增，仅 Detail 3 条行号漂移）：FavoriteService 双写改造—— ① 7 个变更方法（收藏增/删/改标签/删标签 + 笔记增/改/删）在内存缓存 + Preferences 之后上抛 SyncService（降级时空操作，本地不受影响）；② mergeRemoteChanges LWW 合并（远端新增直接采纳；双端版本不同走 lwwRemoteWins，远端胜替换+记台账，本机胜保留并回写 KV 让对端收敛；远端删除按「删除生效」简化——删除通知无时间戳可比，注释说明取舍）；③ init 注册合并处理器（重入只注册一次）+ onDataChanged/offDataChanged 页面通知 API；④ UI 联动：Index.aboutToAppear 提前 init（防 TabContent 懒加载导致合并处理器注册过晚）并订阅刷新信号，Detail 订阅/注销（aboutToDisappear 防泄漏）刷新收藏状态与笔记列表。开工前已按新规则核对官方「跨设备同步 KV Store」指南：单版本 KV 官方语义即「同键多端修改以最新为准」（与应用层 LWW 一致）、put/delete 成功即触发 autoSync（双写无需逐次手动 sync）、手动 sync(deviceIds, PUSH_PULL) 留作 M3.3 面板入口 |
 | 2026-09-26 | M3.3 完成（构建 BUILD SUCCESSFUL，告警与 O3 基线完全一致零新增）：① SyncService 扩展——getOnlineDevices（DeviceManager 懒创建 + 失败熔断 + getAvailableDeviceListSync，d.ts 实测仅需已声明的 DISTRIBUTED_DATASYNC 权限，无新增权限）、manualSync（在线设备 PUSH_PULL，无设备/降级返回 false）、onStatusChanged/offStatusChanged 状态通知（远端变更/同步完成/设备上下线触发）、subscribeSyncComplete（KV ready 后订阅，同步完成刷新 lastSyncTime）、subscribeDeviceStateChange（设备上下线刷新面板）；② 新增 pages/SyncPanel.ets 并接入 Index 第 3 个 Tab（PlaceholderTab 占位删除）：同步状态卡（服务状态/进度条/最后同步/在线设备/冲突数四行 + Progress 组件）、在线设备卡（列表或「等待设备上线」组网提示）、手动同步卡（立即同步按钮 + 降级文案：单机模式本地仍保存）、冲突记录卡（明细列表含 LWW 保留结果说明）；aboutToAppear 订阅刷新 + aboutToDisappear 注销防泄漏。distributedDeviceManager 事件回调采用零参函数（结构兼容官方匿名对象签名，避免 ArkTS 类型坑）。模拟器预期表现：服务状态「单机模式」、0 台设备、从未同步（O7） |
+| 2026-09-26 | M3.4 完成，**M3 里程碑全部完成**（收口构建 BUILD SUCCESSFUL，告警与 O3 基线完全一致）：① 真机联调操作清单 9 条写入计划书 M3 小节（签名自动生成配置/组网三件套/同签名同 bundleName 安装/双向同步/手动同步/LWW 冲突/删除同步/重启持久化/降级回归）；② conflictLog 持久化评估结论：**保持内存态不持久化不同步**——冲突日志是本端诊断信息非用户数据，同步它自身会引入复杂度与循环风险，重启清零可接受；③ M3 全阶段复检：SyncService 全文重读（初始化→订阅→双写→合并→面板 API 链路无断点）、FavoriteService 16 处接线逐一核对（7 变更方法双写 + 合并注册 + LWW 两段 + 冲突台账）、BUNDLE_NAME/STORE_ID/键前缀与 app.json5 及各调用点一致、头注释过期描述修正 |
