@@ -29,6 +29,7 @@ import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
+import { formatDate } from '../utils/TimeFormat';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
@@ -189,16 +190,6 @@ export struct Favorites {
 
   private cardName(card: FavoriteCard): string {
     return card.heritage === null ? `数据缺失 (${card.favorite.itemId})` : card.heritage.name;
-  }
-
-  /** 毫秒时间戳 → yyyy-MM-dd */
-  private formatDate(ts: number): string {
-    const d: Date = new Date(ts);
-    const month: number = d.getMonth() + 1;
-    const day: number = d.getDate();
-    const monthStr: string = month < 10 ? `0${month}` : `${month}`;
-    const dayStr: string = day < 10 ? `0${day}` : `${day}`;
-    return `${d.getFullYear()}-${monthStr}-${dayStr}`;
   }
 
   /** 卡片标签显示上限截取 */
@@ -512,7 +503,7 @@ export struct Favorites {
 
           // 收藏时间 + 笔记数
           Row() {
-            Text(`收藏于 ${this.formatDate(card.favorite.createdAt)}`)
+            Text(`收藏于 ${formatDate(card.favorite.createdAt)}`)
               .fontSize(11)
               .fontColor('#BCAAA4')
             if (card.noteCount > 0) {

@@ -112,7 +112,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M2.1 | FavoriteService + 本地持久化 | Preferences/RDB 存储收藏与笔记 | ✅ |
 | M2.2 | 收藏页 | 按标签分组列表 + 自定义标签 | ✅ |
 | M2.3 | 笔记编辑页 | 文字 + 自动时间戳（标签归收藏维度，见修订记录） | ✅ |
-| M2.4 | 详情页接入收藏/笔记 | 收藏按钮、笔记入口、列表联动 | 🚧 |
+| M2.4 | 详情页接入收藏/笔记 | 收藏按钮、笔记入口、列表联动 | ✅ |
 
 ### M3 分布式数据同步（赛题核心）
 - 接入 `distributedKVStore` + `distributedDeviceManager`
@@ -170,14 +170,15 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 - O1 `coverImage` 全为空且 rawfile 中无任何图片资源，列表用文字徽标占位，详情页「图文介绍」实际只有文 —— 待确定是否引入图片资源。
 - O2 详情页仅认 `id` 入参；M2 收藏页 / M4 推荐入口跳转必须统一带 id，否则落「未找到该遗产」。
-- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-25 实测更新，仅允许以下 7 条 + 1 条签名提示）**：
+- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-25 实测更新，仅允许以下 8 条 + 1 条签名提示）**：
   `data/HeritageDataLoader.ets:39 Function may throw exceptions`（getRawFileContent）、
   `pages/Discovery.ets:307 'pushUrl' has been deprecated`、
-  `pages/Favorites.ets:534 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
-  `pages/Detail.ets:41 'getParams' has been deprecated`、
-  `pages/Detail.ets:97 'back' has been deprecated`、
-  `pages/NoteEdit.ets:54 'getParams' has been deprecated`（M2.3 新增，router deprecate 同类型）、
-  `pages/NoteEdit.ets:139 'back' has been deprecated`（M2.3 新增，back 已收敛为唯一调用点 goBack()），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  `pages/Favorites.ets:525 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
+  `pages/Detail.ets:46 'getParams' has been deprecated`、
+  `pages/Detail.ets:109 'back' has been deprecated`、
+  `pages/Detail.ets:264 'pushUrl' has been deprecated`（M2.4 新增，router deprecate 同类型；pushUrl 已收敛为唯一调用点 openNoteEditor 且包 try/catch）、
+  `pages/NoteEdit.ets:55 'getParams' has been deprecated`（M2.3 新增，router deprecate 同类型）、
+  `pages/NoteEdit.ets:140 'back' has been deprecated`（M2.3 新增，back 已收敛为唯一调用点 goBack()），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   行号随代码增删会漂移，比对以「文件 + 告警类型」为准。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
@@ -236,3 +237,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-25 | M2.4 收藏部分提前实现（应用户要求先做用户端验证；构建 BUILD SUCCESSFUL 零新增告警，仅 3 条基线告警行号漂移，O3 补充「行号漂移按文件+类型比对」规则）：① Detail.ets 顶部导航栏新增收藏按钮（未收藏白底棕字棕边 / 已收藏棕底白字，主次高亮清晰区分；@Builder 内部直读 isFav 规避踩坑 15），点击走 FavoriteService.toggleFavorite 同步切换；② aboutToAppear 幂等调 FavoriteService.init 并按 targetId 恢复 isFav 初值；③ 列表联动补齐（M2.2 遗留点）：Index.onPageShow → favoriteRefreshTick+1 → Favorites @Prop @Watch 触发 refreshGroups，从详情页收藏/取消收藏返回后收藏页自动刷新；④ 笔记入口仍待 M2.3 完成后接入，M2.4 保持 🚧 |
 | 2026-09-25 | 计划书动态演进机制确立（用户授权）：文首与 §8 工作流新增条款——开发中发现需要新增子任务、展开细节、调整范围或顺序时，直接更新计划书并在修订记录写明理由，「改计划」优先于「绕过计划」 |
 | 2026-09-25 | M2.3 完成（构建 BUILD SUCCESSFUL，O3 基线 +2 条 router deprecate 同类型告警，back 已收敛为唯一调用点）：新增 pages/NoteEdit.ets 并注册 main_pages.json（踩坑 14）—— ① 路由入参 { id, noteId? }，noteId 缺省新建、携带则编辑（按 noteId 从服务层重新取数回填，数据单一来源）；② 时间戳全自动维护：新建 addNote / 编辑 updateNote，页面不手写任何时间（踩坑 3），编辑模式展示「创建于/最后编辑」；③ 空正文 UI 层先行拦截（行内红色提示，输入即清除）+ 服务层双重保险；④ 删除走 deleteNote + 二次确认弹层（与收藏页同款 Stack 模式）；⑤ 预览器无参直接预览 = 新建模式仅可预览 UI，完整数据流验证需 M2.4 笔记入口接入。**M2.3 范围修订（动态演进首例）**：原「文字 + 自动时间戳 + 标签」中的标签职责归收藏维度（M2.2 已实现收藏标签管理），Note 模型不带 tags（M3 分布式同步保持轻量），本页聚焦纯文字编辑 |
+| 2026-09-25 | M2.4 完成（构建 BUILD SUCCESSFUL，O3 基线 +1 条 Detail pushUrl deprecate；期间修复 1 次编译错误：对象字面量不能初始化 Record 类型变量，改内联进 pushUrl 调用；pushUrl 直接调用曾伴生 may throw 告警，包 try/catch 消除）：Detail.ets 新增「我的笔记」区块—— ① 五层级之后展示该条目笔记列表（正文 3 行截断 + 最后编辑时间，点击进 NoteEdit 编辑），区块头「+ 写笔记」入口（pushUrl 收敛为唯一调用点 openNoteEditor）；② onPageShow 刷新笔记列表与 isFav（从 NoteEdit 返回的同页实例即时联动，aboutToAppear 亦初始化）；③ 新建 utils/TimeFormat.ets（formatDate/formatDateTime 纯函数），Favorites/NoteEdit/Detail 三页共用，删除各自私有重复实现（§3 utils 层首个模块）。**M2 里程碑全部完成**，下一步 M3 分布式同步 |

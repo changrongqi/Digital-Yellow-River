@@ -11,17 +11,20 @@
  *
  * 五层级：图文介绍 intro / 考古发现 discovery / 历史事件 events / 相关诗词 poems / 现代文旅 tourism。
  *
- * M2.4（收藏入口提前实现，供用户端验证完整数据流）：
+ * M2.4：
  * - 顶部导航栏收藏按钮，状态切换走 FavoriteService.toggleFavorite；
- * - 从本页返回主页时 Index.onPageShow 驱动收藏页刷新（列表联动）；
- * - 笔记入口待 M2.3 笔记编辑页完成后接入。
+ * - 五层级之后「我的笔记」区块：列表（按最后编辑时间倒序）+ 写笔记入口 + 点击编辑；
+ * - 从 NoteEdit 返回（同页实例）时 onPageShow 刷新笔记列表与收藏状态；
+ * - 从本页返回主页时 Index.onPageShow 驱动收藏页刷新（列表联动）。
  */
 
 import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Heritage, Poem } from '../model/Heritage';
+import { Note } from '../model/Note';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
+import { formatDateTime } from '../utils/TimeFormat';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
@@ -35,6 +38,8 @@ struct Detail {
   @State isMockData: boolean = false;
   /** 当前收藏状态（M2.4：随收藏按钮切换，返回主页后收藏页联动刷新） */
   @State isFav: boolean = false;
+  /** 本条目笔记列表（updatedAt 倒序，服务层已排序） */
+  @State notes: Note[] = [];
   private targetId: string = '';
 
   aboutToAppear(): void {
@@ -52,7 +57,14 @@ struct Detail {
       FavoriteService.init(hostContext);
     }
     this.isFav = FavoriteService.isFavorite(this.targetId);
+    this.notes = FavoriteService.getNotesByItem(this.targetId);
     this.loadData();
+  }
+
+  /** 页面重新显示（含从 NoteEdit 返回的同页实例）：刷新笔记列表与收藏状态 */
+  onPageShow(): void {
+    this.isFav = FavoriteService.isFavorite(this.targetId);
+    this.notes = FavoriteService.getNotesByItem(this.targetId);
   }
 
   private async loadData(): Promise<void> {
@@ -182,6 +194,9 @@ struct Detail {
             this.EventsSection(this.heritage.detail.events)
             this.PoemsSection(this.heritage.detail.poems)
             this.TextSection('现代文旅', this.heritage.detail.tourism)
+
+            // 我的笔记区块（M2.4）
+            this.NotesSection()
           }
           .width('100%')
           .padding({ left: 16, right: 16, bottom: 24 })
@@ -235,6 +250,84 @@ struct Detail {
       return;
     }
     this.isFav = FavoriteService.toggleFavorite(this.heritage.id);
+  }
+
+  /**
+   * 打开笔记编辑页（router.pushUrl 唯一调用点，收敛 deprecate 告警）。
+   * @param noteId 空串 = 新建；携带 = 编辑对应笔记
+   */
+  private openNoteEditor(noteId: string): void {
+    if (this.heritage === null) {
+      return;
+    }
+    try {
+      router.pushUrl({ url: 'pages/NoteEdit', params: { id: this.heritage.id, noteId: noteId } });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'open note editor failed: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  /**
+   * 我的笔记区块（M2.4）：列表 + 写笔记入口 + 点击编辑。
+   * ⚠️ 无参数、内部直读 @State（notes/heritage），规避踩坑 15 的参数按值传递失联。
+   */
+  @Builder
+  NotesSection() {
+    Column() {
+      Row() {
+        this.SectionTitle('我的笔记')
+        Blank()
+        Text('+ 写笔记')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#6D4C41')
+          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .backgroundColor('#EFEBE9')
+          .borderRadius(14)
+          .onClick(() => {
+            this.openNoteEditor('');
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      if (this.notes.length === 0) {
+        Text('还没有笔记，点击「写笔记」记录你的想法')
+          .fontSize(13)
+          .fontColor('#BCAAA4')
+          .margin({ top: 10 })
+      } else {
+        ForEach(this.notes, (note: Note) => {
+          Column() {
+            Text(note.content)
+              .fontSize(14)
+              .fontColor('#3E2723')
+              .maxLines(3)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .lineHeight(22)
+            Text(`最后编辑 ${formatDateTime(note.updatedAt)}`)
+              .fontSize(11)
+              .fontColor('#BCAAA4')
+              .margin({ top: 6 })
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding(12)
+          .backgroundColor('#FAF6F0')
+          .borderRadius(8)
+          .margin({ top: 10 })
+          .onClick(() => {
+            this.openNoteEditor(note.id);
+          })
+        }, (note: Note) => `${note.id}-${note.updatedAt}`)
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding(16)
+    .backgroundColor('#FFFFFF')
+    .borderRadius(12)
+    .margin({ top: 12 })
   }
 
   /** 通用文字区块：图文介绍 / 考古发现 / 现代文旅 */

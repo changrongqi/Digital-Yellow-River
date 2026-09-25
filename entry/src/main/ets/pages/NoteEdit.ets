@@ -24,6 +24,7 @@ import { Heritage } from '../model/Heritage';
 import { Note } from '../model/Note';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
+import { formatDateTime } from '../utils/TimeFormat';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
@@ -139,20 +140,6 @@ struct NoteEdit {
     router.back();
   }
 
-  /** 毫秒时间戳 → yyyy-MM-dd HH:mm */
-  private formatDateTime(ts: number): string {
-    const d: Date = new Date(ts);
-    const month: number = d.getMonth() + 1;
-    const day: number = d.getDate();
-    const hour: number = d.getHours();
-    const minute: number = d.getMinutes();
-    const monthStr: string = month < 10 ? `0${month}` : `${month}`;
-    const dayStr: string = day < 10 ? `0${day}` : `${day}`;
-    const hourStr: string = hour < 10 ? `0${hour}` : `${hour}`;
-    const minuteStr: string = minute < 10 ? `0${minute}` : `${minute}`;
-    return `${d.getFullYear()}-${monthStr}-${dayStr} ${hourStr}:${minuteStr}`;
-  }
-
   build() {
     Stack() {
       Column() {
@@ -213,10 +200,10 @@ struct NoteEdit {
             // 自动时间戳展示（编辑模式；新建保存后由服务层自动记录）
             if (this.createdAt > 0) {
               Column() {
-                Text(`创建于 ${this.formatDateTime(this.createdAt)}`)
+                Text(`创建于 ${formatDateTime(this.createdAt)}`)
                   .fontSize(12)
                   .fontColor('#BCAAA4')
-                Text(`最后编辑 ${this.formatDateTime(this.updatedAt)}`)
+                Text(`最后编辑 ${formatDateTime(this.updatedAt)}`)
                   .fontSize(12)
                   .fontColor('#BCAAA4')
                   .margin({ top: 4 })
