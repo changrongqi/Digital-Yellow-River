@@ -2,11 +2,12 @@
  * 主页（M1.3）：Tabs 容器
  * - 发现：Discovery（rawfile 数据列表）
  * - 收藏：Favorites（M2.2 收藏列表，按标签分组）
- * - 同步：占位（M3 实现）
+ * - 同步：SyncPanel（M3.3 分布式同步状态面板）
  */
 
 import { Discovery } from './Discovery';
 import { Favorites } from './Favorites';
+import { SyncPanel } from './SyncPanel';
 import { FavoriteService } from '../service/FavoriteService';
 
 @Entry
@@ -51,7 +52,7 @@ struct Index {
       .tabBar(this.TabLabel('收藏', 1))
 
       TabContent() {
-        this.PlaceholderTab('同步', '分布式数据同步将在 M3 里程碑上线')
+        SyncPanel()
       }
       .tabBar(this.TabLabel('同步', 2))
     }
@@ -85,23 +86,6 @@ struct Index {
     }
     .width('100%')
     .height(56)
-    .justifyContent(FlexAlign.Center)
-  }
-
-  @Builder
-  PlaceholderTab(title: string, tip: string) {
-    Column() {
-      Text(title)
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
-      Text(tip)
-        .fontSize(13)
-        .fontColor('#8D6E63')
-        .margin({ top: 10 })
-    }
-    .width('100%')
-    .height('100%')
     .justifyContent(FlexAlign.Center)
   }
 }

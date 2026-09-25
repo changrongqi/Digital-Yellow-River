@@ -27,6 +27,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { distributedKVStore } from '@kit.ArkData';
+import { distributedDeviceManager } from '@kit.DistributedServiceKit';
 import { Favorite } from '../model/Favorite';
 import { Note } from '../model/Note';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
@@ -57,6 +58,12 @@ export interface RemoteChanges {
   deletedNoteIds: string[];     // 远端删除的笔记（noteId）
 }
 
+/** 在线（可信）设备信息（M3.3 同步面板展示） */
+export interface SyncDeviceInfo {
+  deviceId: string;   // 分布式 deviceId（sync 目标列表用，d.ts 实测）
+  deviceName: string;  // 设备显示名
+}
+
 export class SyncService {
   private static kvManager: distributedKVStore.KVManager | null = null;
   private static kvStore: distributedKVStore.SingleKVStore | null = null;
@@ -64,6 +71,12 @@ export class SyncService {
   private static initialized: boolean = false;
   /** 远端变更监听者（M3.2 起 FavoriteService 注册消费） */
   private static listeners: Array<(changes: RemoteChanges) => void> = [];
+  /** 同步状态监听者（M3.3：进度/最后同步时间/设备上下线变化时通知，面板订阅） */
+  private static statusListeners: Array<() => void> = [];
+  /** DeviceManager 实例（M3.3：在线设备查询，懒创建） */
+  private static deviceManager: distributedDeviceManager.DeviceManager | null = null;
+  /** DeviceManager 创建已失败标记（失败不重试，避免每次调用重复抛异常） */
+  private static deviceManagerFailed: boolean = false;
   /** 冲突台账（内存态，M3.4 评估是否持久化） */
   private static conflictLog: ConflictLogItem[] = [];
   private static lastSyncTime: number = 0;
@@ -105,6 +118,7 @@ export class SyncService {
       .then((store: distributedKVStore.SingleKVStore) => {
         SyncService.kvStore = store;
         SyncService.subscribeRemoteChanges();
+        SyncService.subscribeSyncComplete();
         hilog.info(DOMAIN, TAG, 'distributed kv store ready');
       })
       .catch((err: BusinessError) => {
@@ -255,6 +269,135 @@ export class SyncService {
     SyncService.lastSyncTime = Date.now();
     SyncService.progress = 100;
     SyncService.notifyListeners(changes);
+    SyncService.notifyStatusListeners();
+  }
+
+  // ==================== 在线设备与手动同步（M3.3） ====================
+
+  /**
+   * 在线（可信）设备列表。
+   * API 事实（本机 SDK d.ts + 官方「跨设备同步 KV Store」指南双核对）：
+   * - getAvailableDeviceListSync 仅需 ohos.permission.DISTRIBUTED_DATASYNC（M3.1 已声明，无新增权限）；
+   * - 官方 sync 示例即用该列表的 deviceId 作为同步目标；
+   * - 降级（DeviceManager 创建失败/查询异常）返回空数组，不影响其余功能。
+   */
+  static getOnlineDevices(): SyncDeviceInfo[] {
+    const dm = SyncService.ensureDeviceManager();
+    if (dm === null) {
+      return [];
+    }
+    try {
+      const list: Array<distributedDeviceManager.DeviceBasicInfo> = dm.getAvailableDeviceListSync();
+      const result: SyncDeviceInfo[] = [];
+      for (let i = 0; i < list.length; i++) {
+        const info: SyncDeviceInfo = {
+          deviceId: list[i].deviceId,
+          deviceName: list[i].deviceName
+        };
+        result.push(info);
+      }
+      return result;
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'getAvailableDeviceListSync failed: %{public}s', JSON.stringify(err));
+      return [];
+    }
+  }
+
+  /**
+   * 手动同步入口（同步面板「立即同步」）：
+   * 对全部在线可信设备 PUSH_PULL（推本端 + 拉远端）；完成经 syncComplete 回调刷新状态。
+   * @return sync 是否成功受理（false = KV 未就绪 / 无在线设备 / 调用异常）
+   */
+  static manualSync(): boolean {
+    const store = SyncService.kvStore;
+    if (store === null) {
+      return false;
+    }
+    const devices: SyncDeviceInfo[] = SyncService.getOnlineDevices();
+    if (devices.length === 0) {
+      return false; // 单机/无组网：等待设备上线（面板显示降级文案）
+    }
+    const ids: string[] = [];
+    for (let i = 0; i < devices.length; i++) {
+      ids.push(devices[i].deviceId);
+    }
+    try {
+      store.sync(ids, distributedKVStore.SyncMode.PUSH_PULL);
+      return true;
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'manual sync failed: %{public}s', JSON.stringify(err));
+      return false;
+    }
+  }
+
+  /** 订阅同步状态变化（进度/最后同步时间/设备上下线），同步面板 aboutToAppear 注册 */
+  static onStatusChanged(listener: () => void): void {
+    SyncService.statusListeners.push(listener);
+  }
+
+  /** 取消订阅（面板 aboutToDisappear 调用，传入注册时的同一函数引用） */
+  static offStatusChanged(listener: () => void): void {
+    const idx: number = SyncService.statusListeners.indexOf(listener);
+    if (idx >= 0) {
+      SyncService.statusListeners.splice(idx, 1);
+    }
+  }
+
+  private static notifyStatusListeners(): void {
+    for (let i = 0; i < SyncService.statusListeners.length; i++) {
+      SyncService.statusListeners[i]();
+    }
+  }
+
+  /** DeviceManager 懒创建 + 失败熔断（已失败不再重试） */
+  private static ensureDeviceManager(): distributedDeviceManager.DeviceManager | null {
+    if (SyncService.deviceManager !== null) {
+      return SyncService.deviceManager;
+    }
+    if (SyncService.deviceManagerFailed) {
+      return null;
+    }
+    try {
+      SyncService.deviceManager = distributedDeviceManager.createDeviceManager(BUNDLE_NAME);
+      SyncService.subscribeDeviceStateChange();
+      return SyncService.deviceManager;
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'createDeviceManager failed, device query degrade: %{public}s', JSON.stringify(err));
+      SyncService.deviceManagerFailed = true;
+      return null;
+    }
+  }
+
+  /** 设备上下线 → 通知面板刷新设备列表与状态（回调载荷不使用，零参函数结构兼容官方签名） */
+  private static subscribeDeviceStateChange(): void {
+    const dm = SyncService.deviceManager;
+    if (dm === null) {
+      return;
+    }
+    try {
+      dm.on('deviceStateChange', () => {
+        SyncService.notifyStatusListeners();
+      });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'subscribe deviceStateChange failed: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  /** 手动/自动同步完成 → 刷新最后同步时间并通知面板（回调载荷不使用） */
+  private static subscribeSyncComplete(): void {
+    const store = SyncService.kvStore;
+    if (store === null) {
+      return;
+    }
+    try {
+      store.on('syncComplete', () => {
+        SyncService.lastSyncTime = Date.now();
+        SyncService.progress = 100;
+        SyncService.notifyStatusListeners();
+      });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'subscribe syncComplete failed: %{public}s', JSON.stringify(err));
+    }
   }
 
   /** Entry 值统一转字符串（本应用只写 string 值；其他类型视为空） */
