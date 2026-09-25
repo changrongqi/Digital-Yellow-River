@@ -106,7 +106,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | 编号 | 子任务 | 内容 | 状态 |
 |---|---|---|---|
 | M2.1 | FavoriteService + 本地持久化 | Preferences/RDB 存储收藏与笔记 | ✅ |
-| M2.2 | 收藏页 | 按标签分组列表 + 自定义标签 | ⬜ |
+| M2.2 | 收藏页 | 按标签分组列表 + 自定义标签 | ✅ |
 | M2.3 | 笔记编辑页 | 文字 + 自动时间戳 + 标签 | ⬜ |
 | M2.4 | 详情页接入收藏/笔记 | 收藏按钮、笔记入口、列表联动 | ⬜ |
 
@@ -166,9 +166,11 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 - O1 `coverImage` 全为空且 rawfile 中无任何图片资源，列表用文字徽标占位，详情页「图文介绍」实际只有文 —— 待确定是否引入图片资源。
 - O2 详情页仅认 `id` 入参；M2 收藏页 / M4 推荐入口跳转必须统一带 id，否则落「未找到该遗产」。
-- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-25 实测，仅允许以下 4 条 + 1 条签名提示）**：
+- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-25 实测更新，仅允许以下 5 条 + 1 条签名提示）**：
   `data/HeritageDataLoader.ets:39 Function may throw exceptions`（getRawFileContent）、
-  `pages/Discovery.ets:302 'pushUrl' has been deprecated`、`pages/Detail.ets:34 'getParams' has been deprecated`、
+  `pages/Discovery.ets:307 'pushUrl' has been deprecated`、
+  `pages/Favorites.ets:520 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
+  `pages/Detail.ets:34 'getParams' has been deprecated`、
   `pages/Detail.ets:83 'back' has been deprecated`，外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
@@ -222,3 +224,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-25 | M2.1 完成（构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）：新增 service/FavoriteService.ets —— ① Preferences 持久化（getPreferencesSync/putSync/flushSync 全同步 API，实测 API 12 SDK 均存在），收藏/笔记各占一个整表 JSON 键 + device_id 键；② 内存缓存为唯一数据源，查询返回拷贝（收藏按时间倒序、笔记按更新时间倒序），变更同步落盘；③ 收藏 CRUD（toggle/add/remove/updateTags，取消收藏不级联删笔记——笔记为独立用户数据）；④ 笔记 CRUD（add/update/delete/getNotesByItem，空正文拒绝）；⑤ 标签管理（内置三标签常量 + getAllTags 内置∪使用中自定义 + removeTag 只清使用处）；⑥ deviceId 首次生成 UUID 持久化（踩坑 3：createdAt/updatedAt/deviceId 全自动维护，M3 直接复用）；⑦ 读回 JSON 逐字段显式转换 + 逐条 try/catch 跳过非法数据（踩坑 1/2/4）；⑧ Preferences 初始化失败降级纯内存不崩溃。页面接入留待 M2.2~M2.4 |
 | 2026-09-25 | 修复 M1.6 引入的回归：预览器发现页/详情页列表全空（「预置数据为空」、mock 不注入）。根因：M1.6 抽出的 `parseHeritageList` 把 JSON.parse 异常 catch 成返回空数组，失败语义从「抛异常」变「返回空」，页面 catch 不到。修复：`loadHeritageList` 整表解析 0 条即抛异常且空结果不入缓存，恢复 M1.5 的失败传播语义；新增踩坑第 17 条（逐条容错在解析层、整表失败判定在加载层） |
 | 2026-09-25 | 排查「搜索框只能英文输入」：核对代码（Search 未设 type/inputFilter）与 SDK（默认 SearchType.NORMAL），确认非代码问题，为预览器/模拟器环境限制（预览器软键盘仅英文、模拟器物理键盘不支持中文、软键盘需设默认输入法为小艺输入法）；记入观察项 O5，无代码变更 |
+| 2026-09-25 | M2.2 完成（构建 BUILD SUCCESSFUL，告警维持 O3 基线仅 +1 条同类型 pushUrl deprecate）：新增 pages/Favorites.ets 并接入 Index 第 2 个 Tab —— ① 按标签分组列表（内置标签在前、自定义按首次出现顺序，「未分组」殿后，空分组不显示），卡片显示城市/年代徽标、名称、摘要、标签 chips（最多 3 个 +「+N」）、收藏时间、笔记数，点击统一带 id 跳详情（O2）；② ⋯ 菜单 → 管理标签（内置 + 使用中自定义 + 新增自定义标签，勾选保存走 updateFavoriteTags）/ 取消收藏（二次确认，文案注明笔记保留）；③ 弹层用页内 Stack + 条件渲染实现（状态集中于单组件规避踩坑 15），遮罩空 onClick 消费点击防穿透、一律显式按钮关闭，卡片主区域与 ⋯ 按钮为兄弟节点规避点击冒泡；④ 所有变更走 FavoriteService 后整体赋值刷新 groups（踩坑 5），FavoriteService.init 于 aboutToAppear 调用（幂等）；⑤ rawfile 加载失败时注入 MOCK_HERITAGES 建映射表（只读预览调试，与发现页行为一致）。验收说明：当前无收藏入口（M2.4 详情页收藏按钮未实现），本阶段可验证空态与编译，数据流联调留待 M2.4 完成后进行；届时需补 Index.onPageShow → 收藏页刷新机制（详情页收藏后返回收藏 Tab 不自动刷新） |

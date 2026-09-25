@@ -1,11 +1,12 @@
 /**
  * 主页（M1.3）：Tabs 容器
  * - 发现：Discovery（rawfile 数据列表）
- * - 收藏：占位（M2 实现）
+ * - 收藏：Favorites（M2.2 收藏列表，按标签分组）
  * - 同步：占位（M3 实现）
  */
 
 import { Discovery } from './Discovery';
+import { Favorites } from './Favorites';
 
 @Entry
 @Component
@@ -20,7 +21,7 @@ struct Index {
       .tabBar(this.TabLabel('发现', 0))
 
       TabContent() {
-        this.PlaceholderTab('收藏', '收藏与笔记功能将在 M2 里程碑上线')
+        Favorites()
       }
       .tabBar(this.TabLabel('收藏', 1))
 
