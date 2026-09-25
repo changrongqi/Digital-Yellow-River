@@ -12,6 +12,17 @@ import { Favorites } from './Favorites';
 @Component
 struct Index {
   @State currentIndex: number = 0;
+  /** 收藏页刷新信号：onPageShow（含从详情页返回）时 +1，经 @Prop @Watch 驱动 Favorites 重载数据 */
+  @State favoriteRefreshTick: number = 0;
+
+  /**
+   * 页面重新显示（含从详情页收藏/取消收藏后返回）：通知收藏页刷新列表（M2.4 列表联动）。
+   * 收藏 Tab 的 aboutToAppear 只在首次构建时执行一次，若不做此联动，
+   * 从详情页返回后收藏页不会感知 FavoriteService 的数据变化。
+   */
+  onPageShow(): void {
+    this.favoriteRefreshTick += 1;
+  }
 
   build() {
     Tabs({ barPosition: BarPosition.End, index: this.currentIndex }) {
@@ -21,7 +32,7 @@ struct Index {
       .tabBar(this.TabLabel('发现', 0))
 
       TabContent() {
-        Favorites()
+        Favorites({ refreshTick: this.favoriteRefreshTick })
       }
       .tabBar(this.TabLabel('收藏', 1))
 

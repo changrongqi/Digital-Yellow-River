@@ -10,13 +10,18 @@
  * - 找不到对应条目 / 单层内容为空：对应区块显示占位，不崩溃。
  *
  * 五层级：图文介绍 intro / 考古发现 discovery / 历史事件 events / 相关诗词 poems / 现代文旅 tourism。
- * 收藏与笔记按钮属于 M2，本页暂不包含。
+ *
+ * M2.4（收藏入口提前实现，供用户端验证完整数据流）：
+ * - 顶部导航栏收藏按钮，状态切换走 FavoriteService.toggleFavorite；
+ * - 从本页返回主页时 Index.onPageShow 驱动收藏页刷新（列表联动）；
+ * - 笔记入口待 M2.3 笔记编辑页完成后接入。
  */
 
 import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Heritage, Poem } from '../model/Heritage';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { FavoriteService } from '../service/FavoriteService';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
@@ -28,6 +33,8 @@ struct Detail {
   @State heritage: Heritage | null = null;
   @State isLoading: boolean = true;
   @State isMockData: boolean = false;
+  /** 当前收藏状态（M2.4：随收藏按钮切换，返回主页后收藏页联动刷新） */
+  @State isFav: boolean = false;
   private targetId: string = '';
 
   aboutToAppear(): void {
@@ -38,6 +45,13 @@ struct Detail {
         this.targetId = String(idObj);
       }
     }
+    // FavoriteService 幂等初始化（主页已初始化则直接返回），
+    // 保证用户直接从本页冷启动（如通知/深链）时收藏功能同样可用
+    const hostContext = this.getUIContext().getHostContext();
+    if (hostContext !== undefined) {
+      FavoriteService.init(hostContext);
+    }
+    this.isFav = FavoriteService.isFavorite(this.targetId);
     this.loadData();
   }
 
@@ -90,6 +104,7 @@ struct Detail {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
           .margin({ left: 8 })
+        this.FavButton()
       }
       .width('100%')
       .padding({ left: 12, right: 20, top: 12, bottom: 12 })
@@ -192,6 +207,34 @@ struct Detail {
       .backgroundColor('#EFEBE9')
       .borderRadius(8)
       .margin({ right: 8 })
+  }
+
+  /**
+   * 收藏按钮（M2.4 收藏入口）。
+   * 状态区分：未收藏 = 白底棕字棕边；已收藏 = 棕底白字（主次高亮清晰区分）。
+   * ⚠️ 内部直读 this.isFav（踩坑 15：@Builder 状态源必须直读，禁止参数传入）。
+   */
+  @Builder
+  FavButton() {
+    Text(this.isFav ? '已收藏' : '收藏')
+      .fontSize(13)
+      .fontWeight(FontWeight.Medium)
+      .fontColor(this.isFav ? '#FFFFFF' : '#6D4C41')
+      .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+      .backgroundColor(this.isFav ? '#6D4C41' : '#FFFFFF')
+      .borderRadius(14)
+      .border({ width: 1, color: this.isFav ? '#6D4C41' : '#E0D6CC' })
+      .onClick(() => {
+        this.toggleFav();
+      })
+  }
+
+  /** 切换收藏状态（toggleFavorite 同步完成，按钮样式随 isFav 即时反转） */
+  private toggleFav(): void {
+    if (this.heritage === null) {
+      return;
+    }
+    this.isFav = FavoriteService.toggleFavorite(this.heritage.id);
   }
 
   /** 通用文字区块：图文介绍 / 考古发现 / 现代文旅 */

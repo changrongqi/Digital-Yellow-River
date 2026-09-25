@@ -95,6 +95,20 @@ export struct Favorites {
   /** itemId → Heritage 映射表（只读；预置数据加载完成后一次构建） */
   private heritageMap: Map<string, Heritage> = new Map();
 
+  /**
+   * 父页面刷新信号（M2.4 列表联动）：Index.onPageShow（含从详情页返回）时 +1，
+   * @Watch 触发重载数据——收藏 Tab 的 aboutToAppear 仅首次构建执行一次，
+   * 详情页收藏/取消收藏后的变化只能靠该信号感知。
+   */
+  @Prop @Watch('onRefreshTick') refreshTick: number = 0;
+
+  private onRefreshTick(): void {
+    // 加载中不重复刷（loadHeritages 完成后自带一次 refreshGroups）
+    if (this.refreshTick > 0 && !this.isLoading) {
+      this.refreshGroups();
+    }
+  }
+
   aboutToAppear(): void {
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
