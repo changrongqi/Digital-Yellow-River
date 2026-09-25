@@ -11,6 +11,10 @@
     {
       "name": "EntryAbility_label",
       "value": "label"
+    },
+    {
+      "name": "distributed_datasync_reason",
+      "value": "用于在登录同一华为账号的多台设备间同步您的收藏与笔记"
     }
   ]
 }

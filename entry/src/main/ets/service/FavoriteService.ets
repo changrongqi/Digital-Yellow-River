@@ -23,6 +23,7 @@ import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { Favorite } from '../model/Favorite';
 import { Note } from '../model/Note';
+import { SyncService } from './SyncService';
 
 const DOMAIN = 0x0000;
 const TAG = 'FavoriteService';
@@ -57,6 +58,9 @@ export class FavoriteService {
     if (FavoriteService.pref !== null) {
       return;
     }
+    // M3.1：激活分布式同步骨架（幂等；降级不影响下方本地逻辑）。
+    // 双写与远端合并（M3.2）在此骨架之上接线。
+    SyncService.init(context);
     try {
       const options: preferences.Options = { name: FavoriteService.STORE_NAME };
       FavoriteService.pref = preferences.getPreferencesSync(context, options);
