@@ -41,6 +41,8 @@ struct Detail {
   /** 本条目笔记列表（updatedAt 倒序，服务层已排序） */
   @State notes: Note[] = [];
   private targetId: string = '';
+  /** 用户数据变化监听句柄（远端合并/本地变更时刷新本页，M3.2；消失时注销防泄漏） */
+  private dataChangedHandler: () => void = (): void => {};
 
   aboutToAppear(): void {
     const params = router.getParams() as Record<string, Object> | undefined;
@@ -58,7 +60,17 @@ struct Detail {
     }
     this.isFav = FavoriteService.isFavorite(this.targetId);
     this.notes = FavoriteService.getNotesByItem(this.targetId);
+    // M3.2：远端 LWW 合并（或其他页面变更）时刷新收藏状态与笔记列表
+    this.dataChangedHandler = (): void => {
+      this.isFav = FavoriteService.isFavorite(this.targetId);
+      this.notes = FavoriteService.getNotesByItem(this.targetId);
+    };
+    FavoriteService.onDataChanged(this.dataChangedHandler);
     this.loadData();
+  }
+
+  aboutToDisappear(): void {
+    FavoriteService.offDataChanged(this.dataChangedHandler);
   }
 
   /** 页面重新显示（含从 NoteEdit 返回的同页实例）：刷新笔记列表与收藏状态 */

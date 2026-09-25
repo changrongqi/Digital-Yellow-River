@@ -15,6 +15,10 @@
  *    仅无法持久化（每次重启回到空数据），并记错误日志。
  * 6. 分层约定（计划书 §3）：pages 只做 UI，收藏/笔记读写一律走本服务；
  *    返回的数组是拷贝、对象按只读约定使用，修改必须走本服务的变更方法。
+ * 7. M3.2 双写与远端合并：所有变更 = 内存缓存 + Preferences 本地 + 分布式 KV 上抛
+ *    （SyncService，降级时仅本地）；远端变更经 LWW 合并进缓存（updatedAt 谁新谁赢，
+ *    相等 deviceId 兜底——与官方单版本 KV「同键多端修改以最新为准」语义一致）；
+ *    本地变更与远端合并后均经 onDataChanged 通知页面刷新 UI。
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -23,7 +27,7 @@ import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { Favorite } from '../model/Favorite';
 import { Note } from '../model/Note';
-import { SyncService } from './SyncService';
+import { SyncService, RemoteChanges } from './SyncService';
 
 const DOMAIN = 0x0000;
 const TAG = 'FavoriteService';
@@ -49,6 +53,10 @@ export class FavoriteService {
   private static notesCache: Note[] = [];
   /** 本机设备标识（M3 冲突判定兜底用） */
   private static device: string = '';
+  /** 远端变更合并处理器是否已注册（init 可能重入，只注册一次） */
+  private static mergeRegistered: boolean = false;
+  /** 数据变更监听者（本地 CRUD 与远端合并后通知，页面订阅刷新 UI） */
+  private static dataListeners: Array<() => void> = [];
 
   /**
    * 初始化：加载 Preferences 并把历史数据读入内存缓存。
@@ -59,8 +67,14 @@ export class FavoriteService {
       return;
     }
     // M3.1：激活分布式同步骨架（幂等；降级不影响下方本地逻辑）。
-    // 双写与远端合并（M3.2）在此骨架之上接线。
     SyncService.init(context);
+    // M3.2：注册远端变更合并处理器（init 可能因 Preferences 失败重入，只注册一次）
+    if (!FavoriteService.mergeRegistered) {
+      FavoriteService.mergeRegistered = true;
+      SyncService.onRemoteChange((changes: RemoteChanges) => {
+        FavoriteService.mergeRemoteChanges(changes);
+      });
+    }
     try {
       const options: preferences.Options = { name: FavoriteService.STORE_NAME };
       FavoriteService.pref = preferences.getPreferencesSync(context, options);
@@ -143,6 +157,8 @@ export class FavoriteService {
     };
     FavoriteService.favoritesCache.push(fav);
     FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
+    SyncService.syncFavorite(fav); // M3.2 双写：上抛分布式 KV（降级时空操作）
+    FavoriteService.notifyDataChanged();
     return true;
   }
 
@@ -156,6 +172,8 @@ export class FavoriteService {
     const removed: boolean = FavoriteService.favoritesCache.length < before;
     if (removed) {
       FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
+      SyncService.removeFavoriteSync(itemId); // M3.2 双写：移除分布式 KV 记录
+      FavoriteService.notifyDataChanged();
     }
     return removed;
   }
@@ -169,6 +187,8 @@ export class FavoriteService {
     fav.tags = FavoriteService.normalizeTags(tags);
     fav.updatedAt = Date.now();
     FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
+    SyncService.syncFavorite(fav); // M3.2 双写
+    FavoriteService.notifyDataChanged();
     return true;
   }
 
@@ -194,7 +214,7 @@ export class FavoriteService {
    * 内置标签仍作为 getAllTags 的常量候选保留，可再次选用）。
    */
   static removeTag(tag: string): void {
-    let changed: boolean = false;
+    const affected: Favorite[] = [];
     for (let i = 0; i < FavoriteService.favoritesCache.length; i++) {
       const fav: Favorite = FavoriteService.favoritesCache[i];
       const idx: number = fav.tags.indexOf(tag);
@@ -203,11 +223,15 @@ export class FavoriteService {
         next.splice(idx, 1);
         fav.tags = next;
         fav.updatedAt = Date.now();
-        changed = true;
+        affected.push(fav);
       }
     }
-    if (changed) {
+    if (affected.length > 0) {
       FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
+      for (let i = 0; i < affected.length; i++) {
+        SyncService.syncFavorite(affected[i]); // M3.2 双写：逐条上抛被更新的收藏
+      }
+      FavoriteService.notifyDataChanged();
     }
   }
 
@@ -254,6 +278,8 @@ export class FavoriteService {
     };
     FavoriteService.notesCache.push(note);
     FavoriteService.persist(FavoriteService.KEY_NOTES, FavoriteService.notesCache);
+    SyncService.syncNote(note); // M3.2 双写：上抛分布式 KV（降级时空操作）
+    FavoriteService.notifyDataChanged();
     return true;
   }
 
@@ -267,6 +293,8 @@ export class FavoriteService {
     note.content = trimmed;
     note.updatedAt = Date.now();
     FavoriteService.persist(FavoriteService.KEY_NOTES, FavoriteService.notesCache);
+    SyncService.syncNote(note); // M3.2 双写
+    FavoriteService.notifyDataChanged();
     return true;
   }
 
@@ -277,8 +305,127 @@ export class FavoriteService {
     const removed: boolean = FavoriteService.notesCache.length < before;
     if (removed) {
       FavoriteService.persist(FavoriteService.KEY_NOTES, FavoriteService.notesCache);
+      SyncService.removeNoteSync(noteId); // M3.2 双写：移除分布式 KV 记录
+      FavoriteService.notifyDataChanged();
     }
     return removed;
+  }
+
+  // ==================== 页面刷新通知（M3.2） ====================
+
+  /** 订阅用户数据变化（本地 CRUD 与远端合并后触发），页面在 aboutToAppear 注册 */
+  static onDataChanged(listener: () => void): void {
+    FavoriteService.dataListeners.push(listener);
+  }
+
+  /** 取消订阅（页面 aboutToDisappear 调用，传入注册时的同一函数引用） */
+  static offDataChanged(listener: () => void): void {
+    const idx: number = FavoriteService.dataListeners.indexOf(listener);
+    if (idx >= 0) {
+      FavoriteService.dataListeners.splice(idx, 1);
+    }
+  }
+
+  private static notifyDataChanged(): void {
+    for (let i = 0; i < FavoriteService.dataListeners.length; i++) {
+      FavoriteService.dataListeners[i]();
+    }
+  }
+
+  /**
+   * 远端变更 LWW 合并（M3.2，SyncService 回调触发；本服务是数据唯一权威）。
+   *
+   * 合并规则（与官方单版本 KV「同键多端修改以最新为准」语义对齐，应用层显式化）：
+   * - 远端记录本地不存在 → 直接采纳（远端新增）；
+   * - 双端版本不同 → LWW（updatedAt 谁新谁赢，相等 deviceId 字典序小者胜）：
+   *   远端胜 → 本地替换为远端版本 + 记 conflictLog；
+   *   本机胜 → 保留本机并回写 KV（autoSync 推送让对端收敛，本机 REMOTE 订阅不会
+   *   收到自己 put 的回声，无回环）+ 记 conflictLog；
+   * - 版本完全一致（updatedAt 与 deviceId 均同）→ 无操作。
+   * - 远端删除 → 本地移除（删除通知不带时间戳，无墓碑可比，按「删除生效」简化处理；
+   *   代价是删除与本地并发修改时本地修改丢失——小体量用户数据下可接受，不记台账）。
+   * 合并结果落 Preferences 并通知页面刷新。
+   */
+  private static mergeRemoteChanges(changes: RemoteChanges): void {
+    let favChanged: boolean = false;
+    for (let i = 0; i < changes.upsertFavorites.length; i++) {
+      const remote: Favorite = changes.upsertFavorites[i];
+      const local: Favorite | null = FavoriteService.findFavorite(remote.itemId);
+      if (local === null) {
+        FavoriteService.favoritesCache.push(remote);
+        favChanged = true;
+      } else if (local.updatedAt !== remote.updatedAt || local.deviceId !== remote.deviceId) {
+        if (SyncService.lwwRemoteWins(local.updatedAt, local.deviceId, remote.updatedAt, remote.deviceId)) {
+          FavoriteService.replaceFavoriteByItemId(remote.itemId, remote);
+          SyncService.recordConflict(remote.itemId, '收藏双端并发修改，保留较新的远端版本');
+          favChanged = true;
+        } else {
+          SyncService.syncFavorite(local);
+          SyncService.recordConflict(remote.itemId, '收藏双端并发修改，保留较新的本机版本');
+        }
+      }
+    }
+    for (let i = 0; i < changes.deletedFavoriteItemIds.length; i++) {
+      const itemId: string = changes.deletedFavoriteItemIds[i];
+      if (FavoriteService.findFavorite(itemId) !== null) {
+        FavoriteService.favoritesCache = FavoriteService.filterOutFavorite(FavoriteService.favoritesCache, itemId);
+        favChanged = true;
+      }
+    }
+    if (favChanged) {
+      FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
+    }
+
+    let noteChanged: boolean = false;
+    for (let i = 0; i < changes.upsertNotes.length; i++) {
+      const remote: Note = changes.upsertNotes[i];
+      const local: Note | null = FavoriteService.findNote(remote.id);
+      if (local === null) {
+        FavoriteService.notesCache.push(remote);
+        noteChanged = true;
+      } else if (local.updatedAt !== remote.updatedAt || local.deviceId !== remote.deviceId) {
+        if (SyncService.lwwRemoteWins(local.updatedAt, local.deviceId, remote.updatedAt, remote.deviceId)) {
+          FavoriteService.replaceNoteById(remote.id, remote);
+          SyncService.recordConflict(remote.id, '笔记双端并发修改，保留较新的远端版本');
+          noteChanged = true;
+        } else {
+          SyncService.syncNote(local);
+          SyncService.recordConflict(remote.id, '笔记双端并发修改，保留较新的本机版本');
+        }
+      }
+    }
+    for (let i = 0; i < changes.deletedNoteIds.length; i++) {
+      const noteId: string = changes.deletedNoteIds[i];
+      if (FavoriteService.findNote(noteId) !== null) {
+        FavoriteService.notesCache = FavoriteService.filterOutNote(FavoriteService.notesCache, noteId);
+        noteChanged = true;
+      }
+    }
+    if (noteChanged) {
+      FavoriteService.persist(FavoriteService.KEY_NOTES, FavoriteService.notesCache);
+    }
+
+    if (favChanged || noteChanged) {
+      FavoriteService.notifyDataChanged();
+    }
+  }
+
+  private static replaceFavoriteByItemId(itemId: string, next: Favorite): void {
+    for (let i = 0; i < FavoriteService.favoritesCache.length; i++) {
+      if (FavoriteService.favoritesCache[i].itemId === itemId) {
+        FavoriteService.favoritesCache[i] = next;
+        return;
+      }
+    }
+  }
+
+  private static replaceNoteById(noteId: string, next: Note): void {
+    for (let i = 0; i < FavoriteService.notesCache.length; i++) {
+      if (FavoriteService.notesCache[i].id === noteId) {
+        FavoriteService.notesCache[i] = next;
+        return;
+      }
+    }
   }
 
   // ==================== 内部实现 ====================

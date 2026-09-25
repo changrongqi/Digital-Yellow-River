@@ -124,7 +124,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | 编号 | 子任务 | 内容 | 状态 |
 |---|---|---|---|
 | M3.1 | 权限声明 + SyncService 骨架 | DISTRIBUTED_DATASYNC 权限；distributedKVStore 单版本 KV 初始化 + 降级（失败仅记日志不崩溃）；LWW 冲突判定 + conflictLog 维护；on('dataChange') 订阅骨架 | ✅ |
-| M3.2 | FavoriteService 双写改造 | 收藏/笔记变更时本地 Preferences + 分布式 KV 双写；收到远端变更回调后 LWW 合并进内存缓存并刷 UI；单机自动降级 | ⬜ |
+| M3.2 | FavoriteService 双写改造 | 收藏/笔记变更时本地 Preferences + 分布式 KV 双写；收到远端变更回调后 LWW 合并进内存缓存并刷 UI；单机自动降级 | ✅ |
 | M3.3 | 同步面板 | Index 第 3 个 Tab：进度 / 最后同步时间 / 冲突记录数 / 在线设备数；单机降级「等待设备上线」；手动 sync 入口 | ⬜ |
 | M3.4 | 编译自测基线 + 真机联调待办 | 构建 BUILD SUCCESSFUL + 告警基线比对；整理真机联调操作清单（签名配置、组网、验证步骤）写入计划书 | ⬜ |
 
@@ -257,3 +257,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-26 | M3 拆解为 M3.1~M3.4 子任务表（动态演进）并确定验证策略：用户无鸿蒙真机（仅平板模拟器，见新增 O7），按「代码实现 + 编译自测」为基线推进；模拟器仅可验证单机降级路径，真实双向同步需两台真机（同华为账号 + 同 WLAN + 蓝牙）联调留待设备到位。同时明确代码来源约定：API 用法对齐华为官方文档（distributedKVStore/distributedDeviceManager 接口名以官方为准），架构与业务逻辑为本项目自主设计（用户问询后确认） |
 | 2026-09-26 | M3.1 完成（构建 BUILD SUCCESSFUL，告警与 O3 基线完全一致零新增）：① module.json5 声明 `ohos.permission.DISTRIBUTED_DATASYNC`（reason 走 $string 资源）；② 新增 service/SyncService.ets 骨架——单版本 KV（键 fav_{itemId}/note_{noteId}，值记录 JSON）+ autoSync + SUBSCRIBE_TYPE_REMOTE 订阅（本机 put 不自触发）、初始化失败降级纯本地（不崩溃不影响 M2 功能）、LWW 判定纯函数（updatedAt 胜，相等 deviceId 字典序小者胜保证两端收敛）、conflictLog 台账（上限 50 丢最旧）+ getStatus 快照、远端变更解析为 RemoteChanges 事件（监听者注册接口留给 M3.2 接线）、线格式逐字段显式转换（踩坑 1/2/4）；③ FavoriteService.init 幂等激活 SyncService.init（行为不变，双写留 M3.2）。期间实测 2 个 SDK 漂移（SecurityLevel 无 S0、无 putSync）致一次编译失败，已查 d.ts 修正并新增踩坑第 18 条 |
 | 2026-09-26 | 新增工作流硬性规则（用户要求）：凡稍微复杂的代码/结构搭建（新 kit、不熟悉 API、架构接线、较大新逻辑）动手前必须先查真实官方文档、示例与教学，并与本机 SDK d.ts 双重核对，官方推荐模式优先于自创写法（与踩坑 18 配套） |
+| 2026-09-26 | M3.2 完成（构建 BUILD SUCCESSFUL，告警与 O3 基线一致零新增，仅 Detail 3 条行号漂移）：FavoriteService 双写改造—— ① 7 个变更方法（收藏增/删/改标签/删标签 + 笔记增/改/删）在内存缓存 + Preferences 之后上抛 SyncService（降级时空操作，本地不受影响）；② mergeRemoteChanges LWW 合并（远端新增直接采纳；双端版本不同走 lwwRemoteWins，远端胜替换+记台账，本机胜保留并回写 KV 让对端收敛；远端删除按「删除生效」简化——删除通知无时间戳可比，注释说明取舍）；③ init 注册合并处理器（重入只注册一次）+ onDataChanged/offDataChanged 页面通知 API；④ UI 联动：Index.aboutToAppear 提前 init（防 TabContent 懒加载导致合并处理器注册过晚）并订阅刷新信号，Detail 订阅/注销（aboutToDisappear 防泄漏）刷新收藏状态与笔记列表。开工前已按新规则核对官方「跨设备同步 KV Store」指南：单版本 KV 官方语义即「同键多端修改以最新为准」（与应用层 LWW 一致）、put/delete 成功即触发 autoSync（双写无需逐次手动 sync）、手动 sync(deviceIds, PUSH_PULL) 留作 M3.3 面板入口 |

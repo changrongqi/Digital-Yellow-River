@@ -7,6 +7,7 @@
 
 import { Discovery } from './Discovery';
 import { Favorites } from './Favorites';
+import { FavoriteService } from '../service/FavoriteService';
 
 @Entry
 @Component
@@ -14,6 +15,19 @@ struct Index {
   @State currentIndex: number = 0;
   /** 收藏页刷新信号：onPageShow（含从详情页返回）时 +1，经 @Prop @Watch 驱动 Favorites 重载数据 */
   @State favoriteRefreshTick: number = 0;
+
+  aboutToAppear(): void {
+    // 提前初始化用户数据服务（幂等）：注册 SyncService 远端变更合并处理器，
+    // 避免 TabContent 懒加载导致收藏 Tab 未打开时远端变更无人合并（M3.2）
+    const context = this.getUIContext().getHostContext();
+    if (context !== undefined) {
+      FavoriteService.init(context);
+    }
+    // 用户数据变化（本地 CRUD 与远端 LWW 合并后均会触发）→ 刷新收藏页（M3.2 列表联动）
+    FavoriteService.onDataChanged(() => {
+      this.favoriteRefreshTick += 1;
+    });
+  }
 
   /**
    * 页面重新显示（含从详情页收藏/取消收藏后返回）：通知收藏页刷新列表（M2.4 列表联动）。
