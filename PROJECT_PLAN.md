@@ -211,6 +211,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 - **一次只做一个子任务**（如 M1.1 → 验证 → commit → 汇报 → 下一个）。
 - **开工前先读第 6 节踩坑清单并逐条对照**：清单是硬约束，不是参考资料；反复踩同一个坑视为流程失误。
+- **复杂代码先查官方文档（用户要求，2026-09-26 起硬性）**：凡涉及稍微复杂的代码与结构搭建——新 kit / 不熟悉的 API / 新架构接线 / 超过约 30 行的新逻辑——动手前**必须先查真实的官方文档、示例与教学**（华为开发者文档 + 本机 SDK d.ts 双重核对），确认 API 签名、枚举成员与官方推荐用法后再写。网上旧版 OpenHarmony 文档（API 9/10 时代）与当前 HarmonyOS NEXT SDK 存在漂移（踩坑 18 实测），**以本机 SDK d.ts 为最终依据**；官方示例的推荐模式（如 autoSync 与手动 sync 的搭配、dataChange 订阅时机）优先于自创写法。
 - **同一文件禁止并行修改**：并发写同一文件会互相覆盖（曾导致踩坑第 14 条丢失），对同一文件的多次改动必须顺序执行，改完回读校验。
 - 每完成一个子任务即 commit 一次，commit message 用 `[M里程碑.子任务] 摘要` 格式，如 `[M1.1] 新增数据模型(枚举+Heritage/Favorite/Note/SyncStatus)`。
 - 同步更新本计划书的「里程碑状态」与「修订记录」。
@@ -255,3 +256,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-25 | 新增观察项 O6（环境问题）：模拟器偶现青绿色背景伪影——弹窗场景偶发 GPU 合成占位色块（一帧出现、交互后消失、不操作则停留、斜线边界）；全库 Grep 确认调色板无青色，判定为 DevEco 模拟器渲染合成未合帧，真机不受影响。同时澄清发现页「N 处遗产」为筛选结果计数（非总数），与筛选同源联动无需改动 |
 | 2026-09-26 | M3 拆解为 M3.1~M3.4 子任务表（动态演进）并确定验证策略：用户无鸿蒙真机（仅平板模拟器，见新增 O7），按「代码实现 + 编译自测」为基线推进；模拟器仅可验证单机降级路径，真实双向同步需两台真机（同华为账号 + 同 WLAN + 蓝牙）联调留待设备到位。同时明确代码来源约定：API 用法对齐华为官方文档（distributedKVStore/distributedDeviceManager 接口名以官方为准），架构与业务逻辑为本项目自主设计（用户问询后确认） |
 | 2026-09-26 | M3.1 完成（构建 BUILD SUCCESSFUL，告警与 O3 基线完全一致零新增）：① module.json5 声明 `ohos.permission.DISTRIBUTED_DATASYNC`（reason 走 $string 资源）；② 新增 service/SyncService.ets 骨架——单版本 KV（键 fav_{itemId}/note_{noteId}，值记录 JSON）+ autoSync + SUBSCRIBE_TYPE_REMOTE 订阅（本机 put 不自触发）、初始化失败降级纯本地（不崩溃不影响 M2 功能）、LWW 判定纯函数（updatedAt 胜，相等 deviceId 字典序小者胜保证两端收敛）、conflictLog 台账（上限 50 丢最旧）+ getStatus 快照、远端变更解析为 RemoteChanges 事件（监听者注册接口留给 M3.2 接线）、线格式逐字段显式转换（踩坑 1/2/4）；③ FavoriteService.init 幂等激活 SyncService.init（行为不变，双写留 M3.2）。期间实测 2 个 SDK 漂移（SecurityLevel 无 S0、无 putSync）致一次编译失败，已查 d.ts 修正并新增踩坑第 18 条 |
+| 2026-09-26 | 新增工作流硬性规则（用户要求）：凡稍微复杂的代码/结构搭建（新 kit、不熟悉 API、架构接线、较大新逻辑）动手前必须先查真实官方文档、示例与教学，并与本机 SDK d.ts 双重核对，官方推荐模式优先于自创写法（与踩坑 18 配套） |
