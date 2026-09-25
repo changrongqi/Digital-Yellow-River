@@ -1,6 +1,7 @@
 {
   "src": [
     "pages/Index",
-    "pages/Detail"
+    "pages/Detail",
+    "pages/NoteEdit"
   ]
 }
