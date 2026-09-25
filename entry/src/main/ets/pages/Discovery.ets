@@ -147,16 +147,21 @@ export struct Discovery {
    */
   private filterList(): Heritage[] {
     const kw: string = this.keyword.trim();
+    // 循环前缓存状态变量读数（IDE 规则 hp-arkui-no-state-var-access-in-loop）：
+    // @State 每次读取都会触发依赖追踪，循环内反复读有性能开销，先拷到局部变量。
+    const era: string = this.selectedEra;
+    const type: string = this.selectedType;
+    const city: string = this.selectedCity;
     const result: Heritage[] = [];
     for (let i = 0; i < this.heritageList.length; i++) {
       const item: Heritage = this.heritageList[i];
-      if (this.selectedEra !== ALL_FILTER && item.era !== this.selectedEra) {
+      if (era !== ALL_FILTER && item.era !== era) {
         continue;
       }
-      if (this.selectedType !== ALL_FILTER && item.type !== this.selectedType) {
+      if (type !== ALL_FILTER && item.type !== type) {
         continue;
       }
-      if (this.selectedCity !== ALL_FILTER && item.city !== this.selectedCity) {
+      if (city !== ALL_FILTER && item.city !== city) {
         continue;
       }
       if (kw.length > 0 && !item.name.includes(kw) && !item.summary.includes(kw)) {
