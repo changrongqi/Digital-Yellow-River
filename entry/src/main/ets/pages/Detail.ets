@@ -31,6 +31,7 @@ import { FavoriteService } from '../service/FavoriteService';
 import { getEraTheme } from '../utils/EraTheme';
 import { formatDateTime } from '../utils/TimeFormat';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
+import { ImageGallery } from '../components/ImageGallery';
 
 const DOMAIN = 0x0000;
 const TAG = 'Detail';
@@ -459,6 +460,25 @@ struct Detail {
               .borderRadius(8)
               .margin({ top: 10 })
             }, (artifact: Artifact) => artifact.name)
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding(16)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .margin({ top: 20 })
+        }
+
+        // 遗址级图集（M1.10：真实图片占位 + 点击放大，动态布局）
+        if (this.heritage !== null && this.heritage.detail.images.length > 0) {
+          Column() {
+            Text('遗址图集')
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#3E2723')
+              .width('100%')
+            ImageGallery({ images: this.heritage.detail.images })
+              .margin({ top: 12 })
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)

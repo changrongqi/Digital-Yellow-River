@@ -12,7 +12,7 @@ import { util } from '@kit.ArkTS';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { HeritageEra, HeritageType, HeritageCity, isValidEra, isValidType, isValidCity } from '../model/Types';
-import { Heritage, HeritageDetail, HeritageEvent, Poem, SpecItem, Artifact, TourismInfo, TourismGuide } from '../model/Heritage';
+import { Heritage, HeritageDetail, HeritageEvent, Poem, SpecItem, Artifact, TourismInfo, TourismGuide, HeritageImage } from '../model/Heritage';
 
 const DOMAIN = 0x0000;
 const TAG = 'HeritageDataLoader';
@@ -107,7 +107,8 @@ export class HeritageDataLoader {
         tourism: HeritageDataLoader.getTourism(detailObj, 'tourism'),
         highlights: HeritageDataLoader.getStrArray(detailObj, 'highlights'),
         specs: HeritageDataLoader.getSpecArray(detailObj, 'specs'),
-        artifacts: HeritageDataLoader.getArtifactArray(detailObj, 'artifacts')
+        artifacts: HeritageDataLoader.getArtifactArray(detailObj, 'artifacts'),
+        images: HeritageDataLoader.getImageArray(detailObj, 'images')
       };
 
       const item: Heritage = {
@@ -184,7 +185,8 @@ export class HeritageDataLoader {
           figures: [],
           artifacts: [],
           furtherReading: '',
-          commentary: ''
+          commentary: '',
+          images: []
         });
       } else {
         const obj = item as Record<string, Object>;
@@ -202,7 +204,8 @@ export class HeritageDataLoader {
           figures: HeritageDataLoader.getStrArray(obj, 'figures'),
           artifacts: HeritageDataLoader.getStrArray(obj, 'artifacts'),
           furtherReading: HeritageDataLoader.getStr(obj, 'furtherReading'),
-          commentary: HeritageDataLoader.getStr(obj, 'commentary')
+          commentary: HeritageDataLoader.getStr(obj, 'commentary'),
+          images: HeritageDataLoader.getImageArray(obj, 'images')
         });
       }
     }
@@ -311,5 +314,33 @@ export class HeritageDataLoader {
       interpretation: HeritageDataLoader.getStr(obj, 'interpretation')
     };
     return info;
+  }
+
+  /**
+   * M1.10：解析图片数组为 HeritageImage 对象（path/caption/source 逐字段显式转换）。
+   * 全字段缺失的项跳过；path 允许为空串（= 待填充占位，UI 显示占位卡）。
+   */
+  private static getImageArray(rec: Record<string, Object>, key: string): HeritageImage[] {
+    const v: Object | undefined = rec[key];
+    if (v === undefined || v === null) {
+      return [];
+    }
+    const arr = v as Object[];
+    const result: HeritageImage[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const obj = arr[i] as Record<string, Object>;
+      const path: string = HeritageDataLoader.getStr(obj, 'path');
+      const caption: string = HeritageDataLoader.getStr(obj, 'caption');
+      if (path === '' && caption === '') {
+        continue; // 全空的项跳过
+      }
+      const img: HeritageImage = {
+        path: path,
+        caption: caption,
+        source: HeritageDataLoader.getStr(obj, 'source')
+      };
+      result.push(img);
+    }
+    return result;
   }
 }

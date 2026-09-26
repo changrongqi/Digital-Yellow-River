@@ -20,9 +20,21 @@
 > **产品定位（2026-09-27 用户明确，最高优先级）**：本应用是**沉浸式文化遗产体验**产品，不是精简数据知识库。
 > 三大硬性要求：
 > 1. **信息量目标 = 现状的 10 倍**：内容必须联网搜索真实官方/权威来源（官网、博物馆、文旅厅、文物局、学术报道）编辑抄录并核证，**禁止凭记忆写精简数据**；凡我基于知识草拟的内容，一律视为「待官方核证草稿」，交付前必须经搜索比对。
-> 2. **事件可点开**：遗址详情页的每个历史事件都可作为入口，点击打开**事件子详情页**做专题讲解（背景、经过、影响、相关人物/文物、延伸阅读）。
+> 2. **事件可点开**：遗址详情页的每个历史事件都可作为入口，点击打开**事件子详情页**做专题讲解（背景/经过/影响/相关人物文物/延伸阅读/深度解说）。
 > 3. **文旅深度化**：文旅信息须含**行程规划**（推荐路线/时长/交通/串联景点）、参观指引（开放时间/票务）、深度解说（看什么、怎么看、背后的故事），让用户能据此规划一次真实的文化旅行。
+> 4. **考古内容配真实图片**（2026-09-27 增补）：遗址考古内容（文物照片/遗址/发掘现场）需要**真实图片**，页面内显示缩略图、**点击打开放大**（Lightbox）、**动态布局**（响应式自适应）；图片须可点开查看大图，实现细节见 M1.10。
 > 数据规模策略：23 条遗址 × 10 倍内容，按遗址分批联网搜证扩充（每批完成后经用户抽查校验），子任务进度见 M1.7。
+
+### 1.1 内容深写与搜证方法论（M1.7~M1.9 实践提炼，持续更新）
+
+> 本小节把「联网搜证 + 深写」的实操方法沉淀为规范，后续每批遗址深写都按此执行。
+
+- **搜证来源优先级**：遗址所在地**县政府官网**（简介/开馆公告/A 级景区名录，如渑池县政府）> **省级文物局/文旅厅** > 省政府门户（市县栏目）> **国家文物局官网**（含「中国考古百年」专栏、博物馆年报系统）> 新华社/人民日报/河南日报等权威媒体 > 政协/方志等地方史料 > 实地攻略（仅参考参观动线与体验描述，数字一律以官方为准）。
+- **核证纪律**：① 关键数字（年代/面积/开放时间/电话/出土数量）必须至少 1 个官方来源；② 两条官方来源数字冲突时（如第四次发掘面积 600㎡ vs 200㎡），以最新县政府口径为准，正文不写死争议数；③ 每条事件 furtherReading 注明「机构《篇名》（日期）」全称；④ 新增亮点（如玉钺=军事王权、酿酒工艺）必须能在官方报道中找到对应表述，禁止从科普自媒体转述未经官方证实的说法。
+- **事件深写结构**（HeritageEvent 字段填写顺序）：year+title（时间轴主文案）→ summary（一句话概述）→ background（时代背景/前因）→ process（具体经过：日期/人物/器物细节）→ impact（意义/后续影响）→ figures/artifacts（人物与文物清单，宁缺毋滥）→ commentary（深度解说：官方研究细节/学者评价/冷知识）→ furtherReading（来源出处，2~4 个）。
+- **文旅深写结构**（TourismInfo）：overview（公园/景区概览、荣誉、场馆简介）→ guide（hours/tickets/contact/address 四键值，**以最新开馆公告为准**）→ itinerary（建议时长 / 推荐动线 / 交通 / 串联联动景区，`\n` 分段）→ interpretation（「看什么、怎么看」按维度分点：地层/器物/聚落/考古史等）。
+- **双份同步纪律（R3）**：rawfile 与 Mock 同构；Mock 模板字符串内 `\n` 写 `\\n`（踩坑 19）；每批写毕用 PowerShell `ConvertFrom-Json`（rawfile）+ Node 模拟「模板求值→JSON.parse」（mock）双份校验条数/字段。
+- **图片资源现状（2026-09-27 实测）**：WebSearch 返回的官方页面配图链接经搜索代理缓存（`aka.doubaocdn.com` 等）**不可稳定下载**（实测 404），且无法核证版权归属 → **结构先行**：模型预留 images 数组、UI 做缩略图卡 + 点击 Lightbox 放大 + 动态布局（M1.10），真实图片待用户提供或稳定渠道获取后填入 rawfile（本地离线打包，遵守零网络依赖约束）。
 
 ## 2. 技术约束
 
@@ -51,6 +63,8 @@ entry/src/main/
 │   │   ├── NoteEdit.ets       # 笔记编辑页
 │   │   ├── Favorites.ets      # 收藏页（按标签分组）
 │   │   └── SyncPanel.ets      # 同步状态面板
+│   ├── components/            # 可复用 UI 组件（M1.10 起）
+│   │   └── ImageGallery.ets   # 图集组件：缩略图网格 + 点击 Lightbox 放大（动态布局）
 │   ├── model/                 # 数据模型层（类型定义，无逻辑）
 │   │   ├── Types.ets          # 三个枚举（年代/类型/城市）
 │   │   ├── Heritage.ets       # 文化条目 + 详情（五层级）
@@ -114,6 +128,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M1.7 | 内容 10 倍扩充 + 文旅深化（样本先行，联网搜证） | 23 条遗址 × 10 倍信息量（联网搜索官方/权威来源核证，禁止凭记忆精简）；文旅含行程规划/参观指引/深度解说；**仰韶村已首批完成联网搜证深写**（intro 4 段/discovery 5 段/events 8 条含子详情/tourism 行程+指引+解说/highlights 8/specs 12/artifacts 6，待用户验证后按遗址分批推进） | 🚧 |
 | M1.8 | 事件子详情页 | 遗址详情页每个历史事件可点击，打开事件专题页（背景/经过/影响/相关人物文物/延伸阅读）；events 升级为结构化对象（含详情字段，模型只增不改）；仰韶村 events 8 条已含完整专题字段，其余随 M1.7 分批深化 | ✅ |
 | M1.9 | 文旅深度化迭代（用户复验反馈） | ① tourism 由 string 升级为 TourismInfo 结构化对象（overview 概览 / guide 参观指引键值 / itinerary 行程规划 / interpretation 深度解说，加载层旧字符串自动迁移为 overview）；② Detail 文旅页签改卡片化 UI（概览正文 → 参观指引信息卡 → 行程规划段落卡 → 深度解说卡，空块隐藏）；③ HeritageEvent 新增 commentary（深度解说），事件子详情页独立段落渲染；④ 仰韶村二轮联网搜证（国家文物局/新华网/省文旅厅/河南日报/渑池县政府）补全 8 条事件 commentary+furtherReading 出处，tourism 结构化深写 | ✅ |
+| M1.10 | 遗址图片框架（真实图片占位 + 点击放大） | 模型新增 HeritageImage（path/caption/source），HeritageDetail 与 HeritageEvent 各加 images 数组（缺失兜底空数组，只增不改）；新增 components/ImageGallery.ets 图集组件——**动态布局**（Flex wrap 响应式网格，缩略图 + 图注 + 来源）、**点击缩略图 → 全屏 Lightbox 放大**（bindContentCover 页面级遮罩不被 Scroll 裁剪，深色遮罩 / ✕ 关闭 / 页码 / 左右切换 / 图注来源）；图片用 resourceManager.getRawFileContent + @kit.ImageKit createImageSource/createPixelMap **动态加载 rawfile**（Image 组件吃 PixelMap，d.ts 已核证）；path 为空或加载失败显示**占位卡**（虚线框 +「图片待补充」+ 建议来源）；考古页签「遗址图集」与事件子详情页「图集」已接入，仰韶村已填 4 张遗址级 + 1921/2020/2021 事件级占位条目（path 空）。**已实测官方图片 URL 经搜索代理缓存不可下载（404）→ 结构完成、图片待用户提供/稳定渠道后填入 rawfile**（零网络依赖离线打包） | ✅ |
 
 ### M2 收藏与笔记全流程（增删改查、标签管理）+ 本地持久化（重启不丢）
 
@@ -309,3 +324,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-27 | **产品定位确立（用户明确，最高优先级）**：应用是**沉浸式文化遗产体验**产品，非精简数据知识库。三大硬性要求写入 §1：① 信息量 = 现状 10 倍，内容必须联网搜索官方/权威来源核证，**禁止凭记忆写精简数据**（凡 AI 草拟内容一律视为「待官方核证草稿」，交付前经搜索比对）；② **事件可点开**——遗址详情页每个事件点击进事件子详情页做专题讲解（背景/经过/影响/相关人物文物/延伸阅读，新增子任务 M1.8，events 升级结构化对象）；③ **文旅深度化**——含行程规划（路线/时长/交通/串联景点）、参观指引（开放时间/票务）、深度解说。23 条遗址 × 10 倍按遗址分批联网搜证扩充（每批用户抽查校验），M1.7 扩编为此目标并 🚧。同时补踩坑第 20 条（layoutWeight 无高度约束撑高） |
 | 2026-09-27 | **M1.8 完成 + 仰韶村首批联网搜证深写（构建 BUILD SUCCESSFUL，告警维持 O3 基线 11 条零新增）**：① 事件子详情页全链路——model/Heritage.ets 新增 `HeritageEvent` 接口（year/title/summary/background/process/impact/figures/artifacts/furtherReading），HeritageDetail.events 由 `string[]` 升级为 `HeritageEvent[]`（模型只增不改，旧字符串数据加载层正则自动迁移）；Loader 增 `getEventArray` 逐字段显式转换（title 空跳过）；Detail.ets 时间轴改结构化渲染、条目可点击 → `openEventDetail(index)` 经 router.pushUrl 带 { heritageId, eventIndex } 跳转；新建 pages/EventDetail.ets 事件专题页（按 id 重新取数 + getEraTheme 年代渐变英雄横幅 + 背景/经过/影响三段 + 人物 chips + 文物卡 + 延伸阅读出处，越界返回 null 不崩溃）并注册 main_pages.json（踩坑 14）；② **仰韶村深写全部来自联网搜证的官方/权威来源**（渑池县政府 3 篇/河南省文物局/河南省政府门户/三门峡市政协网/北京青年报/国家文物局年报/实探攻略，每条事件 furtherReading 注明出处）：intro 4 段（~1300 字，位置命名/仰韶文化定义/考古学意义/彩陶与小口尖底瓶酿酒说）、discovery 5 段（1920 刘长山 600 余件石器 → 1921 首发掘 36 天 17 点袁复礼绘中国第一张田野考古地形图 → 1951 夏鼐驳「西来说」 → 1980—1981 第三次 → 2020 第四次多学科 → 2021 象牙镯+发酵酒丝蛋白/2022 大型房址壕沟/2024 遗传连续性先民面貌复原）、events 8 条结构化对象（各含完整 background/process/impact/figures/artifacts/furtherReading）、tourism 4 段（概览+【参观指引】博物馆 9:00-17:00 周一闭馆免费 0398-3068878+【行程规划】2.5-3.5 小时动线+观光车 10 元+【深度解说·看什么怎么看】）、highlights 8 条/specs 12 项/artifacts 6 件；③ MockHeritages 仰韶村 mock 条目与 rawfile 完全同步（R3，模板字符串值内分段 `\\n` 守踩坑 19，events 8 条单行 JSON）；④ rawfile 23 条/mock 4 条双份 JSON 校验通过。**用户验证通过后**按遗址分批联网搜证深写其余 22 条（每批用户抽查） |
 | 2026-09-27 | **M1.9 完成（文旅深度化迭代，用户复验反馈「事件详情页信息仍精简 + 文旅页签 UI 太简陋」；构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）**：① 模型——tourism 由 string 升级为 TourismInfo（overview/guide{hours,tickets,contact,address}/itinerary/interpretation），Loader `getTourism` 旧字符串自动迁移为 overview、guide 子对象逐键转换（无 keys 兜底空串），UI 按结构化卡片渲染；HeritageEvent 新增 commentary（深度解说），加载层两分支兜底空串；② UI——Detail.ets 删除通用 BodyTab，文旅页签改 TourismTab 卡片化（概览正文 → 参观指引信息卡（主题色标签键值行）→ 行程规划段落卡（`\n` 分段 + 主题色竖块锚点）→ 深度解说卡（soft 浅主题底，与白卡主次区分），空块隐藏、全空占位）；EventDetail.ets 新增「深度解说」soft 底段落渲染 commentary；③ **仰韶村二轮联网搜证**（国家文物局官网陈星灿《中国考古学百年成就》/新华网百年纪念与发酵酒报道/河南省文旅厅第四次发掘成果发布/河南省文物局工作站研学基地/河南日报酿酒史/渑池县政府博物馆简介与 2024 开馆公告/国家文物局年报）：8 条事件全量补 commentary 与 furtherReading 出处（1921 补 12 月 1 日结束口径/4 月住 8 天 4 木箱/安特生旧居王二保窑洞/陈星灿评价；1923 补《甘肃考古记》《河南的史前遗址》/远东古物博物馆/疑古思潮与王巍本土起源论；2021 重点补玉钺=军事王权、玉环=红山风格证中原-东北交流、玉璜玛瑙彩绘陶橡子果核首现、酿酒=斯坦福合作 8 尖底瓶残留谷芽酒+曲酒两工艺/甲骨文酒醴对照、丝绸=14 土样 2 个检出丝蛋白/刘海旺养蚕缫丝论、习总书记贺信）；④ tourism 结构化深写——参观指引含 2024-09-24 全新开馆公告/免费无须预约/三级博物馆/关肇业设计"从黄土地里长出来的博物馆"/球幕影院裸眼3D 等数字化设施，行程规划含馆藏 800 余件展出 695 件/联动仰韶酒庄/仙门山/黄河丹峡，深度解说按地层/彩陶/聚落/百年考古四看；⑤ specs 配套场馆升级"国家三级博物馆"、artifacts 小口尖底瓶 desc 补酿酒实证；⑥ rawfile 23 条/mock 4 条双份 JSON 校验通过（mock 其余遗址 tourism 走旧字符串迁移路径验证） |
+| 2026-09-27 | **M1.10 完成（遗址图片框架：真实图片占位 + 点击放大，动态布局；构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）**：① 实测官方图片 URL 经搜索代理缓存（aka.doubaocdn.com）返回 404 **不可下载**、无法核证版权 → 按用户退路指令「结构先行、图片待填」；② 模型新增 HeritageImage（path/caption/source），HeritageDetail/HeritageEvent 各加 images 数组（缺失兜底空数组，字段只增不改），Loader `getImageArray` 逐字段显式转换（path 与 caption 全空项跳过）；③ 新增 components/ImageGallery.ets（目录约定新增 components/ 层）——**动态布局**：Flex wrap 每行 3 列缩略图（宽度 32% 百分比自适应 + aspectRatio 等比 + 图注/来源小字）；**点击缩略图 → Lightbox 全屏放大**：bindContentCover 页面级遮罩（不被 Scroll 裁剪，d.ts 核证 ContentCoverOptions）、深色遮罩、大图 objectFit Contain 动态适配、✕ 关闭、多图左右切换 + 页码、底部图注/来源；图片用 resourceManager.getRawFileContent → image.createImageSource(buf).createPixelMap() 动态加载 rawfile → Image(PixelMap)（@kit.ImageKit，d.ts 核证 createImageSource(buf: ArrayBuffer)/createPixelMap 均存在）；path 空或加载失败 → 虚线占位卡（+「图片待补充」+ 建议来源）；④ 接入：Detail 考古页签「遗址图集」卡 + EventDetail「图集」段；仰韶村填 4 张遗址级占位 + 1921（地形图/安特生旧居）、2020（混凝土地坪）、2021（象牙镯/玉钺）事件级占位；⑤ 实测修正：ClickEvent 无 stopPropagation（d.ts 核证）→ Lightbox 弃用「点遮罩关闭」改为仅 ✕ 显式关闭，避免箭头/大图被冒泡误关；⑥ rawfile 23 条/mock 4 条双份 JSON 校验通过（detail.images 4、events with images 1921/2020/2021）；⑦ §1 产品定位追加硬性要求 4「考古内容配真实图片」，新增 §1.1「内容深写与搜证方法论」（搜证来源优先级/核证纪律/事件与文旅深写结构/双份同步纪律/图片资源现状）——后续每批遗址深写按此执行；真实图片待用户提供/稳定渠道获取后填入 rawfile（填入 path 即自动显示） |

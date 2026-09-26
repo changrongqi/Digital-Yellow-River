@@ -12,6 +12,9 @@
  * （overview 概览 / guide 参观指引键值 / itinerary 行程规划 / interpretation 深度解说），
  * 旧版单字符串由加载层自动迁移为 overview（其余字段兜底空），UI 按结构化卡片渲染；
  * HeritageEvent 新增 commentary（深度解说/延伸知识点），加载层兜底空串。
+ * → M1.10（遗址图片框架）：新增 HeritageImage（path/caption/source），HeritageDetail 与
+ * HeritageEvent 各加 images 数组；path 指向 rawfile 图片（动态加载），空串=待填充占位；
+ * 字段只增不改，存量数据缺失兜底空数组。
  */
 
 import { HeritageEra, HeritageType, HeritageCity } from './Types';
@@ -39,6 +42,19 @@ export interface SpecItem {
 export interface Artifact {
   name: string;  // 文物名称（如「彩陶盆」）
   desc: string;  // 文物说明
+}
+
+/**
+ * 遗址图片（M1.10：真实图片占位 + 点击放大）。
+ * path 为 rawfile 相对路径（如 'images/yangshao/1921-excavation.jpg'），空串=待填充占位；
+ * caption 为图注；source 为来源/版权标注（官方出处）。
+ * 说明：官方图片 URL 经搜索代理缓存不可稳定下载（实测 404），故图片作为本地资源
+ * 由用户/稳定渠道提供后填入 rawfile，遵守零网络依赖离线打包约束。
+ */
+export interface HeritageImage {
+  path: string;    // rawfile 图片相对路径，空串=待填充
+  caption: string; // 图注（如「1921 年发掘现场」）
+  source: string;  // 来源/版权标注
 }
 
 /**
@@ -80,6 +96,7 @@ export interface HeritageEvent {
   artifacts: string[];   // 相关文物
   furtherReading: string; // 延伸阅读（来源出处）
   commentary: string;    // 深度解说/延伸知识点（M1.9 新增，空串为无）
+  images: HeritageImage[]; // 事件图片（M1.10，path 空串=占位待填充）
 }
 
 /**
@@ -94,6 +111,7 @@ export interface HeritageDetail {
   highlights: string[]; // 核心看点（M1.7，介绍页签顶部 chips）
   specs: SpecItem[];    // 遗址档案键值（M1.7，介绍页签底部档案卡）
   artifacts: Artifact[]; // 代表性出土文物（M1.7，考古页签文物卡）
+  images: HeritageImage[]; // 遗址级图集（M1.10，考古页签展示，path 空串=占位待填充）
 }
 
 /**

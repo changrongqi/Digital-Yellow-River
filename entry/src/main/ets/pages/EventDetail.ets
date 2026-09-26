@@ -22,6 +22,7 @@ import { Heritage, HeritageEvent } from '../model/Heritage';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { getEraTheme } from '../utils/EraTheme';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
+import { ImageGallery } from '../components/ImageGallery';
 
 const DOMAIN = 0x0000;
 const TAG = 'EventDetail';
@@ -300,6 +301,17 @@ struct EventDetail {
               if (this.event.artifacts.length > 0) {
                 this.SectionTitle('相关文物')
                 this.ArtifactsList(this.event.artifacts)
+              }
+
+              // 事件图集（M1.10：真实图片占位 + 点击放大，动态布局）
+              if (this.event.images.length > 0) {
+                Text('图集')
+                  .fontSize(16)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor('#3E2723')
+                  .width('100%')
+                  .margin({ top: 18, bottom: 8 })
+                ImageGallery({ images: this.event.images })
               }
 
               // 延伸阅读（来源出处）
