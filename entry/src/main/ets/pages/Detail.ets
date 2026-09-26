@@ -24,7 +24,7 @@
 
 import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { Heritage, Poem } from '../model/Heritage';
+import { Heritage, Poem, SpecItem, Artifact } from '../model/Heritage';
 import { Note } from '../model/Note';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
@@ -265,12 +265,12 @@ struct Detail {
         // 五层级 + 笔记：顶部页签（官方推荐信息分类方式），左右滑动切换（M4.0）
         Tabs({ barPosition: BarPosition.Start }) {
           TabContent() {
-            this.BodyTab(this.heritage.detail.intro)
+            this.IntroTab()
           }
           .tabBar(SubTabBarStyle.of('介绍'))
 
           TabContent() {
-            this.BodyTab(this.heritage.detail.discovery)
+            this.ArchTab()
           }
           .tabBar(SubTabBarStyle.of('考古'))
 
@@ -341,7 +341,164 @@ struct Detail {
       })
   }
 
-  /** 通用正文页签（介绍/考古/文旅）：白卡 + 长文排版，空层占位（M4.0） */
+  /**
+   * 介绍页签（M1.7）：核心看点 chips + 正文 + 遗址档案卡。
+   * ⚠️ 无参数、内部直读 this.heritage（踩坑 15）。
+   */
+  @Builder
+  IntroTab() {
+    Scroll() {
+      Column() {
+        // 核心看点（有数据才显示；主题色浅底 chips）
+        if (this.heritage !== null && this.heritage.detail.highlights.length > 0) {
+          Flex({ wrap: FlexWrap.Wrap }) {
+            ForEach(this.heritage.detail.highlights, (point: string) => {
+              Text(point)
+                .fontSize(12)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+                .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).soft)
+                .borderRadius(10)
+                .margin({ right: 8, bottom: 8 })
+            }, (point: string) => point)
+          }
+          .width('100%')
+          .margin({ bottom: 14 })
+        }
+
+        // 正文（数据中含 \n 分段）
+        if (this.heritage !== null) {
+          if (this.heritage.detail.intro.length === 0) {
+            Text('暂无内容')
+              .fontSize(14)
+              .fontColor('#BCAAA4')
+              .padding({ top: 40 })
+          } else {
+            Text(this.heritage.detail.intro)
+              .fontSize(15)
+              .fontColor('#3E2723')
+              .lineHeight(26)
+              .textAlign(TextAlign.JUSTIFY)
+          }
+        }
+
+        // 遗址档案卡（键值行）
+        if (this.heritage !== null && this.heritage.detail.specs.length > 0) {
+          Column() {
+            Text('遗址档案')
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#3E2723')
+              .width('100%')
+            ForEach(this.heritage.detail.specs, (spec: SpecItem) => {
+              Row() {
+                Text(spec.label)
+                  .fontSize(13)
+                  .fontColor('#8D6E63')
+                  .width(88)
+                Text(spec.value)
+                  .fontSize(13)
+                  .fontColor('#3E2723')
+                  .layoutWeight(1)
+                  .textAlign(TextAlign.End)
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Top)
+              .padding({ top: 8, bottom: 8 })
+              .border({ width: { bottom: 1 }, color: '#F0EBE5' })
+            }, (spec: SpecItem) => spec.label)
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding(16)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .margin({ top: 20 })
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(16)
+    }
+    .width('100%')
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .edgeEffect(EdgeEffect.Spring)
+  }
+
+  /**
+   * 考古页签（M1.7）：考古发现正文 + 代表性出土文物卡。
+   * ⚠️ 无参数、内部直读 this.heritage（踩坑 15）。
+   */
+  @Builder
+  ArchTab() {
+    Scroll() {
+      Column() {
+        if (this.heritage !== null) {
+          if (this.heritage.detail.discovery.length === 0) {
+            Text('暂无内容')
+              .fontSize(14)
+              .fontColor('#BCAAA4')
+              .padding({ top: 40 })
+          } else {
+            Text(this.heritage.detail.discovery)
+              .fontSize(15)
+              .fontColor('#3E2723')
+              .lineHeight(26)
+              .textAlign(TextAlign.JUSTIFY)
+          }
+        }
+
+        // 代表性出土文物卡
+        if (this.heritage !== null && this.heritage.detail.artifacts.length > 0) {
+          Column() {
+            Text('代表性出土文物')
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#3E2723')
+              .width('100%')
+            ForEach(this.heritage.detail.artifacts, (artifact: Artifact) => {
+              Column() {
+                Text(artifact.name)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                Text(artifact.desc)
+                  .fontSize(13)
+                  .fontColor('#6D4C41')
+                  .lineHeight(21)
+                  .margin({ top: 4 })
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding(12)
+              .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).soft)
+              .borderRadius(8)
+              .margin({ top: 10 })
+            }, (artifact: Artifact) => artifact.name)
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding(16)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .margin({ top: 20 })
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(16)
+    }
+    .width('100%')
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .edgeEffect(EdgeEffect.Spring)
+  }
+
+  /** 通用正文页签（文旅）：白卡 + 长文排版，空层占位（M4.0） */
   @Builder
   BodyTab(content: string) {
     Scroll() {
@@ -446,10 +603,14 @@ struct Detail {
     Scroll() {
       Column() {
         if (poems.length === 0) {
-          Text('暂无内容')
+          Text('该遗址暂无收录的传世诗词')
             .fontSize(14)
             .fontColor('#BCAAA4')
             .padding({ top: 40 })
+          Text('古都类遗址（洛阳 · 汉唐、开封 · 宋等）多有历代咏史诗词，可前往浏览')
+            .fontSize(12)
+            .fontColor('#BCAAA4')
+            .margin({ top: 8 })
         } else {
           ForEach(poems, (poem: Poem) => {
             Column() {

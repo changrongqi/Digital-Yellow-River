@@ -12,7 +12,7 @@ import { util } from '@kit.ArkTS';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { HeritageEra, HeritageType, HeritageCity, isValidEra, isValidType, isValidCity } from '../model/Types';
-import { Heritage, HeritageDetail, Poem } from '../model/Heritage';
+import { Heritage, HeritageDetail, Poem, SpecItem, Artifact } from '../model/Heritage';
 
 const DOMAIN = 0x0000;
 const TAG = 'HeritageDataLoader';
@@ -104,7 +104,10 @@ export class HeritageDataLoader {
         discovery: HeritageDataLoader.getStr(detailObj, 'discovery'),
         events: HeritageDataLoader.getStrArray(detailObj, 'events'),
         poems: HeritageDataLoader.getPoemArray(detailObj, 'poems'),
-        tourism: HeritageDataLoader.getStr(detailObj, 'tourism')
+        tourism: HeritageDataLoader.getStr(detailObj, 'tourism'),
+        highlights: HeritageDataLoader.getStrArray(detailObj, 'highlights'),
+        specs: HeritageDataLoader.getSpecArray(detailObj, 'specs'),
+        artifacts: HeritageDataLoader.getArtifactArray(detailObj, 'artifacts')
       };
 
       const item: Heritage = {
@@ -160,6 +163,52 @@ export class HeritageDataLoader {
         content: HeritageDataLoader.getStr(poemObj, 'content')
       };
       result.push(poem);
+    }
+    return result;
+  }
+
+  /** M1.7：解析遗址档案键值数组（字段缺失/非法项兜底为空） */
+  private static getSpecArray(rec: Record<string, Object>, key: string): SpecItem[] {
+    const v: Object | undefined = rec[key];
+    if (v === undefined || v === null) {
+      return [];
+    }
+    const arr = v as Object[];
+    const result: SpecItem[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const obj = arr[i] as Record<string, Object>;
+      const label: string = HeritageDataLoader.getStr(obj, 'label');
+      if (label === '') {
+        continue; // 无名称的档案项跳过
+      }
+      const spec: SpecItem = {
+        label: label,
+        value: HeritageDataLoader.getStr(obj, 'value')
+      };
+      result.push(spec);
+    }
+    return result;
+  }
+
+  /** M1.7：解析代表性出土文物数组（无名称项跳过） */
+  private static getArtifactArray(rec: Record<string, Object>, key: string): Artifact[] {
+    const v: Object | undefined = rec[key];
+    if (v === undefined || v === null) {
+      return [];
+    }
+    const arr = v as Object[];
+    const result: Artifact[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const obj = arr[i] as Record<string, Object>;
+      const name: string = HeritageDataLoader.getStr(obj, 'name');
+      if (name === '') {
+        continue; // 无名称的文物项跳过
+      }
+      const artifact: Artifact = {
+        name: name,
+        desc: HeritageDataLoader.getStr(obj, 'desc')
+      };
+      result.push(artifact);
     }
     return result;
   }
