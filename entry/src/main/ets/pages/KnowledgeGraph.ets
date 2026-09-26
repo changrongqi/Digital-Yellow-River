@@ -21,8 +21,9 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { router } from '@kit.ArkUI';
+import { router, window } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
 import { Theme } from '../model/Theme';
@@ -38,10 +39,6 @@ const TAG = 'KnowledgeGraph';
 
 /** 主题色板（colorIndex 取余兜底）：棕/红/绿/蓝/紫/橙 */
 const THEME_PALETTE: string[] = ['#6D4C41', '#C0392B', '#2E7D32', '#1565C0', '#6A1B9A', '#EF6C00'];
-/** 遗址节点半径 */
-const NODE_RADIUS: number = 20;
-/** 中心主题节点半径 */
-const THEME_NODE_RADIUS: number = 34;
 /** 拓展推荐条数 */
 const MAX_RECOMMEND: number = 5;
 
@@ -100,6 +97,11 @@ export struct KnowledgeGraph {
   private canvasW: number = 0;
   private canvasH: number = 0;
   private graphNodes: GraphNode[] = [];
+  /**
+   * 图谱区域高度（vp）：动态适配设备窗口（取窗口高度约 42%，下限 300vp），
+   * 平板/大屏自动更大，避免固定高度在不同设备上挤压图谱与节点文字。
+   */
+  @State canvasHeight: number = 300;
 
   /** 预置遗产映射表与全量列表（只读；加载完成后构建） */
   private heritageMap: Map<string, Heritage> = new Map();
@@ -138,6 +140,7 @@ export struct KnowledgeGraph {
     ThemeService.init(context);
     ThemeService.onDataChanged(this.themeChangedHandler);
     FavoriteService.onDataChanged(this.favChangedHandler);
+    this.queryCanvasHeight();
     this.loadHeritages(context);
   }
 
@@ -381,6 +384,51 @@ export struct KnowledgeGraph {
 
   // ==================== Canvas 知识节点网络 ====================
 
+  /**
+   * 动态适配图谱区域高度：按窗口高度取约 42%（下限 300vp），平板/大屏自动更大，
+   * 避免固定高度在不同设备上挤压图谱与节点文字（用户要求动态自适应布局）。
+   * 失败（窗口 API 异常/无 context）时保持默认高度，不影响功能。
+   */
+  private queryCanvasHeight(): void {
+    const context = this.getUIContext().getHostContext();
+    if (context === undefined) {
+      return;
+    }
+    try {
+      window.getLastWindow(context).then((win: window.Window) => {
+        const props: window.WindowProperties = win.getWindowProperties();
+        const winH: number = props.windowRect.height; // 窗口高度（vp，d.ts 实测为 windowRect）
+        this.canvasHeight = Math.max(300, Math.round(winH * 0.42));
+      }).catch((err: BusinessError) => {
+        hilog.error(DOMAIN, TAG, 'query window height failed, keep default: %{public}s', JSON.stringify(err));
+      });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'getLastWindow failed, keep default: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  /** 数值钳制到 [min, max]（Canvas 绘制尺寸按画布宽度动态缩放用） */
+  private clamp(v: number, min: number, max: number): number {
+    if (v < min) {
+      return min;
+    }
+    if (v > max) {
+      return max;
+    }
+    return v;
+  }
+
+  /** 按最大字符数智能截断（超长补省略号；中文字符为主，按字符计数） */
+  private fitLabel(text: string, maxChars: number): string {
+    if (text.length <= maxChars) {
+      return text;
+    }
+    if (maxChars <= 1) {
+      return text.substring(0, 1);
+    }
+    return `${text.substring(0, maxChars - 1)}…`;
+  }
+
   /** 绘制知识节点网络（命令式重绘：主题/归类变化后手动调用） */
   private drawGraph(): void {
     if (this.canvasW <= 0 || this.canvasH <= 0) {
@@ -394,28 +442,37 @@ export struct KnowledgeGraph {
     const cx: number = w / 2;
     const cy: number = h / 2 - 8;
 
-    // 中心主题节点
+    // ---- 动态尺寸（随画布宽度缩放，平板/大屏自动放大，保证可读性） ----
+    const themeR: number = this.clamp(Math.round(w * 0.052), 36, 54);   // 中心主题节点半径
+    const nodeR: number = this.clamp(Math.round(w * 0.032), 24, 36);    // 遗址节点半径
+    const themeFont: number = this.clamp(Math.round(w * 0.024), 15, 20);  // 主题名字号
+    const countFont: number = this.clamp(Math.round(w * 0.017), 11, 14);  // 「N 处」字号
+    const labelFont: number = this.clamp(Math.round(w * 0.021), 12, 15);  // 遗址标签字号
+    const labelMaxChars: number = Math.max(3, Math.floor((w * 0.34) / labelFont)); // 标签最大字符数
+
+    // 中心主题节点（圆内短标签，按可用宽度截断）
     const theme: Theme | null = this.selectedTheme();
     const themeColor: string = theme === null ? '#9E9E9E' : THEME_PALETTE[theme.colorIndex % THEME_PALETTE.length];
     ctx.beginPath();
-    ctx.arc(cx, cy, THEME_NODE_RADIUS, 0, Math.PI * 2);
+    ctx.arc(cx, cy, themeR, 0, Math.PI * 2);
     ctx.fillStyle = themeColor;
     ctx.fill();
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
-    ctx.font = '13px sans-serif';
-    ctx.fillText(theme === null ? '未选择' : theme.name, cx, cy + 4);
-    ctx.font = '10px sans-serif';
-    ctx.fillText(`${this.themedHeritages.length} 处`, cx, cy + 18);
+    ctx.font = `${themeFont}px sans-serif`;
+    const themeMaxChars: number = Math.max(2, Math.floor((themeR * 1.62) / themeFont));
+    ctx.fillText(theme === null ? '未选择' : this.fitLabel(theme.name, themeMaxChars), cx, cy + Math.round(themeFont * 0.35));
+    ctx.font = `${countFont}px sans-serif`;
+    ctx.fillText(`${this.themedHeritages.length} 处`, cx, cy + themeR - 2);
 
-    // 环绕遗址节点（圆周分布；N=1 时单点置右）
+    // 环绕遗址节点（圆周分布；布局半径随画布与节点尺寸动态计算，下限兜底防重叠）
     const n: number = this.themedHeritages.length;
     if (n > 0) {
-      const radius: number = Math.max(70, Math.min(w, h) / 2 - 56);
+      const layoutR: number = Math.max(50, Math.min(w, h) / 2 - themeR - nodeR - 24);
       for (let i = 0; i < n; i++) {
         const angle: number = (i / n) * Math.PI * 2 - Math.PI / 2;
-        const x: number = cx + radius * Math.cos(angle);
-        const y: number = cy + radius * Math.sin(angle);
+        const x: number = cx + layoutR * Math.cos(angle);
+        const y: number = cy + layoutR * Math.sin(angle);
         // 连线（中心 → 节点）
         ctx.beginPath();
         ctx.moveTo(cx, cy);
@@ -424,20 +481,20 @@ export struct KnowledgeGraph {
         ctx.lineWidth = 1;
         ctx.stroke();
         // 节点圆（主题色软底 + 年代色描边，克制不做 3D）
-        const h: Heritage = this.themedHeritages[i];
+        const item: Heritage = this.themedHeritages[i];
         ctx.beginPath();
-        ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = getEraTheme(h.era).soft;
+        ctx.arc(x, y, nodeR, 0, Math.PI * 2);
+        ctx.fillStyle = getEraTheme(item.era).soft;
         ctx.fill();
-        ctx.strokeStyle = getEraTheme(h.era).deep;
+        ctx.strokeStyle = getEraTheme(item.era).deep;
         ctx.lineWidth = 2;
         ctx.stroke();
-        // 节点名称（节点下方）
+        // 遗址名称（节点下方外置标签，字号放大 + 智能截断，避免压边与超宽）
         ctx.fillStyle = '#3E2723';
-        ctx.font = '10px sans-serif';
+        ctx.font = `${labelFont}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(h.name, x, y + NODE_RADIUS + 12);
-        this.graphNodes.push(new GraphNode(h.id, h.name, x, y, NODE_RADIUS));
+        ctx.fillText(this.fitLabel(item.name, labelMaxChars), x, y + nodeR + labelFont + 4);
+        this.graphNodes.push(new GraphNode(item.id, item.name, x, y, nodeR));
       }
     }
   }
@@ -580,7 +637,7 @@ export struct KnowledgeGraph {
               Column() {
                 Canvas(this.context)
                   .width('100%')
-                  .height(300)
+                  .height(this.canvasHeight)
                   .onReady(() => {
                     this.drawGraph();
                   })
