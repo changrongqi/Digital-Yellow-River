@@ -1,21 +1,25 @@
 /**
- * 详情页（M1.5）：文化条目五层级内容展示。
+ * 详情页（M1.5 建立骨架，M4.0 信息架构与视觉改版）。
  *
- * 路由：发现页列表点击 router.pushUrl('pages/Detail', { id }) 进入；
+ * 路由：发现页/收藏页/我的笔记列表点击 router.pushUrl('pages/Detail', { id }) 进入；
  * 本页按 id 从 HeritageDataLoader 重新取数（数据单一来源，便于 M2/M3 联动）。
  *
+ * M4.0 改版（用户反馈「详情页简陋」，方向经确认：布局重构 + 年代主题色，克制低饱和）：
+ * - 英雄横幅：按年代取主题色渐变（utils/EraTheme：仰韶彩陶红/龙山黑陶灰/夏商青铜绿/
+ *   周玄青/汉唐鎏金赭/宋青瓷），大号名称 + 半透明白底徽标 + 简介，一屏建立年代记忆点；
+ * - 五层级 + 笔记改为顶部页签（Tabs + SubTabBarStyle，官方推荐「信息较多时分类聚焦」）：
+ *   介绍 / 考古 / 事件 / 诗词 / 文旅 / 笔记，支持左右滑动切换，横幅常驻不随内容滚动；
+ * - 历史事件 → 时间轴（年份高亮 + 竖线 + 节点，自动解析「XXXX年：」前缀）；
+ * - 相关诗词 → 古风卡（浅主题底 + 标题作者居中 + 引文排版）；
+ * - M4.1 起推荐区块将接入「介绍」页签（预留结构位置）。
+ *
  * 兜底策略（与发现页一致）：
- * - 加载中：转圈提示；
- * - rawfile 加载失败（典型场景：预览器）：注入 mock 示例数据再按 id 匹配；
- * - 找不到对应条目 / 单层内容为空：对应区块显示占位，不崩溃。
+ * - 加载中：转圈提示；rawfile 加载失败（预览器）：注入 mock 再按 id 匹配；
+ * - 找不到条目 / 单层内容为空：对应页签显示占位，不崩溃。
  *
- * 五层级：图文介绍 intro / 考古发现 discovery / 历史事件 events / 相关诗词 poems / 现代文旅 tourism。
- *
- * M2.4：
- * - 顶部导航栏收藏按钮，状态切换走 FavoriteService.toggleFavorite；
- * - 五层级之后「我的笔记」区块：列表（按最后编辑时间倒序）+ 写笔记入口 + 点击编辑；
- * - 从 NoteEdit 返回（同页实例）时 onPageShow 刷新笔记列表与收藏状态；
- * - 从本页返回主页时 Index.onPageShow 驱动收藏页刷新（列表联动）。
+ * M2.4/M3.2 逻辑（改版后原样保留）：
+ * - 导航栏收藏按钮（toggleFavorite 同步切换）；「笔记」页签列表 + 写笔记入口 + 点击编辑；
+ * - onPageShow / onDataChanged 刷新收藏状态与笔记列表；aboutToDisappear 注销监听防泄漏。
  */
 
 import { router } from '@kit.ArkUI';
@@ -24,11 +28,23 @@ import { Heritage, Poem } from '../model/Heritage';
 import { Note } from '../model/Note';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
+import { getEraTheme } from '../utils/EraTheme';
 import { formatDateTime } from '../utils/TimeFormat';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
 const TAG = 'Detail';
+
+/** 历史事件解析结果：年份前缀 + 正文 */
+class EventItem {
+  year: string;
+  body: string;
+
+  constructor(year: string, body: string) {
+    this.year = year;
+    this.body = body;
+  }
+}
 
 @Entry
 @Component
@@ -107,9 +123,53 @@ struct Detail {
     return null;
   }
 
+  /** 切换收藏状态（toggleFavorite 同步完成，按钮样式随 isFav 即时反转） */
+  private toggleFav(): void {
+    if (this.heritage === null) {
+      return;
+    }
+    this.isFav = FavoriteService.toggleFavorite(this.heritage.id);
+  }
+
+  /**
+   * 打开笔记编辑页（router.pushUrl 唯一调用点，收敛 deprecate 告警）。
+   * @param noteId 空串 = 新建；携带 = 编辑对应笔记
+   */
+  private openNoteEditor(noteId: string): void {
+    if (this.heritage === null) {
+      return;
+    }
+    try {
+      router.pushUrl({ url: 'pages/NoteEdit', params: { id: this.heritage.id, noteId: noteId } });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'open note editor failed: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  /**
+   * 解析历史事件「XXXX年：正文」前缀（无前缀则年份为空，正文为整条）。
+   * 时间轴年份高亮用；逐条容错，非法格式按整条展示。
+   */
+  private parseEvents(events: string[]): EventItem[] {
+    const result: EventItem[] = [];
+    for (let i = 0; i < events.length; i++) {
+      const event: string = events[i];
+      let year: string = '';
+      let body: string = event;
+      const re = /^(\d{3,4}年)[:：]\s*(.+)$/;
+      const m: RegExpExecArray | null = re.exec(event);
+      if (m !== null && m[1] !== undefined && m[2] !== undefined) {
+        year = m[1];
+        body = m[2];
+      }
+      result.push(new EventItem(year, body));
+    }
+    return result;
+  }
+
   build() {
     Column() {
-      // 顶部导航栏：返回 + 标题
+      // 顶部导航栏：返回 + 标题 + 收藏（M4.0 改版保持不变）
       Row() {
         Text('‹')
           .fontSize(30)
@@ -163,60 +223,85 @@ struct Detail {
         .layoutWeight(1)
         .width('100%')
       } else {
-        Scroll() {
-          Column() {
-            if (this.isMockData) {
-              Text('示例数据 · 预览调试专用（rawfile 加载失败）')
-                .fontSize(12)
-                .fontColor('#8D6E63')
-                .width('100%')
-                .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-                .backgroundColor('#FFF3E0')
-                .borderRadius(8)
-                .margin({ bottom: 12 })
-            }
-
-            // 头部卡片：名称 + 三维标签 + 简介
-            Column() {
-              Text(this.heritage.name)
-                .fontSize(24)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#3E2723')
-              Row() {
-                this.MetaTag(this.heritage.era)
-                this.MetaTag(this.heritage.type)
-                this.MetaTag(this.heritage.city)
-              }
-              .margin({ top: 10 })
-              Text(this.heritage.summary)
-                .fontSize(14)
-                .fontColor('#6D4C41')
-                .lineHeight(22)
-                .margin({ top: 12 })
-            }
+        // mock 示例数据提示条（仅加载失败兜底时出现）
+        if (this.isMockData) {
+          Text('示例数据 · 预览调试专用（rawfile 加载失败）')
+            .fontSize(12)
+            .fontColor('#8D6E63')
             .width('100%')
-            .alignItems(HorizontalAlign.Start)
-            .padding(16)
-            .backgroundColor('#FFFFFF')
-            .borderRadius(12)
+            .padding({ left: 16, right: 16, top: 6, bottom: 6 })
+            .backgroundColor('#FFF3E0')
+            .margin({ bottom: 8 })
+        }
 
-            // 五层级内容
-            this.TextSection('图文介绍', this.heritage.detail.intro)
-            this.TextSection('考古发现', this.heritage.detail.discovery)
-            this.EventsSection(this.heritage.detail.events)
-            this.PoemsSection(this.heritage.detail.poems)
-            this.TextSection('现代文旅', this.heritage.detail.tourism)
-
-            // 我的笔记区块（M2.4）
-            this.NotesSection()
+        // 英雄横幅：年代主题色渐变 + 名称 + 徽标 + 简介（M4.0）
+        Column() {
+          Text(this.heritage.name)
+            .fontSize(26)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FFFFFF')
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Row() {
+            this.HeroTag(this.heritage.era)
+            this.HeroTag(this.heritage.type)
+            this.HeroTag(this.heritage.city)
           }
-          .width('100%')
-          .padding({ left: 16, right: 16, bottom: 24 })
+          .margin({ top: 12 })
+          Text(this.heritage.summary)
+            .fontSize(13)
+            .fontColor('rgba(255,255,255,0.92)')
+            .lineHeight(21)
+            .margin({ top: 12 })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+        .padding({ left: 20, right: 20, top: 20, bottom: 20 })
+        .linearGradient({
+          angle: 135,
+          colors: [[getEraTheme(this.heritage.era).deep, 0.0], [getEraTheme(this.heritage.era).mid, 1.0]]
+        })
+
+        // 五层级 + 笔记：顶部页签（官方推荐信息分类方式），左右滑动切换（M4.0）
+        Tabs({ barPosition: BarPosition.Start }) {
+          TabContent() {
+            this.BodyTab(this.heritage.detail.intro)
+          }
+          .tabBar(SubTabBarStyle.of('介绍'))
+
+          TabContent() {
+            this.BodyTab(this.heritage.detail.discovery)
+          }
+          .tabBar(SubTabBarStyle.of('考古'))
+
+          TabContent() {
+            this.TimelineTab(this.heritage.detail.events)
+          }
+          .tabBar(SubTabBarStyle.of('事件'))
+
+          TabContent() {
+            this.PoemsTab(this.heritage.detail.poems)
+          }
+          .tabBar(SubTabBarStyle.of('诗词'))
+
+          TabContent() {
+            this.BodyTab(this.heritage.detail.tourism)
+          }
+          .tabBar(SubTabBarStyle.of('文旅'))
+
+          TabContent() {
+            this.NotesTab()
+          }
+          .tabBar(SubTabBarStyle.of('笔记'))
         }
         .layoutWeight(1)
         .width('100%')
-        .scrollBar(BarState.Off)
-        .align(Alignment.Top)
+        .barWidth('100%')
+        .barMode(BarMode.Fixed)
+        .scrollable(true)
+        .onChange((index: number) => {
+          hilog.info(DOMAIN, TAG, 'detail tab %{public}d', index);
+        })
       }
     }
     .width('100%')
@@ -224,14 +309,14 @@ struct Detail {
     .backgroundColor('#FAF6F0')
   }
 
-  /** 头部元信息小标签（年代/类型/城市） */
+  /** 横幅徽标（年代/类型/城市）：半透明白底 + 白字（M4.0） */
   @Builder
-  MetaTag(text: string) {
+  HeroTag(text: string) {
     Text(text)
       .fontSize(12)
-      .fontColor('#6D4C41')
+      .fontColor('#FFFFFF')
       .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-      .backgroundColor('#EFEBE9')
+      .backgroundColor('rgba(255,255,255,0.22)')
       .borderRadius(8)
       .margin({ right: 8 })
   }
@@ -256,220 +341,229 @@ struct Detail {
       })
   }
 
-  /** 切换收藏状态（toggleFavorite 同步完成，按钮样式随 isFav 即时反转） */
-  private toggleFav(): void {
-    if (this.heritage === null) {
-      return;
-    }
-    this.isFav = FavoriteService.toggleFavorite(this.heritage.id);
-  }
-
-  /**
-   * 打开笔记编辑页（router.pushUrl 唯一调用点，收敛 deprecate 告警）。
-   * @param noteId 空串 = 新建；携带 = 编辑对应笔记
-   */
-  private openNoteEditor(noteId: string): void {
-    if (this.heritage === null) {
-      return;
-    }
-    try {
-      router.pushUrl({ url: 'pages/NoteEdit', params: { id: this.heritage.id, noteId: noteId } });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'open note editor failed: %{public}s', JSON.stringify(err));
-    }
-  }
-
-  /**
-   * 我的笔记区块（M2.4）：列表 + 写笔记入口 + 点击编辑。
-   * ⚠️ 无参数、内部直读 @State（notes/heritage），规避踩坑 15 的参数按值传递失联。
-   */
+  /** 通用正文页签（介绍/考古/文旅）：白卡 + 长文排版，空层占位（M4.0） */
   @Builder
-  NotesSection() {
-    Column() {
-      Row() {
-        this.SectionTitle('我的笔记')
-        Blank()
-        Text('+ 写笔记')
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#6D4C41')
-          .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-          .backgroundColor('#EFEBE9')
-          .borderRadius(14)
-          .onClick(() => {
-            this.openNoteEditor('');
-          })
+  BodyTab(content: string) {
+    Scroll() {
+      Column() {
+        if (content.length === 0) {
+          Text('暂无内容')
+            .fontSize(14)
+            .fontColor('#BCAAA4')
+            .padding({ top: 40 })
+        } else {
+          Text(content)
+            .fontSize(15)
+            .fontColor('#3E2723')
+            .lineHeight(26)
+            .textAlign(TextAlign.JUSTIFY)
+        }
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      if (this.notes.length === 0) {
-        Text('还没有笔记，点击「写笔记」记录你的想法')
-          .fontSize(13)
-          .fontColor('#BCAAA4')
-          .margin({ top: 10 })
-      } else {
-        ForEach(this.notes, (note: Note) => {
-          Column() {
-            Text(note.content)
-              .fontSize(14)
-              .fontColor('#3E2723')
-              .maxLines(3)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .lineHeight(22)
-            Text(`最后编辑 ${formatDateTime(note.updatedAt)}`)
-              .fontSize(11)
-              .fontColor('#BCAAA4')
-              .margin({ top: 6 })
-          }
-          .width('100%')
-          .alignItems(HorizontalAlign.Start)
-          .padding(12)
-          .backgroundColor('#FAF6F0')
-          .borderRadius(8)
-          .margin({ top: 10 })
-          .onClick(() => {
-            this.openNoteEditor(note.id);
-          })
-        }, (note: Note) => `${note.id}-${note.updatedAt}`)
-      }
+      .alignItems(HorizontalAlign.Start)
+      .padding(16)
     }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(12)
-    .margin({ top: 12 })
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .edgeEffect(EdgeEffect.Spring)
   }
 
-  /** 通用文字区块：图文介绍 / 考古发现 / 现代文旅 */
+  /** 历史事件时间轴页签：年份高亮（主题色）+ 竖线 + 节点（M4.0） */
   @Builder
-  TextSection(title: string, content: string) {
-    Column() {
-      this.SectionTitle(title)
-      if (content.length === 0) {
-        Text('暂无内容')
-          .fontSize(13)
-          .fontColor('#BCAAA4')
-          .margin({ top: 10 })
-      } else {
-        Text(content)
-          .fontSize(14)
-          .fontColor('#3E2723')
-          .lineHeight(24)
-          .margin({ top: 10 })
-      }
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(12)
-    .margin({ top: 12 })
-  }
-
-  /** 历史事件区块：时间线列表 */
-  @Builder
-  EventsSection(events: string[]) {
-    Column() {
-      this.SectionTitle('历史事件')
-      if (events.length === 0) {
-        Text('暂无内容')
-          .fontSize(13)
-          .fontColor('#BCAAA4')
-          .margin({ top: 10 })
-      } else {
-        ForEach(events, (event: string) => {
-          Row() {
-            Text()
-              .width(6)
-              .height(6)
-              .borderRadius(3)
-              .backgroundColor('#8D6E63')
-              .margin({ top: 8 })
-            Text(event)
-              .fontSize(14)
-              .fontColor('#3E2723')
-              .lineHeight(22)
-              .layoutWeight(1)
-              .margin({ left: 10 })
-          }
-          .width('100%')
-          .alignItems(VerticalAlign.Top)
-          .margin({ top: 10 })
-        }, (event: string) => event)
-      }
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(12)
-    .margin({ top: 12 })
-  }
-
-  /** 相关诗词区块：卡片列表 */
-  @Builder
-  PoemsSection(poems: Poem[]) {
-    Column() {
-      this.SectionTitle('相关诗词')
-      if (poems.length === 0) {
-        Text('暂无内容')
-          .fontSize(13)
-          .fontColor('#BCAAA4')
-          .margin({ top: 10 })
-      } else {
-        ForEach(poems, (poem: Poem) => {
-          Column() {
+  TimelineTab(events: string[]) {
+    Scroll() {
+      Column() {
+        if (events.length === 0) {
+          Text('暂无内容')
+            .fontSize(14)
+            .fontColor('#BCAAA4')
+            .padding({ top: 40 })
+        } else {
+          // 解析放在 @Builder 外不合规（踩坑 13），但 @Builder 内调用私有方法返回派生数据是
+          // 官方推荐的派生数据写法；ForEach 回调里逐条解析保证键值稳定
+          ForEach(this.parseEvents(events), (item: EventItem, idx: number) => {
             Row() {
-              Text(poem.title)
+              // 年份列（无年份的条目显示占位点）
+              Text(item.year)
                 .fontSize(14)
-                .fontWeight(FontWeight.Medium)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                .width(64)
+                .textAlign(TextAlign.End)
+
+              // 时间轴轨道：节点 + 竖线（末项不画竖线）。
+              // 节点用「等宽高+半宽圆角+白描边」的通用写法（Circle.fill/stroke 需 SDK 26，
+              // 超出工程兼容版本 16，构建告警实测，故不用）
+              Column() {
+                Column()
+                  .width(10)
+                  .height(10)
+                  .borderRadius(5)
+                  .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                  .border({ width: 2, color: '#FFFFFF' })
+                if (idx < events.length - 1) {
+                  Line()
+                    .width(1)
+                    .layoutWeight(1)
+                    .backgroundColor('#E0D6CC')
+                    .margin({ top: 4, bottom: 4 })
+                }
+              }
+              .width(24)
+              .alignItems(HorizontalAlign.Center)
+              .margin({ left: 12 })
+
+              // 正文
+              Text(item.body)
+                .fontSize(14)
                 .fontColor('#3E2723')
+                .lineHeight(22)
                 .layoutWeight(1)
-              Text(poem.author)
-                .fontSize(12)
-                .fontColor('#8D6E63')
+                .margin({ left: 12, right: 4 })
+                .padding({ bottom: 16 })
             }
             .width('100%')
-            Text(poem.content)
-              .fontSize(14)
-              .fontColor('#6D4C41')
-              .lineHeight(24)
-              .margin({ top: 8 })
-          }
-          .width('100%')
-          .alignItems(HorizontalAlign.Start)
-          .padding(12)
-          .backgroundColor('#FAF6F0')
-          .borderRadius(8)
-          .margin({ top: 10 })
-        }, (poem: Poem) => poem.title)
+            .alignItems(VerticalAlign.Top)
+          }, (item: EventItem) => `${item.year}-${item.body}`)
+        }
       }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(16)
     }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(12)
-    .margin({ top: 12 })
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .edgeEffect(EdgeEffect.Spring)
   }
 
-  /** 区块标题：左侧竖条 + 文字 */
+  /** 相关诗词页签：古风卡（浅主题底 + 居中排版 + 引文行距，M4.0） */
   @Builder
-  SectionTitle(title: string) {
-    Row() {
-      Text()
-        .width(4)
-        .height(16)
-        .borderRadius(2)
-        .backgroundColor('#8D6E63')
-      Text(title)
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
-        .margin({ left: 8 })
+  PoemsTab(poems: Poem[]) {
+    Scroll() {
+      Column() {
+        if (poems.length === 0) {
+          Text('暂无内容')
+            .fontSize(14)
+            .fontColor('#BCAAA4')
+            .padding({ top: 40 })
+        } else {
+          ForEach(poems, (poem: Poem) => {
+            Column() {
+              Text(poem.title)
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#3E2723')
+                .textAlign(TextAlign.Center)
+                .width('100%')
+              Text(poem.author)
+                .fontSize(12)
+                .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                .textAlign(TextAlign.Center)
+                .width('100%')
+                .margin({ top: 6 })
+              Divider()
+                .color('#FFFFFF')
+                .strokeWidth(1)
+                .width('40%')
+                .margin({ top: 10, bottom: 10 })
+              Text(poem.content)
+                .fontSize(15)
+                .fontColor('#4A403A')
+                .lineHeight(30)
+                .textAlign(TextAlign.Center)
+                .width('100%')
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Center)
+            .padding({ left: 20, right: 20, top: 18, bottom: 20 })
+            .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).soft)
+            .borderRadius(12)
+            .margin({ top: 12 })
+          }, (poem: Poem) => poem.title)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(16)
     }
-    .alignItems(VerticalAlign.Center)
+    .width('100%')
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .edgeEffect(EdgeEffect.Spring)
+  }
+
+  /**
+   * 笔记页签（M2.4 的「我的笔记」区块，M4.0 并入页签）。
+   * ⚠️ 无参数、内部直读 @State（notes），规避踩坑 15 的参数按值传递失联。
+   */
+  @Builder
+  NotesTab() {
+    Scroll() {
+      Column() {
+        Row() {
+          Text('我的笔记')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#3E2723')
+          Blank()
+          Text('+ 写笔记')
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#6D4C41')
+            .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+            .backgroundColor('#EFEBE9')
+            .borderRadius(14)
+            .onClick(() => {
+              this.openNoteEditor('');
+            })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        if (this.notes.length === 0) {
+          Text('还没有笔记，点击「写笔记」记录你的想法')
+            .fontSize(13)
+            .fontColor('#BCAAA4')
+            .margin({ top: 12 })
+        } else {
+          ForEach(this.notes, (note: Note) => {
+            Column() {
+              Text(note.content)
+                .fontSize(14)
+                .fontColor('#3E2723')
+                .maxLines(3)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .lineHeight(22)
+              Text(`最后编辑 ${formatDateTime(note.updatedAt)}`)
+                .fontSize(11)
+                .fontColor('#BCAAA4')
+                .margin({ top: 6 })
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .padding(12)
+            .backgroundColor('#FAF6F0')
+            .borderRadius(8)
+            .margin({ top: 10 })
+            .onClick(() => {
+              this.openNoteEditor(note.id);
+            })
+          }, (note: Note) => `${note.id}-${note.updatedAt}`)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(16)
+    }
+    .width('100%')
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+    .edgeEffect(EdgeEffect.Spring)
   }
 }
