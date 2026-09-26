@@ -3,11 +3,13 @@
  * - 发现：Discovery（rawfile 数据列表）
  * - 收藏：Favorites（M2.2 收藏列表，按标签分组）
  * - 同步：SyncPanel（M3.3 分布式同步状态面板）
+ * - 图谱：KnowledgeGraph（C1.2 文化主题聚合 + 知识节点网络可视化）
  */
 
 import { Discovery } from './Discovery';
 import { Favorites } from './Favorites';
 import { SyncPanel } from './SyncPanel';
+import { KnowledgeGraph } from './KnowledgeGraph';
 import { FavoriteService } from '../service/FavoriteService';
 
 @Entry
@@ -55,6 +57,11 @@ struct Index {
         SyncPanel()
       }
       .tabBar(this.TabLabel('同步', 2))
+
+      TabContent() {
+        KnowledgeGraph({ refreshTick: this.favoriteRefreshTick })
+      }
+      .tabBar(this.TabLabel('图谱', 3))
     }
     .barWidth('100%')
     .barHeight(56)

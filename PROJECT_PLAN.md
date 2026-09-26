@@ -187,8 +187,30 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M4.1 | 推荐算法 | 条目特征向量（年代/类型/城市 one-hot）→ 余弦相似度 → Top-N（utils 层纯函数） | ✅ |
 | M4.2 | 详情页推荐区块 | 「介绍」页签下方「相关遗址推荐」横向卡片，点击带 id 跳详情（O2）；基于收藏微调 | ✅ |
 
-### M5 创新扩展（P2，视进度）
-- C1 知识图谱可视化 / C2 备份与还原 / C3 多端协同编辑
+### M5 创新扩展（2026-09-27 起推进 C1，C2/C3 待 M3 真机联调后评估）
+
+> 状态图例沿用；C1 为「文化主题聚合与个人知识库构建」——用户自定义文化主题标签 → 收藏归类 →
+> 知识节点网络可视化（Canvas）→ 基于知识结构的拓展推荐，主题与关联数据经分布式 KV 实时同步（C1.3）。
+
+| 编号 | 子任务 | 内容 | 状态 |
+|---|---|---|---|
+| C1.1 | 主题数据模型 + 主题服务 | 新增 model/Theme.ets（id/name/colorIndex/createdAt/updatedAt/deviceId，LWW 兼容）；Favorite 增 themeIds[]（只增字段，旧数据缺省空数组）；service/ThemeService.ets：主题 CRUD（增/改名/删，删除主题仅清关联引用不删收藏）+ 收藏归类 setFavoriteThemes（走 FavoriteService 双写）+ Preferences 持久化（同一 store，theme_json 键）+ 订阅 SyncService.onRemoteChange 做主题远端 LWW 合并 | ✅ |
+| C1.2 | 知识图谱页 + 首页入口 | pages/KnowledgeGraph.ets（Index 第 4 个 Tab「图谱」）：主题 chips 选择/新建/重命名/删除 → Canvas 知识节点网络（中心=主题、环绕节点=已归类遗址，点击带 id 跳详情，O2）+ 归类操作（已归类列表移除 / 弹层从未归类收藏中选取加入）+ 拓展推荐（该主题已收藏遗址的相似推荐，排除已收藏，复用 utils/Recommendation）+ 空态兜底（无主题引导新建 / 有主题无收藏引导归类） | ✅ |
+| C1.3 | 分布式同步扩展 | SyncService 增 theme_ 前缀通道：syncTheme/removeThemeSync、RemoteChanges 增 upsertThemes/deletedThemeIds、远端解析 parseThemeFromWire；FavoriteService 增 updateFavoriteThemes（双写 syncFavorite，themeIds 随收藏走 LWW）；主题同步经 autoSync + 面板「立即同步」一并覆盖；真机联调并入 O7 清单 | ✅ |
+
+> C1 设计要点：
+> - 主题与 M2 收藏标签是**两个维度**：标签是收藏卡片的管理分类（待实地探访/已去过/研究资料 + 自定义），
+>   主题是**文化脉络聚合**（如「彩陶文化」「青铜文明」「帝王陵寝」），一个收藏可归入多个主题，多对多；
+> - 模型只增不改：Theme 全新增、Favorite 仅增字段，解析层 getStrArray 缺省空数组天然兼容旧数据（踩坑 1/2/4）；
+> - 分层：ThemeService 是主题数据唯一权威（仿 FavoriteService 模式：内存缓存 + Preferences + 分布式双写 + 远端 LWW 合并）；
+>   归类写 FavoriteService.updateFavoriteThemes（收藏唯一权威不变，避免两个权威改同一份数据）；
+> - 知识节点网络用 ArkUI Canvas 绘制（API 12 CanvasRenderingContext2D，d.ts 双重核对，官方 ts-components-canvas）；
+>   布局：中心主题节点 + 环绕遗址节点（圆周分布）+ 连线，克制简洁（用户偏好：不堆 3D、不做多余视觉）;
+> - 拓展推荐复用 M4 纯函数 recommendHeritages（list=当前数据源全量、currentId=主题下某遗址、favoriteIds=已收藏集合），
+>   过滤出「同主题已收藏」之外的建议条目，横向卡片展示。
+
+- C2 分布式数据备份与恢复（⬜）：设备间收藏/笔记/主题/知识图谱完整迁移 + 一键恢复；依赖真机联调（并入 O7）
+- C3 多端协同编辑（⬜）：双端笔记实时同步 + 补充/修改/合并/排序成结构化文档；依赖真机联调（并入 O7）
 
 ## 6. 踩坑清单（必须遵守，遇坑及时补充）
 
@@ -235,22 +257,23 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 - O1 `coverImage` 全为空且 rawfile 中无任何图片资源，列表用文字徽标占位，详情页「图文介绍」实际只有文 —— 待确定是否引入图片资源。
 - O2 详情页仅认 `id` 入参；M2 收藏页 / M4 推荐入口跳转必须统一带 id，否则落「未找到该遗产」。
-- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-27 M4.2 收口更新，仅允许以下 15 条 + 1 条签名提示；其中 M1.8 期间已存在但基线漏记的 3 条——Detail openEventDetail pushUrl、EventDetail getParams/back——于 M4.2 补齐登记，本次新增仅 Detail openRecommendedDetail pushUrl 1 条）**：
+- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-27 C1.2 收口更新，仅允许以下 16 条 + 1 条签名提示；其中 M1.8 期间已存在但基线漏记的 3 条——Detail openEventDetail pushUrl、EventDetail getParams/back——于 M4.2 补齐登记；本次新增仅 KnowledgeGraph openDetail pushUrl 1 条同类型告警）**：
   `data/HeritageDataLoader.ets:39 Function may throw exceptions`（getRawFileContent）、
   `pages/Discovery.ets:307 'pushUrl' has been deprecated`、
   `pages/Favorites.ets:226 'pushUrl' has been deprecated`（M2.5 新增，openMyNotes 入口，router deprecate 同类型）、
-  `pages/Favorites.ets:525 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
-  `pages/Detail.ets:46 'getParams' has been deprecated`、
-  `pages/Detail.ets:109 'back' has been deprecated`、
-  `pages/Detail.ets:264 'pushUrl' has been deprecated`（M2.4 新增，router deprecate 同类型；openNoteEditor 且包 try/catch）、
-  `pages/Detail.ets 'pushUrl' has been deprecated`（M1.8 新增，openEventDetail，M4.2 补齐登记）、
-  `pages/Detail.ets 'pushUrl' has been deprecated`（M4.2 新增，openRecommendedDetail 推荐卡跳详情，router deprecate 同类型且包 try/catch）、
+  `pages/Favorites.ets:566 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
+  `pages/Detail.ets:62 'getParams' has been deprecated`、
+  `pages/Detail.ets:215 'back' has been deprecated`、
+  `pages/Detail.ets:198 'pushUrl' has been deprecated`（M2.4 新增，router deprecate 同类型；openNoteEditor 且包 try/catch）、
+  `pages/Detail.ets:163 'pushUrl' has been deprecated`（M1.8 新增，openEventDetail，M4.2 补齐登记）、
+  `pages/Detail.ets:148 'pushUrl' has been deprecated`（M4.2 新增，openRecommendedDetail 推荐卡跳详情，router deprecate 同类型且包 try/catch）、
   `pages/NoteEdit.ets:55 'getParams' has been deprecated`（M2.3 新增，router deprecate 同类型）、
   `pages/NoteEdit.ets:140 'back' has been deprecated`（M2.3 新增，back 已收敛为唯一调用点 goBack()）、
   `pages/MyNotes.ets:125 'pushUrl' has been deprecated`（M2.5 新增，openDetail 收敛唯一调用点）、
   `pages/MyNotes.ets:133 'back' has been deprecated`（M2.5 新增，goBack 收敛唯一调用点）、
   `pages/EventDetail.ets:42 'getParams' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
-  `pages/EventDetail.ets:171 'back' has been deprecated`（M1.8 新增，M4.2 补齐登记），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  `pages/EventDetail.ets:171 'back' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
+  `pages/KnowledgeGraph.ets:376 'pushUrl' has been deprecated`（C1.2 新增，openDetail 图谱节点/卡片跳详情，router deprecate 同类型且包 try/catch），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   行号随代码增删会漂移，比对以「文件 + 告警类型」为准。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
@@ -292,6 +315,7 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 | 日期 | 修订内容 |
 |---|---|
+| 2026-09-27 | **C1 完成（文化主题聚合与个人知识库构建，M5 创新拓展首个子任务；构建 BUILD SUCCESSFUL，O3 基线更新为 16 条——本次新增仅 KnowledgeGraph openDetail pushUrl 1 条同类型告警）**：① C1.1 主题数据模型 + 主题服务——新增 model/Theme.ets（id/name/colorIndex/createdAt/updatedAt/deviceId，LWW 兼容）；Favorite 增 themeIds[]（只增字段，getStrArray 缺省空数组天然兼容旧数据，踩坑 1/2/4）；新增 service/ThemeService.ets（仿 FavoriteService 模式：内存缓存 + 独立 Preferences store 'yellow_river_themes' + 分布式双写 + 远端 LWW 合并，删除主题仅剥离收藏关联引用不删收藏）；② C1.3 分布式同步扩展——SyncService 增 theme_ 前缀通道（syncTheme/removeThemeSync）、RemoteChanges 增 upsertThemes/deletedThemeIds、handleRemoteChanges 分类解析、parseThemeFromWire 逐字段显式转换；远端收藏解析补 themeIds（双端收敛必需）；FavoriteService 增 updateFavoriteThemes（归类写收藏唯一权威，themeIds 随 syncFavorite 走 LWW）与 getFavoritesByTheme；③ C1.2 知识图谱页——新增 pages/KnowledgeGraph.ets（Index 第 4 个 Tab「图谱」，无新路由无需注册）：主题 chips（选择/新建/重命名/删除，重命名用主题编辑器复用）、Canvas 知识节点网络（API 12 CanvasRenderingContext2D 经本机 SDK component/canvas.d.ts 双重核对：Canvas(context)+onReady/onAreaChange+arc/moveTo/lineTo/stroke/fill/fillText/textAlign；中心主题节点 + 环绕遗址节点圆周分布 + 连线，点击命中测试带 id 跳详情 O2；命令式重绘规避踩坑 15）、归类管理弹层（已归类 ✕ 移除 / 未归类收藏 ＋ 加入）、拓展推荐（复用 M4 recommendHeritages，锚定主题首条已归类遗址、排除已收藏与已归类）、空态兜底（无主题引导新建 / 无归类引导归类）；数据流单一数据源（主题=ThemeService、收藏=FavoriteService、Heritage=HeritageDataLoader，预览器 mock 兜底与收藏页一致）；④ 架构纪律：主题与 M2 标签为两个维度（标签=管理分类，主题=文化脉络聚合，多对多）；不涉及数据文件无 R3 双份需求；新增告警仅 pushUrl 同类型且包 try/catch |
 | 2026-09-23 | 初始建立：计划书总纲 + M1 细分（M1.1~M1.5）+ 踩坑清单 + Git 规范 |
 | 2026-09-23 | M1.1 完成（model 5 文件编译通过）；新增命令行构建命令实录 |
 | 2026-09-23 | M1.2 完成：heritage_data.json（8 条真实遗址）+ HeritageDataLoader 解析；城市枚举增补「安阳」（殷墟所在地）；数据集规模策略：M1.2 抽样 8 条跑通管道，M1.4/1.5 后扩充至每市 3~5 条并补齐龙山年代段 |
