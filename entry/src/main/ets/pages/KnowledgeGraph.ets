@@ -8,10 +8,12 @@
  *   （中心 = 选中主题、环绕 = 已归类遗址节点，圆周分布 + 连线，点击带 id 跳详情 O2）→
  *   归类管理（已归类移除 / 未归类收藏加入）→ 拓展推荐（该主题已收藏遗址的相似推荐，
  *   排除已收藏，复用 M4 utils/Recommendation 纯函数）；
- * - 知识节点网络用 ArkUI Canvas 绘制（API 12 CanvasRenderingContext2D，
- *   本机 SDK component/canvas.d.ts 双重核对：Canvas(context) + onReady/onAreaChange +
- *   arc/moveTo/lineTo/stroke/fill/fillText/textAlign 等）；绘制为命令式，主题/归类变化后
- *   手动重绘（不经 @Builder，规避踩坑 15）；命中测试用记录节点坐标，克制简洁不做 3D（用户偏好）；
+ * - 知识节点网络用 ArkUI Canvas 绘制（官方文档核对：CanvasRenderingContext2D 默认单位为 vp，
+ *   constructor(settings, unit?: LengthMetricsUnit) DEFAULT=vp、PX 需显式指定；context.width/height
+ *   只读属性为 vp，官方 onReady 示例直接 radius = context.width/3 绘制，零换算——前两轮 ×dpr 换算
+ *   致 vp 数值放大 3 倍、节点出画布的踩坑已记录）；绘制为命令式，主题/归类变化后手动重绘
+ *   （不经 @Builder，规避踩坑 15）；命中测试用记录节点坐标（vp 域，与点击事件坐标一致），
+ *   克制简洁不做 3D（用户偏好）；
  * - 数据流单一数据源：主题 = ThemeService、收藏 = FavoriteService（含 themeIds）；
  *   Heritage 预置数据用 HeritageDataLoader（预览器 mock 兜底，与发现/收藏页行为一致）；
  * - 空态兜底（工程惯例）：无主题引导新建 / 有主题无归类引导归类；
@@ -93,13 +95,12 @@ export struct KnowledgeGraph {
 
   // ==================== Canvas 绘制 ====================
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
+  /** 默认 vp 单位模式（官方 constructor 默认 LengthMetricsUnit.DEFAULT=vp；PX 需显式指定） */
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
-  private canvasW: number = 0;
-  private canvasH: number = 0;
   private graphNodes: GraphNode[] = [];
   /**
-   * 图谱区域高度（vp）：动态适配设备窗口（取窗口高度约 42%，下限 300vp），
-   * 平板/大屏自动更大，避免固定高度在不同设备上挤压图谱与节点文字。
+   * 图谱区域高度（vp）：动态适配设备窗口（按窗口宽度约 90%，下限 300vp、上限 430vp），
+   * 图谱区接近方形、图形铺满；平板/大屏自动更大。
    */
   @State canvasHeight: number = 300;
 
@@ -430,48 +431,51 @@ export struct KnowledgeGraph {
     return `${text.substring(0, maxChars - 1)}…`;
   }
 
-  /** 绘制知识节点网络（命令式重绘：主题/归类变化后手动调用） */
+  /**
+   * 绘制知识节点网络（命令式重绘：主题/归类变化后手动调用）。
+   * 官方依据（华为开发者文档 + 本机 SDK canvas.d.ts 双重核对）：
+   * - context 默认 vp 单位模式（constructor unit 缺省 = LengthMetricsUnit.DEFAULT）；
+   * - context.width / context.height 只读属性为 vp，官方 onReady 示例直接
+   *   `radius = context.width / 3` 按比例绘制，无需任何 px/vp 换算（前两轮 ×dpr 致 3 倍放大踩坑）；
+   * - 字体 font-size 显式写 vp 单位（如 '15vp sans-serif'），消除单位歧义。
+   * 逻辑链（用户要求）：画布适应设备（width 100% + 动态高度）→ 图适应画布
+   * （半径/布局按 context.width/height 比例）→ 字体适应图（字号按节点半径比例）。
+   */
   private drawGraph(): void {
-    if (this.canvasW <= 0 || this.canvasH <= 0) {
-      return; // 等 onAreaChange 拿到实际尺寸后重绘
+    const w: number = this.context.width;  // 画布宽度（vp）
+    const h: number = this.context.height; // 画布高度（vp）
+    if (w <= 0 || h <= 0) {
+      return; // onReady/onAreaChange 后才可取到尺寸
     }
     const ctx: CanvasRenderingContext2D = this.context;
-    // Canvas 坐标系单位是物理像素（px）：所有尺寸以 vp 设计、绘制时 ×dpr 转 px
-    // （用 UIContext.vp2px/px2vp 而非全局函数——全局版已 deprecated，告警类型零新增纪律）
-    const ui = this.getUIContext();
-    const dpr: number = ui.vp2px(1);
-    const wPx: number = this.canvasW;
-    const hPx: number = this.canvasH;
-    const w: number = ui.px2vp(wPx); // 画布宽度（vp，尺寸设计基准）
-    const h: number = ui.px2vp(hPx); // 画布高度（vp）
-    ctx.clearRect(0, 0, wPx, hPx);
+    ctx.clearRect(0, 0, w, h);
     this.graphNodes = [];
-    const cx: number = wPx / 2;
-    const cy: number = hPx / 2 - 8;
+    const cx: number = w / 2;
+    const cy: number = h / 2 - 8;
 
-    // ---- 动态尺寸（vp 域，随画布宽度等比缩放：手机~350vp 取中值、平板自动放大） ----
-    const themeR: number = this.clamp(Math.round(w * 0.09), 34, 42);   // 中心主题节点半径（vp）
-    const nodeR: number = this.clamp(Math.round(w * 0.06), 22, 28);    // 遗址节点半径（vp）
-    const themeFont: number = this.clamp(Math.round(w * 0.045), 15, 18);  // 主题名字号（vp）
-    const labelFont: number = this.clamp(Math.round(w * 0.037), 12, 14);  // 遗址标签字号（vp）
-    const countFont: number = this.clamp(Math.round(w * 0.032), 11, 13);  // 「N 处」字号（vp）
-    const labelMaxChars: number = Math.max(3, Math.floor((w * 0.34) / labelFont)); // 标签最大字符数
+    // ---- 尺寸（vp 域，随画布宽度等比缩放：手机 ~350vp 取中值、平板自动放大） ----
+    const themeR: number = this.clamp(Math.round(w * 0.1), 36, 46);    // 中心主题节点半径
+    const nodeR: number = this.clamp(Math.round(w * 0.06), 24, 30);    // 遗址节点半径
+    const themeFont: number = this.clamp(Math.round(themeR * 0.42), 14, 19);  // 主题名字号（vp）
+    const labelFont: number = this.clamp(Math.round(nodeR * 0.5), 12, 15);    // 遗址标签字号（vp）
+    const countFont: number = this.clamp(Math.round(themeR * 0.3), 11, 13);   // 「N 处」字号（vp）
+    const labelMaxChars: number = Math.max(3, Math.floor((w * 0.36) / labelFont)); // 标签最大字符数
 
     // 中心主题节点（圆内短标签，按可用宽度截断）
     const theme: Theme | null = this.selectedTheme();
     const themeColor: string = theme === null ? '#9E9E9E' : THEME_PALETTE[theme.colorIndex % THEME_PALETTE.length];
     ctx.beginPath();
-    ctx.arc(cx, cy, Math.round(themeR * dpr), 0, Math.PI * 2);
+    ctx.arc(cx, cy, themeR, 0, Math.PI * 2);
     ctx.fillStyle = themeColor;
     ctx.fill();
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
-    ctx.font = `${Math.round(themeFont * dpr)}px sans-serif`;
+    ctx.font = `${themeFont}vp sans-serif`;
     const themeMaxChars: number = Math.max(2, Math.floor((themeR * 1.62) / themeFont));
     ctx.fillText(theme === null ? '未选择' : this.fitLabel(theme.name, themeMaxChars),
-      cx, cy + Math.round(themeFont * 0.35 * dpr));
-    ctx.font = `${Math.round(countFont * dpr)}px sans-serif`;
-    ctx.fillText(`${this.themedHeritages.length} 处`, cx, cy + Math.round((themeR - 2) * dpr));
+      cx, cy + Math.round(themeFont * 0.35));
+    ctx.font = `${countFont}vp sans-serif`;
+    ctx.fillText(`${this.themedHeritages.length} 处`, cx, cy + themeR - 2);
 
     // 环绕遗址节点（圆周分布；布局半径随画布与节点尺寸动态计算，下限兜底防重叠）
     const n: number = this.themedHeritages.length;
@@ -479,8 +483,8 @@ export struct KnowledgeGraph {
       const layoutR: number = Math.max(60, Math.min(w, h) / 2 - themeR - nodeR - 20);
       for (let i = 0; i < n; i++) {
         const angle: number = (i / n) * Math.PI * 2 - Math.PI / 2;
-        const x: number = cx + (layoutR * dpr) * Math.cos(angle);
-        const y: number = cy + (layoutR * dpr) * Math.sin(angle);
+        const x: number = cx + layoutR * Math.cos(angle);
+        const y: number = cy + layoutR * Math.sin(angle);
         // 连线（中心 → 节点）
         ctx.beginPath();
         ctx.moveTo(cx, cy);
@@ -491,19 +495,18 @@ export struct KnowledgeGraph {
         // 节点圆（主题色软底 + 年代色描边，克制不做 3D）
         const item: Heritage = this.themedHeritages[i];
         ctx.beginPath();
-        ctx.arc(x, y, Math.round(nodeR * dpr), 0, Math.PI * 2);
+        ctx.arc(x, y, nodeR, 0, Math.PI * 2);
         ctx.fillStyle = getEraTheme(item.era).soft;
         ctx.fill();
         ctx.strokeStyle = getEraTheme(item.era).deep;
         ctx.lineWidth = 2;
         ctx.stroke();
-        // 遗址名称（节点下方外置标签，字号按 vp 放大 + 智能截断，避免压边与超宽）
+        // 遗址名称（节点下方外置标签，字号按 vp + 智能截断，避免压边与超宽）
         ctx.fillStyle = '#3E2723';
-        ctx.font = `${Math.round(labelFont * dpr)}px sans-serif`;
+        ctx.font = `${labelFont}vp sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(this.fitLabel(item.name, labelMaxChars),
-          x, y + Math.round((nodeR + labelFont) * dpr) + 4);
-        this.graphNodes.push(new GraphNode(item.id, item.name, x, y, Math.round(nodeR * dpr)));
+        ctx.fillText(this.fitLabel(item.name, labelMaxChars), x, y + nodeR + labelFont + 4);
+        this.graphNodes.push(new GraphNode(item.id, item.name, x, y, nodeR));
       }
     }
   }
@@ -522,10 +525,8 @@ export struct KnowledgeGraph {
     }
   }
 
-  private onCanvasArea(w: number, h: number): void {
-    this.canvasW = w;
-    this.canvasH = h;
-    this.drawGraph();
+  private onCanvasArea(): void {
+    this.drawGraph(); // 尺寸变化时重绘（实际尺寸从 context.width/height 取，官方模式）
   }
 
   // ==================== UI ====================
@@ -650,12 +651,8 @@ export struct KnowledgeGraph {
                   .onReady(() => {
                     this.drawGraph();
                   })
-                  .onAreaChange((_oldValue: Area, newValue: Area) => {
-                    const w: number = Number(newValue.width);
-                    const h: number = Number(newValue.height);
-                    if (!Number.isNaN(w) && !Number.isNaN(h) && w > 0 && h > 0) {
-                      this.onCanvasArea(w, h);
-                    }
+                  .onAreaChange((_oldValue: Area, _newValue: Area) => {
+                    this.onCanvasArea();
                   })
                   .onClick((event: ClickEvent) => {
                     this.handleCanvasTap(event.x, event.y);
