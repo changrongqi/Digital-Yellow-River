@@ -184,8 +184,8 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | 编号 | 子任务 | 内容 | 状态 |
 |---|---|---|---|
 | M4.0 | 详情页信息架构与视觉改版（前置） | 年代主题色英雄横幅 + 五层级/笔记 Tabs 页签化 + 历史事件时间轴 + 诗词古风卡（推荐区块将接入新结构） | ✅ |
-| M4.1 | 推荐算法 | 条目特征向量（年代/类型/城市 one-hot）→ 余弦相似度 → Top-N（utils 层纯函数） | ⬜ |
-| M4.2 | 详情页推荐区块 | 「介绍」页签下方「相关遗址推荐」横向卡片，点击带 id 跳详情（O2）；基于收藏微调 | ⬜ |
+| M4.1 | 推荐算法 | 条目特征向量（年代/类型/城市 one-hot）→ 余弦相似度 → Top-N（utils 层纯函数） | ✅ |
+| M4.2 | 详情页推荐区块 | 「介绍」页签下方「相关遗址推荐」横向卡片，点击带 id 跳详情（O2）；基于收藏微调 | ✅ |
 
 ### M5 创新扩展（P2，视进度）
 - C1 知识图谱可视化 / C2 备份与还原 / C3 多端协同编辑
@@ -235,18 +235,22 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 - O1 `coverImage` 全为空且 rawfile 中无任何图片资源，列表用文字徽标占位，详情页「图文介绍」实际只有文 —— 待确定是否引入图片资源。
 - O2 详情页仅认 `id` 入参；M2 收藏页 / M4 推荐入口跳转必须统一带 id，否则落「未找到该遗产」。
-- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-27 实测更新，仅允许以下 11 条 + 1 条签名提示）**：
+- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-27 M4.2 收口更新，仅允许以下 15 条 + 1 条签名提示；其中 M1.8 期间已存在但基线漏记的 3 条——Detail openEventDetail pushUrl、EventDetail getParams/back——于 M4.2 补齐登记，本次新增仅 Detail openRecommendedDetail pushUrl 1 条）**：
   `data/HeritageDataLoader.ets:39 Function may throw exceptions`（getRawFileContent）、
   `pages/Discovery.ets:307 'pushUrl' has been deprecated`、
+  `pages/Favorites.ets:226 'pushUrl' has been deprecated`（M2.5 新增，openMyNotes 入口，router deprecate 同类型）、
   `pages/Favorites.ets:525 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
   `pages/Detail.ets:46 'getParams' has been deprecated`、
   `pages/Detail.ets:109 'back' has been deprecated`、
-  `pages/Detail.ets:264 'pushUrl' has been deprecated`（M2.4 新增，router deprecate 同类型；pushUrl 已收敛为唯一调用点 openNoteEditor 且包 try/catch）、
+  `pages/Detail.ets:264 'pushUrl' has been deprecated`（M2.4 新增，router deprecate 同类型；openNoteEditor 且包 try/catch）、
+  `pages/Detail.ets 'pushUrl' has been deprecated`（M1.8 新增，openEventDetail，M4.2 补齐登记）、
+  `pages/Detail.ets 'pushUrl' has been deprecated`（M4.2 新增，openRecommendedDetail 推荐卡跳详情，router deprecate 同类型且包 try/catch）、
   `pages/NoteEdit.ets:55 'getParams' has been deprecated`（M2.3 新增，router deprecate 同类型）、
   `pages/NoteEdit.ets:140 'back' has been deprecated`（M2.3 新增，back 已收敛为唯一调用点 goBack()）、
-  `pages/Favorites.ets:226 'pushUrl' has been deprecated`（M2.5 新增，openMyNotes 入口，router deprecate 同类型）、
   `pages/MyNotes.ets:125 'pushUrl' has been deprecated`（M2.5 新增，openDetail 收敛唯一调用点）、
-  `pages/MyNotes.ets:133 'back' has been deprecated`（M2.5 新增，goBack 收敛唯一调用点），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  `pages/MyNotes.ets:133 'back' has been deprecated`（M2.5 新增，goBack 收敛唯一调用点）、
+  `pages/EventDetail.ets:42 'getParams' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
+  `pages/EventDetail.ets:171 'back' has been deprecated`（M1.8 新增，M4.2 补齐登记），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   行号随代码增删会漂移，比对以「文件 + 告警类型」为准。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
@@ -338,3 +342,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-27 | **M1.7 第十批汉魏洛阳故城深写完成（构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）**：按 §1.1 方法论联网搜证（洛阳市文物局/河南省文物局/省文化和旅游厅/省发改委/人民日报海外版/中国文化报/洛阳日报（洛阳网）/中国社会科学院考古研究所/中国青年报等）——intro 4 段（位置与「天下之中」及司马光诗/五朝为都与都城形制演变/中轴线与丝绸之路东方起点/荣誉与博物馆）、discovery 5 段（考古历程三阶段/都城形制演变与三重城圈/中轴线与宫城建筑太极殿阊阖门/永宁寺灵台太学等重要遗存/新发现与遗址博物馆）、events 8 条结构化（西周周公营建成周洛邑/25 东汉定都雒阳九六城/220—235 曹魏太极殿建中立极/493 北魏迁都三重城圈世界之都/534 北魏分裂城毁/1961—1962 第一批国保与系统考古/2014 丝绸之路世界遗产唯一都城遗址/2025 遗址博物馆开放）、tourism 四卡（博物馆周二至周日 9:00—17:00 周一闭馆/免费需预约/0379-65580010/白马寺镇翟泉村南 + 动线半天博物馆+遗址公园+白马寺 + 五看解说）、highlights 8/specs 12/artifacts 6/images 4 占位；**数据纪律实例**：为都年数采用省文物局/人民日报口径「近600年」（洛阳文物局旧文 540 年，冲突按最新权威口径）；中轴线「北京中轴线的最早典范」表述经刘庆柱（社科院学部委员）评价与洛阳市文物局文章双源核证；司马光诗「若问古今兴废事，请君只看洛阳城」多源核证后引入正文；Mock 新增 mock-hanwei-01 与 rawfile **字段级完全同构**（R3，临时 Node 脚本生成插入，脚本用毕删除）；rawfile 23 条/mock 10 条双份校验通过（PowerShell ConvertFrom-Json + Node 模拟模板求值 + 逐字段同构比对） |
 | 2026-09-27 | **M1.7 第十一批王城岗遗址深写完成（构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）**：按 §1.1 方法论联网搜证（郑州市文物局/河南省文物局/省文化和旅游厅/省发改委/登封市人民政府/河南日报/郑州日报/光明网/河南省文物考古研究院等）——intro 4 段（位置与「禹都阳城」「鲧作城」/小城大城与夯土基址/战国「阳城」陶文佐证与徐旭生发现史/荣誉与观星台地缘）、discovery 5 段（1959 徐旭生发现与早期发掘/大城确认 34.8 万㎡/奠基坑与人牲/青铜器与高等级器物/「禹都阳城」与夏文化研究）、events 8 条结构化（龙山晚期小城筑城鲧作城/龙山末期大城兴建禹都阳城/1959 徐旭生夏墟调查发现/1975—1978 小城堡确认与奠基坑/1996 第四批国保/2000—2005 探源工程大城重见天日/2020 考古中国夏文化研究重大项目/近年禹都阳城研究持续推进）、tourism 四卡（观星台景区夏季 8:00—17:30 冬季 8:00—17:00/观星台免费凭身份证换票/0371-62887139/告成镇 + 动线 1.5—2 小时遗址+观星台+文化展厅 + 五看解说）、highlights 8/specs 12/artifacts 6/images 4 占位；**数据纪律实例**：大城面积采用省文物局/郑州市文物局口径 34.8 万平方米（个别旧文「30 余万平方米」为约数，冲突按最新官方口径）；「鲧作城/禹都阳城」的解读明确标注「学界最新解读」，保持学术审慎；Mock 新增 mock-wangchenggang-01 与 rawfile **字段级完全同构**（R3，临时 Node 脚本生成插入，脚本用毕删除）；rawfile 23 条/mock 11 条双份校验通过（PowerShell ConvertFrom-Json + Node 模拟模板求值 + 逐字段同构比对） |
 | 2026-09-27 | **M1.7 收口完成（第十二至二十三批 12 条遗址全部深写完毕，M1.7 状态 🚧→✅；构建 BUILD SUCCESSFUL，告警维持 O3 基线零新增）**：按 §1.1 方法论逐条联网搜证官方/权威来源（郑州市文物局/洛阳市文物局/安阳市文物局/三门峡市文广旅局/灵宝市政府/濮阳县文旅云/河南省文物局/省文化和旅游厅/省政府门户/人民网/河南日报/开封日报/濮阳日报/安阳市政府网站等）完成 12 条深写——少林寺常住院（禅宗祖庭/塔林/十三棍僧/天地之中世遗，门票 80 元/0371-62745000）、邙山陵墓群（756km²/6 代 24 帝陵/景陵地宫/洛阳古墓博物馆，poems 清空）、巩义黄冶三彩窑址（唐三彩与唐青花发祥地/累计 2015㎡ 发掘/巩义市博物馆）、开封铁塔（唯一宋代琉璃砖塔/福胜木塔喻皓/通高 55.88 米/1938 日军炮击）、繁塔（974 年/近 7000 佛砖/20 块伎乐砖/199 方石刻）、庙底沟（庙底沟类型与二期文化/彩陶占比近 20%/花开中国博物馆，era 龙山→仰韶纠错）、函谷关（西周建置/老子著《道德经》/函关古道 40 段车辙/4A）、西水坡（中华第一龙/约 6500 年/三组蚌砌图案/国博收藏）、回銮碑（澶渊之盟唯一实物见证/御井甘泉/第八批国保）、修定寺塔（3775 块浮雕砖/中国第一华塔/白灰泥护塔传奇）、安阳文峰塔（唯一伞状砖塔/38.65 米/文峰耸秀）、灵泉寺石窟（河朔第一古刹/247 座石窟/大住圣窟三奇/万佛沟，修正 stub「僧稠」误记为道凭法师）；**数据纪律实例**：少林寺创建年官方口径冲突（495 vs 496）按纪律「正文不写死争议数」写「北魏太和年间（495 年前后）」并注明；庙底沟 stub era=龙山 属错误分类纠为仰韶；回銮碑碑文书者「寇准书丹」与「真宗御笔」两说并存按纪律注明；12 条 Mock 与 rawfile **字段级完全同构**（R3，改用通用 Node 脚本参数化生成插入，脚本用毕删除）；**rawfile 23 条全部深写（intro≥3 段/events≥3 条/poems=0）+ mock 23 条双份校验通过**；M1.7 里程碑完成，23 条遗址 × 10 倍信息量目标达成 |
+| 2026-09-27 | **M4.1 + M4.2 完成（智能关联推荐，M4 里程碑全部完成；构建 BUILD SUCCESSFUL，O3 基线更新为 15 条——本次新增仅 Detail openRecommendedDetail pushUrl 1 条同类型告警，M1.8 期间漏记的 3 条——Detail openEventDetail pushUrl、EventDetail getParams/back——一并补齐登记）**：① 新增 utils/Recommendation.ets（M4.1 纯函数，无状态/无副作用/不抛异常）——`buildFeatureVector` 16 维 one-hot（年代 6 + 类型 4 + 城市 6，枚举不匹配段全 0）、`cosineSimilarity` 标准余弦（零向量/维度不一致返回 0，对 one-hot 向量即「共享特征维度数」，值 ∈ {0,1/3,2/3,1}）、`recommendHeritages(list, currentId, favoriteIds, topN)` Top-N——**收藏微调 +0.1**（0.1 小于最小非零相似度差 1/3，只做同档位内「已收藏」优先，不颠倒主序）、排序稳定（分数降序同分名称升序，同数据必得同结果便于交叉验证）、两轮兜底（先取分数>0 强关联、不足再补足，保证区块有内容）、无候选返回空数组；② Detail.ets 接入（M4.2）——@State recommendations + allHeritage 私有缓存（数据源与详情同源：rawfile 或 mock）；loadData 成功/失败分支、onPageShow、dataChangedHandler（收藏变化触发微调重算）三处时机整体赋值重算（踩坑 5）；「介绍」页签底部新增「相关遗址推荐」白卡：横向 Scroll + Row + 固定宽 150 卡片（名称 1 行截断 + 简介 2 行截断 + 年代/类型/城市徽标行，主题色 soft 底 deep 徽标字与文物卡同款视觉语言），点击经 openRecommendedDetail 带 id 跳详情（O2 约定，router.pushUrl 第二调用点包 try/catch）；空态（推荐列表为空）整块隐藏不占位；③ 不涉及数据文件（推荐为运行时计算，无 R3 双份同步需求）、不涉及新路由（Detail 已在 main_pages.json）；④ 官方文档核对：Scroll.scrollable(ScrollDirection.Horizontal) 为 ArkUI 标准横向滚动（官方 ts-container-scroll + 工程内 Discovery.ets 筛选 chips 行同款先例） |

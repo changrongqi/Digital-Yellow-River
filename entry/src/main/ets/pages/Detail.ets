@@ -11,7 +11,9 @@
  *   介绍 / 考古 / 事件 / 诗词 / 文旅 / 笔记，支持左右滑动切换，横幅常驻不随内容滚动；
  * - 历史事件 → 时间轴（年份高亮 + 可点击条目，M1.8 起点击跳转事件子详情页做专题讲解）；
  * - 相关诗词 → 古风卡（浅主题底 + 标题作者居中 + 引文排版）；
- * - M4.1 起推荐区块将接入「介绍」页签（预留结构位置）。
+ * - M4.1/M4.2 起「介绍」页签底部接入「相关遗址推荐」横向卡片（M4.1 预留结构位置）：
+ *   以本条目特征为锚，按余弦相似度 + 收藏微调取 Top-N（utils/Recommendation 纯函数），
+ *   点击卡片带 id 跳转对应详情（O2 约定）；收藏变化（onPageShow / onDataChanged）时重算。
  *
  * 兜底策略（与发现页一致）：
  * - 加载中：转圈提示；rawfile 加载失败（预览器）：注入 mock 再按 id 匹配；
@@ -26,10 +28,12 @@ import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Heritage, HeritageEvent, SpecItem, Artifact } from '../model/Heritage';
 import { Note } from '../model/Note';
+import { Favorite } from '../model/Favorite';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
 import { getEraTheme } from '../utils/EraTheme';
 import { formatDateTime } from '../utils/TimeFormat';
+import { recommendHeritages } from '../utils/Recommendation';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 import { ImageGallery } from '../components/ImageGallery';
 
@@ -46,7 +50,11 @@ struct Detail {
   @State isFav: boolean = false;
   /** 本条目笔记列表（updatedAt 倒序，服务层已排序） */
   @State notes: Note[] = [];
+  /** 相关遗址推荐（M4.2：介绍页签底部横向卡片；收藏变化时整体赋值重算，踩坑 5） */
+  @State recommendations: Heritage[] = [];
   private targetId: string = '';
+  /** 当前数据源全量条目（rawfile 或 mock，与详情同源），推荐重算的数据源 */
+  private allHeritage: Heritage[] = [];
   /** 用户数据变化监听句柄（远端合并/本地变更时刷新本页，M3.2；消失时注销防泄漏） */
   private dataChangedHandler: () => void = (): void => {};
 
@@ -67,9 +75,11 @@ struct Detail {
     this.isFav = FavoriteService.isFavorite(this.targetId);
     this.notes = FavoriteService.getNotesByItem(this.targetId);
     // M3.2：远端 LWW 合并（或其他页面变更）时刷新收藏状态与笔记列表
+    // M4.2：收藏集合变化影响推荐微调，一并重算（heritage 未加载完成时安全跳过）
     this.dataChangedHandler = (): void => {
       this.isFav = FavoriteService.isFavorite(this.targetId);
       this.notes = FavoriteService.getNotesByItem(this.targetId);
+      this.refreshRecommendations();
     };
     FavoriteService.onDataChanged(this.dataChangedHandler);
     this.loadData();
@@ -83,6 +93,7 @@ struct Detail {
   onPageShow(): void {
     this.isFav = FavoriteService.isFavorite(this.targetId);
     this.notes = FavoriteService.getNotesByItem(this.targetId);
+    this.refreshRecommendations();
   }
 
   private async loadData(): Promise<void> {
@@ -92,13 +103,17 @@ struct Detail {
         throw new Error('host context unavailable');
       }
       const list: Heritage[] = await HeritageDataLoader.loadHeritageList(hostContext);
+      this.allHeritage = list;
       this.heritage = this.findById(list, this.targetId);
       this.isMockData = false;
+      this.refreshRecommendations();
     } catch (err) {
       // 预览器无法访问 rawfile：注入示例数据兜底（与发现页同源）
       hilog.error(DOMAIN, TAG, 'load failed, fallback to mock: %{public}s', JSON.stringify(err));
+      this.allHeritage = MOCK_HERITAGES;
       this.heritage = this.findById(MOCK_HERITAGES, this.targetId);
       this.isMockData = true;
+      this.refreshRecommendations();
     } finally {
       this.isLoading = false;
     }
@@ -151,6 +166,38 @@ struct Detail {
       });
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'open event detail failed: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  /**
+   * 重算「相关遗址推荐」（M4.2）：以当前条目为锚，按余弦相似度 + 收藏微调取 Top-N。
+   * 数据源用 allHeritage（与详情同源：rawfile 或 mock）；收藏集合取 FavoriteService。
+   * 触发时机：数据加载完成 / onPageShow（返回本页）/ onDataChanged（收藏变化微调）。
+   * heritage 未加载完成时安全返回空（loadData 完成后会主动重算一次）。
+   */
+  private refreshRecommendations(): void {
+    if (this.heritage === null) {
+      this.recommendations = [];
+      return;
+    }
+    const favs: Favorite[] = FavoriteService.getAllFavorites();
+    const favIds: string[] = [];
+    for (let i = 0; i < favs.length; i++) {
+      favIds.push(favs[i].itemId);
+    }
+    this.recommendations = recommendHeritages(this.allHeritage, this.targetId, favIds, 5);
+  }
+
+  /**
+   * 打开推荐遗址详情（M4.2：推荐卡点击，统一带 id 跳转，O2 约定——不带 id 会落
+   * 「未找到该遗产」）。router.pushUrl 第二调用点（M2.4 收敛后新增，同类型 deprecate
+   * 告警 +1，收尾同步更新 O3 基线）。
+   */
+  private openRecommendedDetail(heritageId: string): void {
+    try {
+      router.pushUrl({ url: 'pages/Detail', params: { id: heritageId } });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'open recommended detail failed: %{public}s', JSON.stringify(err));
     }
   }
 
@@ -398,6 +445,37 @@ struct Detail {
           .borderRadius(12)
           .margin({ top: 20 })
         }
+
+        // 相关遗址推荐（M4.2：介绍页签底部横向卡片，点击带 id 跳详情）
+        if (this.recommendations.length > 0) {
+          Column() {
+            Text('相关遗址推荐')
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#3E2723')
+              .width('100%')
+            Scroll() {
+              Row() {
+                ForEach(this.recommendations, (rec: Heritage) => {
+                  this.RecommendCard(rec)
+                }, (rec: Heritage) => rec.id)
+              }
+              .alignItems(VerticalAlign.Top)
+              .padding({ top: 12 })
+            }
+            .scrollable(ScrollDirection.Horizontal)
+            .scrollBar(BarState.Off)
+            .edgeEffect(EdgeEffect.Spring)
+            .width('100%')
+            .height(120)
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding(16)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .margin({ top: 20 })
+        }
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -408,6 +486,49 @@ struct Detail {
     .scrollBar(BarState.Off)
     .align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring)
+  }
+
+  /**
+   * 推荐遗址卡片（M4.2）：固定宽度横向卡片，名称 + 简介 + 年代/类型/城市徽标行，
+   * 主题色 soft 浅底 + deep 徽标字（与考古页签文物卡同款视觉语言，克制不花哨）。
+   * 内容全部来自推荐列表条目（静态数据），@Builder 参数化渲染安全（踩坑 15）。
+   */
+  @Builder
+  RecommendCard(rec: Heritage) {
+    Column() {
+      Text(rec.name)
+        .fontSize(14)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#3E2723')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+      Text(rec.summary)
+        .fontSize(12)
+        .fontColor('#8D6E63')
+        .lineHeight(18)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+        .margin({ top: 6 })
+      Text(`${rec.era} · ${rec.type} · ${rec.city}`)
+        .fontSize(10)
+        .fontColor(getEraTheme(rec.era).deep)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+        .margin({ top: 8 })
+    }
+    .width(150)
+    .alignItems(HorizontalAlign.Start)
+    .padding(12)
+    .backgroundColor(getEraTheme(rec.era).soft)
+    .borderRadius(10)
+    .border({ width: 1, color: '#F0EBE5' })
+    .margin({ right: 10 })
+    .onClick(() => {
+      this.openRecommendedDetail(rec.id);
+    })
   }
 
   /**
