@@ -78,6 +78,8 @@ export struct Favorites {
   /** 分组显示数据（@State 整体赋值刷新，踩坑 5） */
   @State groups: TagGroup[] = [];
   @State favoriteCount: number = 0;
+  /** 笔记总数（顶部「我的笔记」入口显示，M2.5） */
+  @State noteCount: number = 0;
   @State isLoading: boolean = true;
   /** 预览示例数据标注（rawfile 加载失败注入 mock 时为 true） */
   @State isMockData: boolean = false;
@@ -177,6 +179,7 @@ export struct Favorites {
     }
     this.groups = groups;
     this.favoriteCount = favorites.length;
+    this.noteCount = FavoriteService.getAllNotes().length;
   }
 
   private makeCard(fav: Favorite): FavoriteCard {
@@ -216,6 +219,15 @@ export struct Favorites {
   }
 
   // ==================== 弹层状态与操作 ====================
+
+  /** 打开「我的笔记」列表（M2.5；try/catch 防 may throw 告警） */
+  private openMyNotes(): void {
+    try {
+      router.pushUrl({ url: 'pages/MyNotes' });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'open my notes failed: %{public}s', JSON.stringify(err));
+    }
+  }
 
   private openMenu(itemId: string, name: string): void {
     this.sheetItemId = itemId;
@@ -325,6 +337,35 @@ export struct Favorites {
         }
         .width('100%')
         .padding({ left: 20, right: 20, top: 16, bottom: 12 })
+
+        // 我的笔记入口（M2.5：未收藏遗址的笔记也能从这里快速找回）
+        Row() {
+          Row() {
+            Text('📝 我的笔记')
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#6D4C41')
+            Text(`${this.noteCount} 条`)
+              .fontSize(12)
+              .fontColor('#8D6E63')
+              .margin({ left: 8 })
+            Blank()
+            Text('›')
+              .fontSize(18)
+              .fontColor('#BCAAA4')
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .border({ width: 1, color: '#E0D6CC' })
+          .onClick(() => {
+            this.openMyNotes();
+          })
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16 })
+        .margin({ bottom: 12 })
 
         if (this.isLoading) {
           Column() {

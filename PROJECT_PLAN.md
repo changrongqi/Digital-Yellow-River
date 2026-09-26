@@ -113,6 +113,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M2.2 | 收藏页 | 按标签分组列表 + 自定义标签 | ✅ |
 | M2.3 | 笔记编辑页 | 文字 + 自动时间戳（标签归收藏维度，见修订记录） | ✅ |
 | M2.4 | 详情页接入收藏/笔记 | 收藏按钮、笔记入口、列表联动 | ✅ |
+| M2.5 | 我的笔记入口（体验补强） | 按遗址聚合笔记列表页，未收藏遗址的笔记也能快速找回 | ✅ |
 
 ### M3 分布式数据同步（赛题核心，2026-09-26 拆解为子任务表）
 
@@ -201,7 +202,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 - O1 `coverImage` 全为空且 rawfile 中无任何图片资源，列表用文字徽标占位，详情页「图文介绍」实际只有文 —— 待确定是否引入图片资源。
 - O2 详情页仅认 `id` 入参；M2 收藏页 / M4 推荐入口跳转必须统一带 id，否则落「未找到该遗产」。
-- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-25 实测更新，仅允许以下 8 条 + 1 条签名提示）**：
+- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-27 实测更新，仅允许以下 11 条 + 1 条签名提示）**：
   `data/HeritageDataLoader.ets:39 Function may throw exceptions`（getRawFileContent）、
   `pages/Discovery.ets:307 'pushUrl' has been deprecated`、
   `pages/Favorites.ets:525 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
@@ -209,7 +210,10 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
   `pages/Detail.ets:109 'back' has been deprecated`、
   `pages/Detail.ets:264 'pushUrl' has been deprecated`（M2.4 新增，router deprecate 同类型；pushUrl 已收敛为唯一调用点 openNoteEditor 且包 try/catch）、
   `pages/NoteEdit.ets:55 'getParams' has been deprecated`（M2.3 新增，router deprecate 同类型）、
-  `pages/NoteEdit.ets:140 'back' has been deprecated`（M2.3 新增，back 已收敛为唯一调用点 goBack()），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  `pages/NoteEdit.ets:140 'back' has been deprecated`（M2.3 新增，back 已收敛为唯一调用点 goBack()）、
+  `pages/Favorites.ets:226 'pushUrl' has been deprecated`（M2.5 新增，openMyNotes 入口，router deprecate 同类型）、
+  `pages/MyNotes.ets:125 'pushUrl' has been deprecated`（M2.5 新增，openDetail 收敛唯一调用点）、
+  `pages/MyNotes.ets:133 'back' has been deprecated`（M2.5 新增，goBack 收敛唯一调用点），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   行号随代码增删会漂移，比对以「文件 + 告警类型」为准。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
@@ -280,3 +284,4 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 | 2026-09-26 | M3.3 完成（构建 BUILD SUCCESSFUL，告警与 O3 基线完全一致零新增）：① SyncService 扩展——getOnlineDevices（DeviceManager 懒创建 + 失败熔断 + getAvailableDeviceListSync，d.ts 实测仅需已声明的 DISTRIBUTED_DATASYNC 权限，无新增权限）、manualSync（在线设备 PUSH_PULL，无设备/降级返回 false）、onStatusChanged/offStatusChanged 状态通知（远端变更/同步完成/设备上下线触发）、subscribeSyncComplete（KV ready 后订阅，同步完成刷新 lastSyncTime）、subscribeDeviceStateChange（设备上下线刷新面板）；② 新增 pages/SyncPanel.ets 并接入 Index 第 3 个 Tab（PlaceholderTab 占位删除）：同步状态卡（服务状态/进度条/最后同步/在线设备/冲突数四行 + Progress 组件）、在线设备卡（列表或「等待设备上线」组网提示）、手动同步卡（立即同步按钮 + 降级文案：单机模式本地仍保存）、冲突记录卡（明细列表含 LWW 保留结果说明）；aboutToAppear 订阅刷新 + aboutToDisappear 注销防泄漏。distributedDeviceManager 事件回调采用零参函数（结构兼容官方匿名对象签名，避免 ArkTS 类型坑）。模拟器预期表现：服务状态「单机模式」、0 台设备、从未同步（O7） |
 | 2026-09-26 | M3.4 完成，**M3 里程碑全部完成**（收口构建 BUILD SUCCESSFUL，告警与 O3 基线完全一致）：① 真机联调操作清单 9 条写入计划书 M3 小节（签名自动生成配置/组网三件套/同签名同 bundleName 安装/双向同步/手动同步/LWW 冲突/删除同步/重启持久化/降级回归）；② conflictLog 持久化评估结论：**保持内存态不持久化不同步**——冲突日志是本端诊断信息非用户数据，同步它自身会引入复杂度与循环风险，重启清零可接受；③ M3 全阶段复检：SyncService 全文重读（初始化→订阅→双写→合并→面板 API 链路无断点）、FavoriteService 16 处接线逐一核对（7 变更方法双写 + 合并注册 + LWW 两段 + 冲突台账）、BUNDLE_NAME/STORE_ID/键前缀与 app.json5 及各调用点一致、头注释过期描述修正 |
 | 2026-09-27 | O7 实测闭环：hdc 绕过 IDE 会话限制将 HAP 同时装到两台模拟器（同账号同 WLAN），同步面板「在线设备」仍 0 台——根因模拟器无虚拟蓝牙硬件（宿主机 MediaTek 蓝牙不透传），组网三件套缺蓝牙；结论：普通本地模拟器无法真实分布式组网（由推测转实证），双向同步以真机为准。附记 hdc 手动部署命令为绕过 IDE 会话限制的可靠方式 |
+| 2026-09-27 | M2.5 完成（体验补强，动态演进新增子任务，构建 BUILD SUCCESSFUL，O3 基线 +3 条 router deprecate 同类型至 11 条）：新增 pages/MyNotes.ets 并注册 main_pages.json（踩坑 14）——按遗址聚合全部笔记（遗址名 + 笔记数 + 最后编辑时间，按最后编辑倒序），点击直达详情页（统一带 id，O2），onPageShow 刷新；收藏页顶部新增「📝 我的笔记 N 条」入口卡（openMyNotes try/catch 收敛），noteCount 随 refreshGroups 更新。解决「未收藏遗址写了笔记后难以找回」的体验缺口（用户反馈） |
