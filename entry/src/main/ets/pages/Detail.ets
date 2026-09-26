@@ -9,7 +9,7 @@
  *   周玄青/汉唐鎏金赭/宋青瓷），大号名称 + 半透明白底徽标 + 简介，一屏建立年代记忆点；
  * - 五层级 + 笔记改为顶部页签（Tabs + SubTabBarStyle，官方推荐「信息较多时分类聚焦」）：
  *   介绍 / 考古 / 事件 / 诗词 / 文旅 / 笔记，支持左右滑动切换，横幅常驻不随内容滚动；
- * - 历史事件 → 时间轴（年份高亮 + 竖线 + 节点，自动解析「XXXX年：」前缀）；
+ * - 历史事件 → 时间轴（年份高亮 + 可点击条目，M1.8 起点击跳转事件子详情页做专题讲解）；
  * - 相关诗词 → 古风卡（浅主题底 + 标题作者居中 + 引文排版）；
  * - M4.1 起推荐区块将接入「介绍」页签（预留结构位置）。
  *
@@ -24,7 +24,7 @@
 
 import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { Heritage, SpecItem, Artifact } from '../model/Heritage';
+import { Heritage, HeritageEvent, SpecItem, Artifact } from '../model/Heritage';
 import { Note } from '../model/Note';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
@@ -34,17 +34,6 @@ import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
 const TAG = 'Detail';
-
-/** 历史事件解析结果：年份前缀 + 正文 */
-class EventItem {
-  year: string;
-  body: string;
-
-  constructor(year: string, body: string) {
-    this.year = year;
-    this.body = body;
-  }
-}
 
 @Entry
 @Component
@@ -147,24 +136,21 @@ struct Detail {
   }
 
   /**
-   * 解析历史事件「XXXX年：正文」前缀（无前缀则年份为空，正文为整条）。
-   * 时间轴年份高亮用；逐条容错，非法格式按整条展示。
+   * 打开事件子详情页（M1.8：每个历史事件都可点击，做专题讲解）。
+   * 传 heritageId + eventIndex，子页按 id 从加载器重新取数（数据单一来源）。
    */
-  private parseEvents(events: string[]): EventItem[] {
-    const result: EventItem[] = [];
-    for (let i = 0; i < events.length; i++) {
-      const event: string = events[i];
-      let year: string = '';
-      let body: string = event;
-      const re = /^(\d{3,4}年)[:：]\s*(.+)$/;
-      const m: RegExpExecArray | null = re.exec(event);
-      if (m !== null && m[1] !== undefined && m[2] !== undefined) {
-        year = m[1];
-        body = m[2];
-      }
-      result.push(new EventItem(year, body));
+  private openEventDetail(index: number): void {
+    if (this.heritage === null) {
+      return;
     }
-    return result;
+    try {
+      router.pushUrl({
+        url: 'pages/EventDetail',
+        params: { heritageId: this.heritage.id, eventIndex: index }
+      });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'open event detail failed: %{public}s', JSON.stringify(err));
+    }
   }
 
   build() {
@@ -525,16 +511,18 @@ struct Detail {
   /**
    * 历史事件页签：年份时间线（纯内容驱动，无拉伸，适配任意设备宽度）。
    *
+   * M1.8：events 已升级为结构化对象（HeritageEvent），年份取 year、正文取 title，
+   * 不再依赖正则二次解析；每个条目可点击，跳转事件子详情页做专题讲解。
+   *
    * 布局要点（解决「条目间大段留白」回归）：
    * - 不用「竖线 + layoutWeight 轨道」——Column 无高度约束时 layoutWeight 会把竖线无限撑高，
    *   导致每个条目 Row 被拉高、条目间出现巨大空隙（截图实测 280pt）；
-   * - 改为「年份徽标 + 正文」一行、条目间用 Divider 分隔：高度完全由文字内容决定，
-   *   内容多则条目自然变高、内容少则紧凑收拢，不留填充式空白；
+   * - 改为「年份徽标 + 正文 + 详情箭头」一行、条目间用 Divider 分隔：高度完全由文字内容决定；
    * - 宽度全部自适应（年份列固定 64，正文 layoutWeight 吃掉剩余），平板/手机自动适配；
    * - 条目末尾显示「整理中」引导，把数据稀疏的底部变成有语义的收尾而非纯空白。
    */
   @Builder
-  TimelineTab(events: string[]) {
+  TimelineTab(events: HeritageEvent[]) {
     Scroll() {
       Column() {
         if (events.length === 0) {
@@ -543,7 +531,7 @@ struct Detail {
             .fontColor('#BCAAA4')
             .padding({ top: 40 })
         } else {
-          ForEach(this.parseEvents(events), (item: EventItem, idx: number) => {
+          ForEach(events, (item: HeritageEvent, idx: number) => {
             Column() {
               Row() {
                 // 年份徽标：主题色底圆角胶囊，宽度固定、内容驱动
@@ -556,15 +544,24 @@ struct Detail {
                   .borderRadius(10)
 
                 // 正文：换行自适应，吃满剩余宽度（设备自适应）
-                Text(item.body)
+                Text(item.title)
                   .fontSize(14)
                   .fontColor('#3E2723')
                   .lineHeight(22)
                   .layoutWeight(1)
                   .margin({ left: 12 })
+
+                // 可点击入口提示（M1.8）
+                Text('›')
+                  .fontSize(18)
+                  .fontColor('#A1887F')
+                  .margin({ left: 8 })
               }
               .width('100%')
               .alignItems(VerticalAlign.Center)
+              .onClick(() => {
+                this.openEventDetail(idx);
+              })
 
               // 条目间分隔线（最后一条不加，避免多余空行）
               if (idx < events.length - 1) {
@@ -575,7 +572,7 @@ struct Detail {
               }
             }
             .width('100%')
-          }, (item: EventItem) => `${item.year}-${item.body}`)
+          }, (item: HeritageEvent, idx: number) => `${item.year}-${item.title}-${idx}`)
         }
 
         // 数据稀疏时的语义收尾：把底部留白变成「整理中」说明

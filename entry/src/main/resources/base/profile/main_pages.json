@@ -3,6 +3,7 @@
     "pages/Index",
     "pages/Detail",
     "pages/NoteEdit",
-    "pages/MyNotes"
+    "pages/MyNotes",
+    "pages/EventDetail"
   ]
 }

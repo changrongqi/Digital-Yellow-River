@@ -12,7 +12,7 @@ import { util } from '@kit.ArkTS';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { HeritageEra, HeritageType, HeritageCity, isValidEra, isValidType, isValidCity } from '../model/Types';
-import { Heritage, HeritageDetail, Poem, SpecItem, Artifact } from '../model/Heritage';
+import { Heritage, HeritageDetail, HeritageEvent, Poem, SpecItem, Artifact } from '../model/Heritage';
 
 const DOMAIN = 0x0000;
 const TAG = 'HeritageDataLoader';
@@ -102,7 +102,7 @@ export class HeritageDataLoader {
       const detail: HeritageDetail = {
         intro: HeritageDataLoader.getStr(detailObj, 'intro'),
         discovery: HeritageDataLoader.getStr(detailObj, 'discovery'),
-        events: HeritageDataLoader.getStrArray(detailObj, 'events'),
+        events: HeritageDataLoader.getEventArray(detailObj, 'events'),
         poems: HeritageDataLoader.getPoemArray(detailObj, 'poems'),
         tourism: HeritageDataLoader.getStr(detailObj, 'tourism'),
         highlights: HeritageDataLoader.getStrArray(detailObj, 'highlights'),
@@ -144,6 +144,65 @@ export class HeritageDataLoader {
     const result: string[] = [];
     for (let i = 0; i < arr.length; i++) {
       result.push(String(arr[i]));
+    }
+    return result;
+  }
+
+  /**
+   * M1.8：解析历史事件数组为结构化对象。
+   * - 对象形式：逐字段显式转换，title 缺失的项跳过；缺失子字段兜底为空串/空数组；
+   * - 旧版字符串形式（存量数据兼容）：自动迁移为 year + title（正则解析「XXXX年：正文」），
+   *   其余子详情字段留空，保证升级前数据无需改动 JSON 即可继续展示。
+   */
+  private static getEventArray(rec: Record<string, Object>, key: string): HeritageEvent[] {
+    const v: Object | undefined = rec[key];
+    if (v === undefined || v === null) {
+      return [];
+    }
+    const arr = v as Object[];
+    const result: HeritageEvent[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const item: Object = arr[i];
+      if (typeof item === 'string') {
+        // 旧版「XXXX年：正文」→ year + title
+        const legacy: string = item as string;
+        let year: string = '';
+        let title: string = legacy;
+        const re = /^(\d{3,4}年)[:：]\s*(.+)$/;
+        const m: RegExpExecArray | null = re.exec(legacy);
+        if (m !== null && m[1] !== undefined && m[2] !== undefined) {
+          year = m[1];
+          title = m[2];
+        }
+        result.push({
+          year: year,
+          title: title,
+          summary: '',
+          background: '',
+          process: '',
+          impact: '',
+          figures: [],
+          artifacts: [],
+          furtherReading: ''
+        });
+      } else {
+        const obj = item as Record<string, Object>;
+        const title: string = HeritageDataLoader.getStr(obj, 'title');
+        if (title === '') {
+          continue; // 无标题的事件项跳过
+        }
+        result.push({
+          year: HeritageDataLoader.getStr(obj, 'year'),
+          title: title,
+          summary: HeritageDataLoader.getStr(obj, 'summary'),
+          background: HeritageDataLoader.getStr(obj, 'background'),
+          process: HeritageDataLoader.getStr(obj, 'process'),
+          impact: HeritageDataLoader.getStr(obj, 'impact'),
+          figures: HeritageDataLoader.getStrArray(obj, 'figures'),
+          artifacts: HeritageDataLoader.getStrArray(obj, 'artifacts'),
+          furtherReading: HeritageDataLoader.getStr(obj, 'furtherReading')
+        });
+      }
     }
     return result;
   }
