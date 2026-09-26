@@ -24,7 +24,7 @@
 
 import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { Heritage, Poem, SpecItem, Artifact } from '../model/Heritage';
+import { Heritage, SpecItem, Artifact } from '../model/Heritage';
 import { Note } from '../model/Note';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
@@ -278,11 +278,6 @@ struct Detail {
             this.TimelineTab(this.heritage.detail.events)
           }
           .tabBar(SubTabBarStyle.of('事件'))
-
-          TabContent() {
-            this.PoemsTab(this.heritage.detail.poems)
-          }
-          .tabBar(SubTabBarStyle.of('诗词'))
 
           TabContent() {
             this.BodyTab(this.heritage.detail.tourism)
@@ -572,79 +567,18 @@ struct Detail {
               .alignItems(HorizontalAlign.Center)
               .margin({ left: 12 })
 
-              // 正文
+              // 正文（条目间距 10 保持紧凑，避免稀疏遗址条目间的空旷感）
               Text(item.body)
                 .fontSize(14)
                 .fontColor('#3E2723')
                 .lineHeight(22)
                 .layoutWeight(1)
                 .margin({ left: 12, right: 4 })
-                .padding({ bottom: 16 })
+                .padding({ bottom: 10 })
             }
             .width('100%')
             .alignItems(VerticalAlign.Top)
           }, (item: EventItem) => `${item.year}-${item.body}`)
-        }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-      .padding(16)
-    }
-    .width('100%')
-    .height('100%')
-    .scrollBar(BarState.Off)
-    .align(Alignment.Top)
-    .edgeEffect(EdgeEffect.Spring)
-  }
-
-  /** 相关诗词页签：古风卡（浅主题底 + 居中排版 + 引文行距，M4.0） */
-  @Builder
-  PoemsTab(poems: Poem[]) {
-    Scroll() {
-      Column() {
-        if (poems.length === 0) {
-          Text('该遗址暂无收录的传世诗词')
-            .fontSize(14)
-            .fontColor('#BCAAA4')
-            .padding({ top: 40 })
-          Text('古都类遗址（洛阳 · 汉唐、开封 · 宋等）多有历代咏史诗词，可前往浏览')
-            .fontSize(12)
-            .fontColor('#BCAAA4')
-            .margin({ top: 8 })
-        } else {
-          ForEach(poems, (poem: Poem) => {
-            Column() {
-              Text(poem.title)
-                .fontSize(16)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#3E2723')
-                .textAlign(TextAlign.Center)
-                .width('100%')
-              Text(poem.author)
-                .fontSize(12)
-                .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
-                .textAlign(TextAlign.Center)
-                .width('100%')
-                .margin({ top: 6 })
-              Divider()
-                .color('#FFFFFF')
-                .strokeWidth(1)
-                .width('40%')
-                .margin({ top: 10, bottom: 10 })
-              Text(poem.content)
-                .fontSize(15)
-                .fontColor('#4A403A')
-                .lineHeight(30)
-                .textAlign(TextAlign.Center)
-                .width('100%')
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Center)
-            .padding({ left: 20, right: 20, top: 18, bottom: 20 })
-            .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).soft)
-            .borderRadius(12)
-            .margin({ top: 12 })
-          }, (poem: Poem) => poem.title)
         }
       }
       .width('100%')
