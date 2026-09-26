@@ -12,7 +12,7 @@ import { util } from '@kit.ArkTS';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { HeritageEra, HeritageType, HeritageCity, isValidEra, isValidType, isValidCity } from '../model/Types';
-import { Heritage, HeritageDetail, HeritageEvent, Poem, SpecItem, Artifact } from '../model/Heritage';
+import { Heritage, HeritageDetail, HeritageEvent, Poem, SpecItem, Artifact, TourismInfo, TourismGuide } from '../model/Heritage';
 
 const DOMAIN = 0x0000;
 const TAG = 'HeritageDataLoader';
@@ -104,7 +104,7 @@ export class HeritageDataLoader {
         discovery: HeritageDataLoader.getStr(detailObj, 'discovery'),
         events: HeritageDataLoader.getEventArray(detailObj, 'events'),
         poems: HeritageDataLoader.getPoemArray(detailObj, 'poems'),
-        tourism: HeritageDataLoader.getStr(detailObj, 'tourism'),
+        tourism: HeritageDataLoader.getTourism(detailObj, 'tourism'),
         highlights: HeritageDataLoader.getStrArray(detailObj, 'highlights'),
         specs: HeritageDataLoader.getSpecArray(detailObj, 'specs'),
         artifacts: HeritageDataLoader.getArtifactArray(detailObj, 'artifacts')
@@ -183,7 +183,8 @@ export class HeritageDataLoader {
           impact: '',
           figures: [],
           artifacts: [],
-          furtherReading: ''
+          furtherReading: '',
+          commentary: ''
         });
       } else {
         const obj = item as Record<string, Object>;
@@ -200,7 +201,8 @@ export class HeritageDataLoader {
           impact: HeritageDataLoader.getStr(obj, 'impact'),
           figures: HeritageDataLoader.getStrArray(obj, 'figures'),
           artifacts: HeritageDataLoader.getStrArray(obj, 'artifacts'),
-          furtherReading: HeritageDataLoader.getStr(obj, 'furtherReading')
+          furtherReading: HeritageDataLoader.getStr(obj, 'furtherReading'),
+          commentary: HeritageDataLoader.getStr(obj, 'commentary')
         });
       }
     }
@@ -270,5 +272,44 @@ export class HeritageDataLoader {
       result.push(artifact);
     }
     return result;
+  }
+
+  /**
+   * M1.9：解析文旅信息为结构化对象（TourismInfo）。
+   * - 对象形式：overview/guide/itinerary/interpretation 逐字段显式转换，
+   *   guide 子对象各键值（hours/tickets/contact/address）缺失兜底空串；
+   * - 旧版单字符串形式（存量数据兼容）：自动迁移为 overview，其余字段留空，
+   *   保证升级前数据无需改动 JSON 即可继续展示（文旅页签退化为纯正文）。
+   */
+  private static getTourism(rec: Record<string, Object>, key: string): TourismInfo {
+    const emptyGuide: TourismGuide = {
+      hours: '',
+      tickets: '',
+      contact: '',
+      address: ''
+    };
+    const v: Object | undefined = rec[key];
+    if (v === undefined || v === null) {
+      return { overview: '', guide: emptyGuide, itinerary: '', interpretation: '' };
+    }
+    if (typeof v === 'string') {
+      // 旧版单字符串 → overview
+      return { overview: v as string, guide: emptyGuide, itinerary: '', interpretation: '' };
+    }
+    const obj = v as Record<string, Object>;
+    const guideObj = obj['guide'] as Record<string, Object> | undefined;
+    const guide: TourismGuide = guideObj === undefined || guideObj === null ? emptyGuide : {
+      hours: HeritageDataLoader.getStr(guideObj, 'hours'),
+      tickets: HeritageDataLoader.getStr(guideObj, 'tickets'),
+      contact: HeritageDataLoader.getStr(guideObj, 'contact'),
+      address: HeritageDataLoader.getStr(guideObj, 'address')
+    };
+    const info: TourismInfo = {
+      overview: HeritageDataLoader.getStr(obj, 'overview'),
+      guide: guide,
+      itinerary: HeritageDataLoader.getStr(obj, 'itinerary'),
+      interpretation: HeritageDataLoader.getStr(obj, 'interpretation')
+    };
+    return info;
   }
 }

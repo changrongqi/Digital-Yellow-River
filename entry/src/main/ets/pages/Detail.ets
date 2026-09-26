@@ -266,7 +266,7 @@ struct Detail {
           .tabBar(SubTabBarStyle.of('事件'))
 
           TabContent() {
-            this.BodyTab(this.heritage.detail.tourism)
+            this.TourismTab()
           }
           .tabBar(SubTabBarStyle.of('文旅'))
 
@@ -479,22 +479,125 @@ struct Detail {
     .edgeEffect(EdgeEffect.Spring)
   }
 
-  /** 通用正文页签（文旅）：白卡 + 长文排版，空层占位（M4.0） */
+  /**
+   * 文旅页签（M1.9：tourism 结构化后的卡片化渲染，替代 M4.0 的通用正文 BodyTab）。
+   *
+   * 布局（自上而下，空块隐藏，全部为空显示占位）：
+   * 1. 概览正文（与介绍/考古同款长文排版）；
+   * 2. 【参观指引】信息卡：开放时间 / 票务政策 / 咨询电话 / 景区地址 键值行（主题色标签）；
+   * 3. 【行程规划】卡：按 \n 分段渲染，主题色块装饰 + 段正文（推荐动线/交通/联动线路）；
+   * 4. 【深度解说】卡：soft 浅主题色底，看什么、怎么看（面向实地观展的讲解文本）。
+   *
+   * ⚠️ 无参数、内部直读 this.heritage（踩坑 15）；guide 键值行拆成 @Builder 参数化渲染（静态内容）。
+   */
   @Builder
-  BodyTab(content: string) {
+  TourismTab() {
     Scroll() {
       Column() {
-        if (content.length === 0) {
+        if (this.tourismEmpty()) {
           Text('暂无内容')
             .fontSize(14)
             .fontColor('#BCAAA4')
             .padding({ top: 40 })
         } else {
-          Text(content)
-            .fontSize(15)
-            .fontColor('#3E2723')
-            .lineHeight(26)
-            .textAlign(TextAlign.JUSTIFY)
+          // 1. 概览正文
+          if (this.heritage !== null && this.heritage.detail.tourism.overview.length > 0) {
+            Text(this.heritage.detail.tourism.overview)
+              .fontSize(15)
+              .fontColor('#3E2723')
+              .lineHeight(26)
+              .textAlign(TextAlign.JUSTIFY)
+              .width('100%')
+          }
+
+          // 2. 参观指引信息卡（任一键值非空才显示）
+          if (this.guideHasContent() && this.heritage !== null) {
+            Column() {
+              Text('参观指引')
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#3E2723')
+                .width('100%')
+              if (this.heritage.detail.tourism.guide.hours.length > 0) {
+                this.GuideRow('开放时间', this.heritage.detail.tourism.guide.hours)
+              }
+              if (this.heritage.detail.tourism.guide.tickets.length > 0) {
+                this.GuideRow('票务政策', this.heritage.detail.tourism.guide.tickets)
+              }
+              if (this.heritage.detail.tourism.guide.contact.length > 0) {
+                this.GuideRow('咨询电话', this.heritage.detail.tourism.guide.contact)
+              }
+              if (this.heritage.detail.tourism.guide.address.length > 0) {
+                this.GuideRow('景区地址', this.heritage.detail.tourism.guide.address)
+              }
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .padding(16)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(12)
+            .margin({ top: 20 })
+          }
+
+          // 3. 行程规划卡（\n 分段渲染）
+          if (this.heritage !== null && this.heritage.detail.tourism.itinerary.length > 0) {
+            Column() {
+              Text('行程规划')
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#3E2723')
+                .width('100%')
+              ForEach(this.heritage.detail.tourism.itinerary.split('\n'),
+                (line: string, idx: number) => {
+                  Row() {
+                    // 主题色小竖块：段落视觉锚点（克制，非炫技装饰）
+                    Text('▍')
+                      .fontSize(16)
+                      .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                      .height(18)
+                    Text(line)
+                      .fontSize(14)
+                      .fontColor('#3E2723')
+                      .lineHeight(23)
+                      .layoutWeight(1)
+                      .margin({ left: 8 })
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Top)
+                  .margin({ top: idx === 0 ? 2 : 12 })
+                }, (line: string, idx: number) => `${idx}-${line}`)
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .padding(16)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(12)
+            .margin({ top: 20 })
+          }
+
+          // 4. 深度解说卡（soft 浅主题底，与档案/指引白卡形成主次区分）
+          if (this.heritage !== null && this.heritage.detail.tourism.interpretation.length > 0) {
+            Column() {
+              Text('深度解说 · 看什么怎么看')
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                .width('100%')
+              Text(this.heritage.detail.tourism.interpretation)
+                .fontSize(14)
+                .fontColor('#4E342E')
+                .lineHeight(25)
+                .textAlign(TextAlign.JUSTIFY)
+                .width('100%')
+                .margin({ top: 8 })
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .padding(16)
+            .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).soft)
+            .borderRadius(12)
+            .margin({ top: 20 })
+          }
         }
       }
       .width('100%')
@@ -506,6 +609,47 @@ struct Detail {
     .scrollBar(BarState.Off)
     .align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring)
+  }
+
+  /** 参观指引键值行（静态内容，@Builder 参数化渲染安全） */
+  @Builder
+  GuideRow(label: string, value: string) {
+    Row() {
+      Text(label)
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+        .width(72)
+      Text(value)
+        .fontSize(13)
+        .fontColor('#3E2723')
+        .lineHeight(21)
+        .layoutWeight(1)
+        .textAlign(TextAlign.End)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Top)
+    .padding({ top: 9, bottom: 9 })
+    .border({ width: { bottom: 1 }, color: '#F0EBE5' })
+  }
+
+  /** 文旅内容是否整体为空（任一子块非空即非空） */
+  private tourismEmpty(): boolean {
+    if (this.heritage === null) {
+      return true;
+    }
+    const t = this.heritage.detail.tourism;
+    return t.overview.length === 0 && t.itinerary.length === 0 &&
+      t.interpretation.length === 0 && !this.guideHasContent();
+  }
+
+  /** 参观指引是否至少有一项键值 */
+  private guideHasContent(): boolean {
+    if (this.heritage === null) {
+      return false;
+    }
+    const g = this.heritage.detail.tourism.guide;
+    return g.hours.length > 0 || g.tickets.length > 0 || g.contact.length > 0 || g.address.length > 0;
   }
 
   /**

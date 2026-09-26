@@ -5,9 +5,10 @@
  * { heritageId, eventIndex }) 进入；本页按 heritageId 从 HeritageDataLoader 重新取数
  * （数据单一来源，与 Detail 页一致），再取 events[eventIndex] 做专题讲解。
  *
- * 专题结构（计划书 M1.8 要求）：
+ * 专题结构（计划书 M1.8 要求，M1.9 增补）：
  * - 英雄横幅：遗址年代主题色渐变 + 事件年份/标题/一句话概述；
  * - 背景（background）/ 经过（process）/ 影响（impact）三段正文，字段为空则隐藏小节；
+ * - 深度解说（commentary，M1.9 新增）：延伸知识点/官方研究细节，独立段落；
  * - 相关人物（figures chips）+ 相关文物（artifacts 卡片）；
  * - 延伸阅读（furtherReading 来源出处）。
  *
@@ -268,6 +269,25 @@ struct EventDetail {
               if (this.event.impact.length > 0) {
                 this.SectionTitle('影响')
                 this.BodyParagraph(this.event.impact)
+              }
+
+              // 深度解说（M1.9 新增：延伸知识点/官方研究细节）
+              if (this.event.commentary.length > 0) {
+                Text('深度解说')
+                  .fontSize(16)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
+                  .width('100%')
+                  .margin({ top: 18, bottom: 8 })
+                Text(this.event.commentary)
+                  .fontSize(14)
+                  .fontColor('#4E342E')
+                  .lineHeight(25)
+                  .textAlign(TextAlign.JUSTIFY)
+                  .width('100%')
+                  .padding(12)
+                  .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).soft)
+                  .borderRadius(10)
               }
 
               // 相关人物
