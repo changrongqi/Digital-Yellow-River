@@ -522,7 +522,17 @@ struct Detail {
     .edgeEffect(EdgeEffect.Spring)
   }
 
-  /** 历史事件时间轴页签：年份高亮（主题色）+ 竖线 + 节点（M4.0） */
+  /**
+   * 历史事件页签：年份时间线（纯内容驱动，无拉伸，适配任意设备宽度）。
+   *
+   * 布局要点（解决「条目间大段留白」回归）：
+   * - 不用「竖线 + layoutWeight 轨道」——Column 无高度约束时 layoutWeight 会把竖线无限撑高，
+   *   导致每个条目 Row 被拉高、条目间出现巨大空隙（截图实测 280pt）；
+   * - 改为「年份徽标 + 正文」一行、条目间用 Divider 分隔：高度完全由文字内容决定，
+   *   内容多则条目自然变高、内容少则紧凑收拢，不留填充式空白；
+   * - 宽度全部自适应（年份列固定 64，正文 layoutWeight 吃掉剩余），平板/手机自动适配；
+   * - 条目末尾显示「整理中」引导，把数据稀疏的底部变成有语义的收尾而非纯空白。
+   */
   @Builder
   TimelineTab(events: string[]) {
     Scroll() {
@@ -533,52 +543,47 @@ struct Detail {
             .fontColor('#BCAAA4')
             .padding({ top: 40 })
         } else {
-          // 解析放在 @Builder 外不合规（踩坑 13），但 @Builder 内调用私有方法返回派生数据是
-          // 官方推荐的派生数据写法；ForEach 回调里逐条解析保证键值稳定
           ForEach(this.parseEvents(events), (item: EventItem, idx: number) => {
-            Row() {
-              // 年份列（无年份的条目显示占位点）
-              Text(item.year)
-                .fontSize(14)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
-                .width(64)
-                .textAlign(TextAlign.End)
-
-              // 时间轴轨道：节点 + 竖线（末项不画竖线）。
-              // 节点用「等宽高+半宽圆角+白描边」的通用写法（Circle.fill/stroke 需 SDK 26，
-              // 超出工程兼容版本 16，构建告警实测，故不用）
-              Column() {
-                Column()
-                  .width(10)
-                  .height(10)
-                  .borderRadius(5)
+            Column() {
+              Row() {
+                // 年份徽标：主题色底圆角胶囊，宽度固定、内容驱动
+                Text(item.year)
+                  .fontSize(13)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor('#FFFFFF')
+                  .padding({ left: 10, right: 10, top: 4, bottom: 4 })
                   .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
-                  .border({ width: 2, color: '#FFFFFF' })
-                if (idx < events.length - 1) {
-                  Line()
-                    .width(1)
-                    .layoutWeight(1)
-                    .backgroundColor('#E0D6CC')
-                    .margin({ top: 4, bottom: 4 })
-                }
-              }
-              .width(24)
-              .alignItems(HorizontalAlign.Center)
-              .margin({ left: 12 })
+                  .borderRadius(10)
 
-              // 正文（条目间距 10 保持紧凑，避免稀疏遗址条目间的空旷感）
-              Text(item.body)
-                .fontSize(14)
-                .fontColor('#3E2723')
-                .lineHeight(22)
-                .layoutWeight(1)
-                .margin({ left: 12, right: 4 })
-                .padding({ bottom: 10 })
+                // 正文：换行自适应，吃满剩余宽度（设备自适应）
+                Text(item.body)
+                  .fontSize(14)
+                  .fontColor('#3E2723')
+                  .lineHeight(22)
+                  .layoutWeight(1)
+                  .margin({ left: 12 })
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+
+              // 条目间分隔线（最后一条不加，避免多余空行）
+              if (idx < events.length - 1) {
+                Divider()
+                  .color('#EFE9E2')
+                  .strokeWidth(1)
+                  .margin({ top: 14, bottom: 14 })
+              }
             }
             .width('100%')
-            .alignItems(VerticalAlign.Top)
           }, (item: EventItem) => `${item.year}-${item.body}`)
+        }
+
+        // 数据稀疏时的语义收尾：把底部留白变成「整理中」说明
+        if (events.length > 0 && events.length < 4) {
+          Text('更多考古进程正在整理中')
+            .fontSize(12)
+            .fontColor('#BCAAA4')
+            .margin({ top: 20, bottom: 8 })
         }
       }
       .width('100%')
