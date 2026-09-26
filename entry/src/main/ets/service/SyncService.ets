@@ -31,6 +31,7 @@ import { distributedKVStore } from '@kit.ArkData';
 import { distributedDeviceManager } from '@kit.DistributedServiceKit';
 import { Favorite } from '../model/Favorite';
 import { Note } from '../model/Note';
+import { Theme } from '../model/Theme';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
 
 const DOMAIN = 0x0000;
@@ -44,6 +45,8 @@ const BUNDLE_NAME = 'com.example.first';
 const KEY_FAV_PREFIX = 'fav_';
 /** 笔记存储键前缀：note_{noteId} */
 const KEY_NOTE_PREFIX = 'note_';
+/** 主题存储键前缀：theme_{themeId}（C1.3，与收藏/笔记同一 KV store 双写通道） */
+const KEY_THEME_PREFIX = 'theme_';
 /** conflictLog 条数上限（超出丢最旧，避免无限增长） */
 const MAX_CONFLICT_LOG = 50;
 
@@ -55,8 +58,10 @@ export interface RemoteChanges {
   fromDeviceId: string;        // 变更来源设备
   upsertFavorites: Favorite[];  // 远端新增/覆盖的收藏
   upsertNotes: Note[];          // 远端新增/覆盖的笔记
+  upsertThemes: Theme[];        // 远端新增/覆盖的主题（C1.3）
   deletedFavoriteItemIds: string[]; // 远端删除的收藏（itemId）
   deletedNoteIds: string[];     // 远端删除的笔记（noteId）
+  deletedThemeIds: string[];    // 远端删除的主题（themeId，C1.3）
 }
 
 /** 在线（可信）设备信息（M3.3 同步面板展示） */
@@ -168,6 +173,16 @@ export class SyncService {
     SyncService.deleteRecord(`${KEY_NOTE_PREFIX}${noteId}`);
   }
 
+  /** 主题写入/更新后上抛分布式 KV（C1.3；降级时静默跳过，本地不受影响） */
+  static syncTheme(theme: Theme): void {
+    SyncService.putRecord(`${KEY_THEME_PREFIX}${theme.id}`, JSON.stringify(theme));
+  }
+
+  /** 主题删除后同步移除分布式 KV 记录（C1.3；远端以 deleteEntries 通知对端） */
+  static removeThemeSync(themeId: string): void {
+    SyncService.deleteRecord(`${KEY_THEME_PREFIX}${themeId}`);
+  }
+
   // ==================== LWW 冲突判定原语（纯函数） ====================
 
   /**
@@ -233,8 +248,10 @@ export class SyncService {
       fromDeviceId: data.deviceId,
       upsertFavorites: [],
       upsertNotes: [],
+      upsertThemes: [],
       deletedFavoriteItemIds: [],
-      deletedNoteIds: []
+      deletedNoteIds: [],
+      deletedThemeIds: []
     };
     // insertEntries + updateEntries 在单版本 KV 中都是「写入/覆盖」语义
     const upserts: distributedKVStore.Entry[] = [];
@@ -257,6 +274,11 @@ export class SyncService {
         if (note !== null) {
           changes.upsertNotes.push(note);
         }
+      } else if (entry.key.indexOf(KEY_THEME_PREFIX) === 0) {
+        const theme: Theme | null = SyncService.parseThemeFromWire(text, entry.key);
+        if (theme !== null) {
+          changes.upsertThemes.push(theme);
+        }
       }
     }
     for (let i = 0; i < data.deleteEntries.length; i++) {
@@ -265,6 +287,8 @@ export class SyncService {
         changes.deletedFavoriteItemIds.push(key.substring(KEY_FAV_PREFIX.length));
       } else if (key.indexOf(KEY_NOTE_PREFIX) === 0) {
         changes.deletedNoteIds.push(key.substring(KEY_NOTE_PREFIX.length));
+      } else if (key.indexOf(KEY_THEME_PREFIX) === 0) {
+        changes.deletedThemeIds.push(key.substring(KEY_THEME_PREFIX.length));
       }
     }
     SyncService.lastSyncTime = Date.now();
@@ -451,6 +475,7 @@ export class SyncService {
         id: id,
         itemId: itemId,
         tags: SyncService.getStrArray(rec, 'tags'),
+        themeIds: SyncService.getStrArray(rec, 'themeIds'),
         createdAt: SyncService.getNum(rec, 'createdAt'),
         updatedAt: SyncService.getNum(rec, 'updatedAt'),
         deviceId: SyncService.getStr(rec, 'deviceId')
@@ -483,6 +508,30 @@ export class SyncService {
       return note;
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'parse remote note %{public}s failed: %{public}s', key, JSON.stringify(err));
+      return null;
+    }
+  }
+
+  private static parseThemeFromWire(text: string, key: string): Theme | null {
+    try {
+      const rec = JSON.parse(text) as Record<string, Object>;
+      const id: string = SyncService.getStr(rec, 'id');
+      const name: string = SyncService.getStr(rec, 'name');
+      if (id === '' || name === '') {
+        hilog.warn(DOMAIN, TAG, 'skip invalid remote theme %{public}s', key);
+        return null;
+      }
+      const theme: Theme = {
+        id: id,
+        name: name,
+        colorIndex: SyncService.getNum(rec, 'colorIndex'),
+        createdAt: SyncService.getNum(rec, 'createdAt'),
+        updatedAt: SyncService.getNum(rec, 'updatedAt'),
+        deviceId: SyncService.getStr(rec, 'deviceId')
+      };
+      return theme;
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'parse remote theme %{public}s failed: %{public}s', key, JSON.stringify(err));
       return null;
     }
   }

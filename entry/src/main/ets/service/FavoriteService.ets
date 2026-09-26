@@ -124,6 +124,19 @@ export class FavoriteService {
     return result;
   }
 
+  /** 归入某文化主题的收藏（C1.1，拷贝），按收藏时间倒序 */
+  static getFavoritesByTheme(themeId: string): Favorite[] {
+    const result: Favorite[] = [];
+    for (let i = 0; i < FavoriteService.favoritesCache.length; i++) {
+      const fav: Favorite = FavoriteService.favoritesCache[i];
+      if (fav.themeIds.indexOf(themeId) >= 0) {
+        result.push(fav);
+      }
+    }
+    result.sort((a: Favorite, b: Favorite): number => b.createdAt - a.createdAt);
+    return result;
+  }
+
   // ==================== 收藏变更 ====================
 
   /**
@@ -151,6 +164,7 @@ export class FavoriteService {
       id: util.generateRandomUUID(false),
       itemId: itemId,
       tags: FavoriteService.normalizeTags(tags),
+      themeIds: [],
       createdAt: now,
       updatedAt: now,
       deviceId: FavoriteService.ensureDeviceId()
@@ -188,6 +202,24 @@ export class FavoriteService {
     fav.updatedAt = Date.now();
     FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
     SyncService.syncFavorite(fav); // M3.2 双写
+    FavoriteService.notifyDataChanged();
+    return true;
+  }
+
+  /**
+   * 更新收藏的文化主题集合（C1.1，知识库归类入口；全量替换，自动去重去空）。
+   * 归类走本服务（收藏唯一权威不变，ThemeService 只维护主题本身），
+   * 写入后经 syncFavorite 双写让 themeIds 随收藏走 LWW 同步（C1.3）。
+   */
+  static updateFavoriteThemes(itemId: string, themeIds: string[]): boolean {
+    const fav: Favorite | null = FavoriteService.findFavorite(itemId);
+    if (fav === null) {
+      return false;
+    }
+    fav.themeIds = FavoriteService.normalizeTags(themeIds);
+    fav.updatedAt = Date.now();
+    FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
+    SyncService.syncFavorite(fav); // M3.2 双写：themeIds 随收藏同步
     FavoriteService.notifyDataChanged();
     return true;
   }
@@ -574,6 +606,7 @@ export class FavoriteService {
         id: id,
         itemId: itemId,
         tags: FavoriteService.getStrArray(rec, 'tags'),
+        themeIds: FavoriteService.getStrArray(rec, 'themeIds'),
         createdAt: FavoriteService.getNum(rec, 'createdAt'),
         updatedAt: FavoriteService.getNum(rec, 'updatedAt'),
         deviceId: FavoriteService.getStr(rec, 'deviceId')

@@ -7,6 +7,7 @@ export interface Favorite {
   id: string;         // 收藏记录唯一标识
   itemId: string;     // 被收藏的文化条目 id（对应 Heritage.id）
   tags: string[];     // 标签：内置「待实地探访/已去过/研究资料」+ 自定义
+  themeIds: string[]; // 文化主题 id 集合（C1.1 新增：知识库归类，多对多；旧数据缺省空数组）
   createdAt: number;  // 收藏时间（毫秒时间戳）
   updatedAt: number;  // 最后修改时间（冲突判定用）
   deviceId: string;   // 设备来源（冲突判定兜底用）
