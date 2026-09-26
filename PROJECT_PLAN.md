@@ -35,6 +35,7 @@
 - **文旅深写结构**（TourismInfo）：overview（公园/景区概览、荣誉、场馆简介）→ guide（hours/tickets/contact/address 四键值，**以最新开馆公告为准**）→ itinerary（建议时长 / 推荐动线 / 交通 / 串联联动景区，`\n` 分段）→ interpretation（「看什么、怎么看」按维度分点：地层/器物/聚落/考古史等）。
 - **双份同步纪律（R3）**：rawfile 与 Mock 同构；Mock 模板字符串内 `\n` 写 `\\n`（踩坑 19）；每批写毕用 PowerShell `ConvertFrom-Json`（rawfile）+ Node 模拟「模板求值→JSON.parse」（mock）双份校验条数/字段。
 - **图片资源现状（2026-09-27 实测）**：WebSearch 返回的官方页面配图链接经搜索代理缓存（`aka.doubaocdn.com` 等）**不可稳定下载**（实测 404），且无法核证版权归属 → **结构先行**：模型预留 images 数组、UI 做缩略图卡 + 点击 Lightbox 放大 + 动态布局（M1.10），真实图片待用户提供或稳定渠道获取后填入 rawfile（本地离线打包，遵守零网络依赖约束）。
+- **填真实图片的操作方式（2026-09-27 明确）**：① 把官方图片文件放到 `entry/src/main/resources/rawfile/images/` 目录（文件名自定，如 `yangshao-jianzuiping.jpg`）；② 把对应条目（详情页 `detail.images` 或事件 `events[].images`）的 `path` 字段填为该文件名（如 `"path": "images/yangshao-jianzuiping.jpg"`），caption 写图注、source 写官方来源；③ 无需改任何代码——ImageGallery 组件自动按 path 动态加载 rawfile 并渲染缩略图、支持点击放大；加载失败或 path 空则显示占位卡。MockHeritages 若需同步（R3，预览器调试用），同结构补一份。
 
 ## 2. 技术约束
 
