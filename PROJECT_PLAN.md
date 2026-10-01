@@ -65,7 +65,14 @@ entry/src/main/
 │   │   ├── Favorites.ets      # 收藏页（按标签分组）
 │   │   └── SyncPanel.ets      # 同步状态面板
 │   ├── components/            # 可复用 UI 组件（M1.10 起）
-│   │   └── ImageGallery.ets   # 图集组件：缩略图网格 + 点击 Lightbox 放大（动态布局）
+│   │   ├── ImageGallery.ets   # 图集组件：缩略图网格 + 点击 Lightbox 放大（动态布局）
+│   │   └── graph/             # 知识图谱组件集（C1.2 重构拆分，2026-10-01）
+│   │       ├── GraphCanvas.ets    # Canvas 知识节点网络（绘制 + 命中测试）
+│   │       ├── GraphNode.ets      # 图谱节点模型（命中测试用）
+│   │       ├── HeritageCard.ets   # 遗址卡片（已归类/拓展推荐共用）
+│   │       ├── ThemeEditorSheet.ets  # 主题编辑器弹层（新建/重命名）
+│   │       ├── ManageSheet.ets    # 归类管理弹层（已归类/未归类）
+│   │       └── ConfirmDeleteSheet.ets # 删除主题确认弹层
 │   ├── model/                 # 数据模型层（类型定义，无逻辑）
 │   │   ├── Types.ets          # 三个枚举（年代/类型/城市）
 │   │   ├── Heritage.ets       # 文化条目 + 详情（五层级）
@@ -273,7 +280,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
   `pages/MyNotes.ets:133 'back' has been deprecated`（M2.5 新增，goBack 收敛唯一调用点）、
   `pages/EventDetail.ets:42 'getParams' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
   `pages/EventDetail.ets:171 'back' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
-  `pages/KnowledgeGraph.ets:376 'pushUrl' has been deprecated`（C1.2 新增，openDetail 图谱节点/卡片跳详情，router deprecate 同类型且包 try/catch），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  `pages/KnowledgeGraph.ets:315 'pushUrl' has been deprecated`（C1.2 新增，openDetail 图谱节点/卡片跳详情，router deprecate 同类型且包 try/catch；2026-10-01 架构拆分后行号由 376 漂移至 315），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   行号随代码增删会漂移，比对以「文件 + 告警类型」为准。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
@@ -315,6 +322,8 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 | 日期 | 修订内容 |
 |---|---|
+| 2026-10-01 | **C1.2 架构拆分后的标签截断修复 + 模拟器部署验证闭环（用户反馈：冷启动后看不到任何 UI 变化）**：① **根因**——冷启动仅重启模拟器系统，设备上仍是上次部署的旧 HAP，**不会自动重新安装**；本次用 hdc 手动卸载重装新 HAP 后新版 UI 全部生效（截图实证：320vp 画布卡片、中心节点完整显示、遗址标签圆内嵌、归类管理/重命名/删除按钮行、已归类卡片、拓展推荐）；② **新增缺陷修复**——`GraphCanvas.fitLabel` 按「字符数」截断对英文主题名误判（"First" 被截成 "Fi…"），改为 `fitLabelByWidth` 基于 `CanvasRenderingContext2D.measureText`（SDK canvas.d.ts:2331 实测返回 vp 宽度）按**真实像素宽度**截断：主题名最大宽度=直径-12vp、遗址标签=2.4×节点半径（轻微溢出圆形保名称完整）；③ **部署验证方法固化（O7 补充）**——模拟器冷启动后必须 hdc 重新安装才能看到代码更新：`hdc tconn 127.0.0.1:5555` → `hdc uninstall com.example.first` → `hdc install <hap>` → `hdc shell "aa start -a EntryAbility -b com.example.first"`；页面切 Tab 用 `uitest uiInput click x y`（模拟器无 input 命令，坐标可从 `uitest dumpLayout` 的 bounds 解析）；④ clean 重建 BUILD SUCCESSFUL、16 条 WARN 与 O3 基线一致零新增（新增 fitLabelByWidth 无告警） |
+| 2026-10-01 | **C1.2 知识图谱页架构拆分 + 画布 UI 重新设计（用户反馈：单文件 1000+ 行臃肿、画布 UI 空旷无设计；构建 BUILD SUCCESSFUL，告警 16 条与 O3 基线一致零新增）**：① **文件拆分（单一职责）**——原 KnowledgeGraph.ets 1086 行拆为 7 个文件：主页面 KnowledgeGraph.ets 642 行（仅状态管理与布局）、新增 components/graph/ 组件集（GraphCanvas.ets 162 行 Canvas 绘制+命中测试、GraphNode.ets 节点模型、HeritageCard.ets 遗址卡、ThemeEditorSheet.ets 主题编辑器、ManageSheet.ets 归类管理、ConfirmDeleteSheet.ets 删除确认）；Canvas 绘制逻辑迁入 GraphCanvas 独立 @Component（@Prop 绑定 theme/heritages + onNodeClick 回调，规避踩坑 15）；三个弹层改独立 @Component 子组件（@Prop + 回调，页面仅保留显式按钮开关）；② **UI 重新设计**——画布区改固定 320vp 卡片（白底 + soft 阴影 + 16 圆角）；中心主题节点放大（40-52vp）、「N 处」计数下沉圆内下半区白字弱化；遗址节点标签改**圆内嵌居中文案**，点击命中区扩大到 r+12vp；连线改浅棕 #E0D6CC 更柔和；③ **重构过程中两次编译修复**：@kit.ArkUI 不导出 CanvasRenderingContext2D/RenderingContextSettings（声明式组件内可直接用）；自定义组件属性名与内置 onClick 冲突（HeritageCard 点击回调改名 onTap）；④ O3 基线比对按「文件 + 告警类型」规则，KnowledgeGraph pushUrl 行号漂移不构成新增；⑤ 目录约定 §3 同步更新（components/graph/）。无路由变更、无数据文件变更（无 R3 双份需求）；页面数据流/服务层/C1.3 主题同步均原样保留 |
 | 2026-09-27 | **C1.2 图谱单位三度修正（用户要求去华为开发者官网查真实示例，禁止猜测——前两轮凭记忆写的换算链全错）**：官方文档（developer.huawei.com CanvasRenderingContext2D 章节 + 卡片绘制指南示例 + 本机 SDK canvas.d.ts 三重核对）确认：① **context 默认单位是 vp**——constructor(settings, unit?: LengthMetricsUnit) 缺省 DEFAULT=vp，PX 需显式指定；② **context.width/height 只读属性为 vp**，官方 onReady 示例直接 `radius = context.width / 3` 按比例绘制、零换算；③ font-size 单位支持 vp（写 '15vp sans-serif' 显式消除歧义）；④ **根因复盘：前两轮把 context（vp 域）当 px 处理并 ×dpr(3) 绘制，导致全部尺寸放大 3 倍**——中心节点 3 倍大、周边节点被 layoutR×3 推出画布裁切、字号语义错乱，截图现象完全吻合；⑤ 修复：drawGraph 彻底删除 dpr/px2vp/vp2px/onAreaChange 取宽，改为 `w = this.context.width`（vp）直接作基准，节点半径（中心 36-46vp/遗址 24-30vp）、字号（主题名 14-19vp/标签 12-15vp/计数 11-13vp）按画布与节点半径比例（图适应画布→字体适应图，用户要求的逻辑链）；onAreaChange 仅作重绘触发；⑥ 全局 vp2px/px2vp deprecated 相关告警随之消失，clean 重建 16 条 WARN 与 O3 基线一致、类型零新增 |
 | 2026-09-27 | **C1.2 图谱动态自适应二轮修正（用户复验截图：文字依旧过小 + 空白更多——根因 Canvas 坐标系是物理像素 px，上轮误将 onAreaChange 返回的 px 当 vp 用）**：① 定位根因——onAreaChange 的 width/height 单位为 px，上一轮按 px 设计字号（15-20px）在高密度屏（@3x）视觉仅 5-6vp，节点半径被 clamp 到上限 54px≈18vp，中心节点从 68vp 直径缩到 36vp，故「更糟 + 空白更多」；② 修复——drawGraph 全部改为 **vp 域设计 + ×dpr 转 px 绘制**：`const dpr = this.getUIContext().vp2px(1)`，画布尺寸用 `ui.px2vp()` 转回 vp 作设计基准；节点半径（中心 34-42vp / 遗址 22-28vp）、字号（主题名 15-18vp / 标签 12-14vp / 计数 11-13vp）随画布宽度等比缩放，平板自动放大、任何设备视觉一致；③ 图谱高度改按**窗口宽度**取约 90%（clamp 300-430vp），图谱区接近方形、图形铺满，消除空洞（原按窗口高度 42% 导致竖向空白）；④ 告警纪律：全局函数 vp2px/px2vp 已 deprecated（common.d.ts），改用 UIContext 实例方法（@ohos.arkui.UIContext.d.ts:5140/5152），告警类型零新增——clean 全量重建 16 条 WARN 与 O3 基线完全一致 |
 | 2026-09-27 | **C1.2 图谱动态自适应改版（用户复验反馈：Canvas 文字过小 + 需动态适配不同设备）**：KnowledgeGraph.ets 图谱区全面动态化——① 图谱高度动态：新增 @State canvasHeight，aboutToAppear 经 window.getLastWindow + getWindowProperties().**windowRect**.height 按窗口高度约 42%（下限 300vp）计算，平板/大屏自动更大（**踩坑实例：凭记忆写 props.height 编译报 'height' does not exist on type 'WindowProperties'，d.ts 实测高度在 windowRect 而非顶层，修正后通过**）；② 节点尺寸与字号随画布宽度动态缩放：中心主题节点半径 clamp(w×0.052, 36, 54)、遗址节点半径 clamp(w×0.032, 24, 36)、主题名字号 15-20px、遗址标签字号 12-15px、「N 处」11-14px（原固定 20/34/13/10px 过小）；③ 文字智能截断：新增 fitLabel（超长补省略号）+ clamp 辅助，中心主题名按圆内可用宽度截断（原「二里…」截断为「二里头…」级），遗址标签按画布宽约 34% 截断；④ 布局半径改为 min(w,h)/2 − 主题半径 − 节点半径 − 24（下限 50），随节点尺寸联动，防文字压边与重叠；标签保持节点下方外置。构建 BUILD SUCCESSFUL，告警 16 条与 O3 基线一致，类型零新增 |

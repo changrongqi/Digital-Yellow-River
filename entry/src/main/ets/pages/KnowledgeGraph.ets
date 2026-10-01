@@ -1,72 +1,36 @@
 /**
- * 知识图谱页（C1.2）：文化主题聚合 + 个人知识库构建。
+ * 知识图谱页（C1.2）：文化主题聚合 + 个人知识库构建
  *
- * 设计说明（计划书 M5 C1）：
- * - 主题是「文化脉络聚合」维度（如「彩陶文化」「青铜文明」），与 M2 收藏标签是两个维度；
- *   一个收藏可归入多个主题（Favorite.themeIds，多对多，归类写 FavoriteService）；
- * - UI 结构：主题 chips（选择/新建/重命名/删除）→ Canvas 知识节点网络
- *   （中心 = 选中主题、环绕 = 已归类遗址节点，圆周分布 + 连线，点击带 id 跳详情 O2）→
- *   归类管理（已归类移除 / 未归类收藏加入）→ 拓展推荐（该主题已收藏遗址的相似推荐，
- *   排除已收藏，复用 M4 utils/Recommendation 纯函数）；
- * - 知识节点网络用 ArkUI Canvas 绘制（官方文档核对：CanvasRenderingContext2D 默认单位为 vp，
- *   constructor(settings, unit?: LengthMetricsUnit) DEFAULT=vp、PX 需显式指定；context.width/height
- *   只读属性为 vp，官方 onReady 示例直接 radius = context.width/3 绘制，零换算——前两轮 ×dpr 换算
- *   致 vp 数值放大 3 倍、节点出画布的踩坑已记录）；绘制为命令式，主题/归类变化后手动重绘
- *   （不经 @Builder，规避踩坑 15）；命中测试用记录节点坐标（vp 域，与点击事件坐标一致），
- *   克制简洁不做 3D（用户偏好）；
- * - 数据流单一数据源：主题 = ThemeService、收藏 = FavoriteService（含 themeIds）；
- *   Heritage 预置数据用 HeritageDataLoader（预览器 mock 兜底，与发现/收藏页行为一致）；
- * - 空态兜底（工程惯例）：无主题引导新建 / 有主题无归类引导归类；
- * - 刷新时机：aboutToAppear 初始化 + ThemeService.onDataChanged（主题增删改/远端合并）
- *   + FavoriteService.onDataChanged（收藏变化与归类） + @Prop refreshTick（Index.onPageShow
- *   从详情返回后 +1，收藏切换联动）；刷新后整体赋值（踩坑 5）。
+ * 职责：页面状态管理 + UI 布局，Canvas 绘制与弹层拆分为独立组件
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { router, window } from '@kit.ArkUI';
+import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
-import { BusinessError } from '@kit.BasicServicesKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
 import { Theme } from '../model/Theme';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
 import { ThemeService } from '../service/ThemeService';
-import { getEraTheme } from '../utils/EraTheme';
 import { recommendHeritages } from '../utils/Recommendation';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
+import { GraphCanvas } from '../components/graph/GraphCanvas';
+import { HeritageCard } from '../components/graph/HeritageCard';
+import { ThemeEditorSheet } from '../components/graph/ThemeEditorSheet';
+import { ManageSheet } from '../components/graph/ManageSheet';
+import { ConfirmDeleteSheet } from '../components/graph/ConfirmDeleteSheet';
 
 const DOMAIN = 0x0000;
 const TAG = 'KnowledgeGraph';
-
-/** 主题色板（colorIndex 取余兜底）：棕/红/绿/蓝/紫/橙 */
-const THEME_PALETTE: string[] = ['#6D4C41', '#C0392B', '#2E7D32', '#1565C0', '#6A1B9A', '#EF6C00'];
-/** 拓展推荐条数 */
 const MAX_RECOMMEND: number = 5;
 
 /** 弹层类型 */
 enum SheetType {
   None,
-  ThemeEditor,   // 新建 / 重命名主题
-  Manage,        // 归类管理
+  ThemeEditor,
+  Manage,
   ConfirmDelete
-}
-
-/** 图谱节点（Canvas 命中测试用） */
-class GraphNode {
-  id: string;
-  label: string;
-  x: number;
-  y: number;
-  r: number;
-
-  constructor(id: string, label: string, x: number, y: number, r: number) {
-    this.id = id;
-    this.label = label;
-    this.x = x;
-    this.y = y;
-    this.r = r;
-  }
 }
 
 @Component
@@ -74,53 +38,34 @@ export struct KnowledgeGraph {
   // ==================== 数据状态 ====================
   @State themes: Theme[] = [];
   @State selectedThemeId: string = '';
-  /** 选中主题下的已归类遗址 */
   @State themedHeritages: Heritage[] = [];
-  /** 拓展推荐（横向卡片） */
   @State recommendations: Heritage[] = [];
-  /** 全部收藏（归类管理数据源） */
   @State favorites: Favorite[] = [];
   @State isLoading: boolean = true;
   @State isMockData: boolean = false;
 
   // ==================== 弹层状态 ====================
   @State sheetType: SheetType = SheetType.None;
-  /** 主题编辑器：true=重命名（编辑选中主题） */
   @State themeEditorMode: boolean = false;
   @State themeNameInput: string = '';
   @State themeColorIndex: number = 0;
-  /** 归类管理：已归类（可移除）/ 未归类收藏（可加入） */
   @State manageIncluded: Heritage[] = [];
   @State manageAvailable: Heritage[] = [];
 
-  // ==================== Canvas 绘制 ====================
-  private settings: RenderingContextSettings = new RenderingContextSettings(true);
-  /** 默认 vp 单位模式（官方 constructor 默认 LengthMetricsUnit.DEFAULT=vp；PX 需显式指定） */
-  private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
-  private graphNodes: GraphNode[] = [];
-  /**
-   * 图谱区域高度（vp）：动态适配设备窗口（按窗口宽度约 90%，下限 300vp、上限 430vp），
-   * 图谱区接近方形、图形铺满；平板/大屏自动更大。
-   */
-  @State canvasHeight: number = 300;
-
-  /** 预置遗产映射表与全量列表（只读；加载完成后构建） */
+  /** 预置遗产映射表与全量列表 */
   private heritageMap: Map<string, Heritage> = new Map();
   private allHeritage: Heritage[] = [];
 
-  /** 主题变化处理器（aboutToDisappear 注销） */
+  /** 主题变化处理器 */
   private themeChangedHandler: () => void = (): void => {
     this.loadThemes();
   };
-  /** 收藏变化处理器（归类/收藏切换后刷新图谱与推荐） */
+  /** 收藏变化处理器 */
   private favChangedHandler: () => void = (): void => {
     this.refreshSelected();
   };
 
-  /**
-   * 父页面刷新信号（Index.onPageShow 从详情返回后 +1，收藏切换联动；对齐 Favorites）。
-   * @Watch 触发刷新；加载中不重复刷（loadHeritages 完成后自带一次 refreshSelected）。
-   */
+  /** 父页面刷新信号 */
   @Prop @Watch('onRefreshTick') refreshTick: number = 0;
 
   private onRefreshTick(): void {
@@ -141,7 +86,6 @@ export struct KnowledgeGraph {
     ThemeService.init(context);
     ThemeService.onDataChanged(this.themeChangedHandler);
     FavoriteService.onDataChanged(this.favChangedHandler);
-    this.queryCanvasHeight();
     this.loadHeritages(context);
   }
 
@@ -150,7 +94,7 @@ export struct KnowledgeGraph {
     FavoriteService.offDataChanged(this.favChangedHandler);
   }
 
-  /** 加载预置遗产数据构建映射表（进程内缓存；预览器失败注入 mock，与发现/收藏页一致） */
+  /** 加载预置遗产数据构建映射表 */
   private async loadHeritages(context: common.Context): Promise<void> {
     let list: Heritage[] = [];
     try {
@@ -171,7 +115,7 @@ export struct KnowledgeGraph {
     this.loadThemes();
   }
 
-  /** 从 ThemeService 加载主题（整体赋值），校验选中主题有效性并刷新图谱 */
+  /** 从 ThemeService 加载主题 */
   private loadThemes(): void {
     const themes: Theme[] = ThemeService.getAllThemes();
     this.themes = themes;
@@ -180,7 +124,6 @@ export struct KnowledgeGraph {
         this.selectedThemeId = themes[0].id;
       }
     } else if (!this.containsTheme(themes, this.selectedThemeId)) {
-      // 选中主题已被删除/远端移除：回退到最新主题或空
       this.selectedThemeId = themes.length > 0 ? themes[0].id : '';
     }
     this.refreshSelected();
@@ -195,7 +138,7 @@ export struct KnowledgeGraph {
     return false;
   }
 
-  /** 重建选中主题下的图谱数据（整体赋值，踩坑 5），并重绘 Canvas */
+  /** 重建选中主题下的图谱数据 */
   private refreshSelected(): void {
     const favs: Favorite[] = FavoriteService.getFavoritesByTheme(this.selectedThemeId);
     const hers: Heritage[] = [];
@@ -208,7 +151,6 @@ export struct KnowledgeGraph {
     this.themedHeritages = hers;
     this.favorites = FavoriteService.getAllFavorites();
     this.refreshRecommendations();
-    this.drawGraph();
   }
 
   /** 选择主题 */
@@ -220,7 +162,7 @@ export struct KnowledgeGraph {
     this.refreshSelected();
   }
 
-  /** 拓展推荐：以选中主题第一个已归类遗址为锚，取相似推荐并排除已归类的 */
+  /** 拓展推荐 */
   private refreshRecommendations(): void {
     if (this.themedHeritages.length === 0 || this.allHeritage.length === 0) {
       this.recommendations = [];
@@ -286,21 +228,16 @@ export struct KnowledgeGraph {
     return theme === null ? 0 : theme.colorIndex;
   }
 
-  private saveTheme(): void {
-    const name: string = this.themeNameInput.trim();
-    if (name === '') {
-      return;
-    }
+  private saveTheme(name: string, colorIndex: number): void {
     if (this.themeEditorMode) {
       ThemeService.renameTheme(this.selectedThemeId, name);
     } else {
-      const created: Theme | null = ThemeService.addTheme(name, this.themeColorIndex);
+      const created: Theme | null = ThemeService.addTheme(name, colorIndex);
       if (created !== null) {
         this.selectedThemeId = created.id;
       }
     }
-    this.themeNameInput = '';
-    this.sheetType = SheetType.None;
+    this.closeSheet();
     this.loadThemes();
   }
 
@@ -310,16 +247,15 @@ export struct KnowledgeGraph {
 
   private confirmDeleteTheme(): void {
     ThemeService.removeTheme(this.selectedThemeId);
-    this.sheetType = SheetType.None;
+    this.closeSheet();
     this.loadThemes();
   }
 
   // ==================== 归类管理 ====================
 
-  /** 打开归类管理：重建「已归类 / 未归类」两个列表（整体赋值） */
   private openManage(): void {
-    this.sheetType = SheetType.Manage;
     this.rebuildManage();
+    this.sheetType = SheetType.Manage;
   }
 
   private rebuildManage(): void {
@@ -374,159 +310,12 @@ export struct KnowledgeGraph {
 
   // ==================== 跳转 ====================
 
-  /** 打开遗址详情（统一带 id，O2 约定） */
   private openDetail(heritageId: string): void {
     try {
       router.pushUrl({ url: 'pages/Detail', params: { id: heritageId } });
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'open detail failed: %{public}s', JSON.stringify(err));
     }
-  }
-
-  // ==================== Canvas 知识节点网络 ====================
-
-  /**
-   * 动态适配图谱区域高度：按窗口宽度取约 90%（下限 300vp、上限 430vp），
-   * 图谱区接近方形、图形铺满，避免固定高度/盲目加高造成的空洞；
-   * 平板/大屏自动更大，文字节点同步等比放大（用户要求动态自适应布局）。
-   * 失败（窗口 API 异常/无 context）时保持默认高度，不影响功能。
-   */
-  private queryCanvasHeight(): void {
-    const context = this.getUIContext().getHostContext();
-    if (context === undefined) {
-      return;
-    }
-    try {
-      window.getLastWindow(context).then((win: window.Window) => {
-        const props: window.WindowProperties = win.getWindowProperties();
-        const winW: number = props.windowRect.width; // 窗口宽度（vp，d.ts 实测为 windowRect）
-        this.canvasHeight = Math.round(this.clamp(Math.round(winW * 0.9), 300, 430));
-      }).catch((err: BusinessError) => {
-        hilog.error(DOMAIN, TAG, 'query window size failed, keep default: %{public}s', JSON.stringify(err));
-      });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'getLastWindow failed, keep default: %{public}s', JSON.stringify(err));
-    }
-  }
-
-  /** 数值钳制到 [min, max]（Canvas 绘制尺寸按画布宽度动态缩放用） */
-  private clamp(v: number, min: number, max: number): number {
-    if (v < min) {
-      return min;
-    }
-    if (v > max) {
-      return max;
-    }
-    return v;
-  }
-
-  /** 按最大字符数智能截断（超长补省略号；中文字符为主，按字符计数） */
-  private fitLabel(text: string, maxChars: number): string {
-    if (text.length <= maxChars) {
-      return text;
-    }
-    if (maxChars <= 1) {
-      return text.substring(0, 1);
-    }
-    return `${text.substring(0, maxChars - 1)}…`;
-  }
-
-  /**
-   * 绘制知识节点网络（命令式重绘：主题/归类变化后手动调用）。
-   * 官方依据（华为开发者文档 + 本机 SDK canvas.d.ts 双重核对）：
-   * - context 默认 vp 单位模式（constructor unit 缺省 = LengthMetricsUnit.DEFAULT）；
-   * - context.width / context.height 只读属性为 vp，官方 onReady 示例直接
-   *   `radius = context.width / 3` 按比例绘制，无需任何 px/vp 换算（前两轮 ×dpr 致 3 倍放大踩坑）；
-   * - 字体 font-size 显式写 vp 单位（如 '15vp sans-serif'），消除单位歧义。
-   * 逻辑链（用户要求）：画布适应设备（width 100% + 动态高度）→ 图适应画布
-   * （半径/布局按 context.width/height 比例）→ 字体适应图（字号按节点半径比例）。
-   */
-  private drawGraph(): void {
-    const w: number = this.context.width;  // 画布宽度（vp）
-    const h: number = this.context.height; // 画布高度（vp）
-    if (w <= 0 || h <= 0) {
-      return; // onReady/onAreaChange 后才可取到尺寸
-    }
-    const ctx: CanvasRenderingContext2D = this.context;
-    ctx.clearRect(0, 0, w, h);
-    this.graphNodes = [];
-    const cx: number = w / 2;
-    const cy: number = h / 2 - 8;
-
-    // ---- 尺寸（vp 域，随画布宽度等比缩放：手机 ~350vp 取中值、平板自动放大） ----
-    const themeR: number = this.clamp(Math.round(w * 0.1), 36, 46);    // 中心主题节点半径
-    const nodeR: number = this.clamp(Math.round(w * 0.06), 24, 30);    // 遗址节点半径
-    const themeFont: number = this.clamp(Math.round(themeR * 0.42), 14, 19);  // 主题名字号（vp）
-    const labelFont: number = this.clamp(Math.round(nodeR * 0.5), 12, 15);    // 遗址标签字号（vp）
-    const countFont: number = this.clamp(Math.round(themeR * 0.3), 11, 13);   // 「N 处」字号（vp）
-    const labelMaxChars: number = Math.max(3, Math.floor((w * 0.36) / labelFont)); // 标签最大字符数
-
-    // 中心主题节点（圆内短标签，按可用宽度截断）
-    const theme: Theme | null = this.selectedTheme();
-    const themeColor: string = theme === null ? '#9E9E9E' : THEME_PALETTE[theme.colorIndex % THEME_PALETTE.length];
-    ctx.beginPath();
-    ctx.arc(cx, cy, themeR, 0, Math.PI * 2);
-    ctx.fillStyle = themeColor;
-    ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textAlign = 'center';
-    ctx.font = `${themeFont}vp sans-serif`;
-    const themeMaxChars: number = Math.max(2, Math.floor((themeR * 1.62) / themeFont));
-    ctx.fillText(theme === null ? '未选择' : this.fitLabel(theme.name, themeMaxChars),
-      cx, cy + Math.round(themeFont * 0.35));
-    ctx.font = `${countFont}vp sans-serif`;
-    ctx.fillText(`${this.themedHeritages.length} 处`, cx, cy + themeR - 2);
-
-    // 环绕遗址节点（圆周分布；布局半径随画布与节点尺寸动态计算，下限兜底防重叠）
-    const n: number = this.themedHeritages.length;
-    if (n > 0) {
-      const layoutR: number = Math.max(60, Math.min(w, h) / 2 - themeR - nodeR - 20);
-      for (let i = 0; i < n; i++) {
-        const angle: number = (i / n) * Math.PI * 2 - Math.PI / 2;
-        const x: number = cx + layoutR * Math.cos(angle);
-        const y: number = cy + layoutR * Math.sin(angle);
-        // 连线（中心 → 节点）
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = '#D7CCC8';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        // 节点圆（主题色软底 + 年代色描边，克制不做 3D）
-        const item: Heritage = this.themedHeritages[i];
-        ctx.beginPath();
-        ctx.arc(x, y, nodeR, 0, Math.PI * 2);
-        ctx.fillStyle = getEraTheme(item.era).soft;
-        ctx.fill();
-        ctx.strokeStyle = getEraTheme(item.era).deep;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        // 遗址名称（节点下方外置标签，字号按 vp + 智能截断，避免压边与超宽）
-        ctx.fillStyle = '#3E2723';
-        ctx.font = `${labelFont}vp sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText(this.fitLabel(item.name, labelMaxChars), x, y + nodeR + labelFont + 4);
-        this.graphNodes.push(new GraphNode(item.id, item.name, x, y, nodeR));
-      }
-    }
-  }
-
-  /** Canvas 点击命中测试：落在遗址节点内 → 跳详情 */
-  private handleCanvasTap(tx: number, ty: number): void {
-    for (let i = 0; i < this.graphNodes.length; i++) {
-      const node: GraphNode = this.graphNodes[i];
-      const dx: number = tx - node.x;
-      const dy: number = ty - node.y;
-      const dist: number = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= node.r + 10) {
-        this.openDetail(node.id);
-        return;
-      }
-    }
-  }
-
-  private onCanvasArea(): void {
-    this.drawGraph(); // 尺寸变化时重绘（实际尺寸从 context.width/height 取，官方模式）
   }
 
   // ==================== UI ====================
@@ -563,7 +352,7 @@ export struct KnowledgeGraph {
           .layoutWeight(1)
           .width('100%')
         } else if (this.themes.length === 0) {
-          // 空态 1：无主题 → 引导新建
+          // 空态：无主题
           Column() {
             Text('还没有文化主题')
               .fontSize(18)
@@ -588,7 +377,7 @@ export struct KnowledgeGraph {
           .width('100%')
           .padding({ left: 32, right: 32 })
         } else {
-          // mock 示例数据提示条（仅加载失败兜底时出现）
+          // mock 示例数据提示条
           if (this.isMockData) {
             Row() {
               Text('示例数据 · 预览调试专用（rawfile 加载失败）')
@@ -605,7 +394,7 @@ export struct KnowledgeGraph {
 
           Scroll() {
             Column() {
-              // 主题 chips（横向滚动；选中高亮直读 this.selectedThemeId，踩坑 15 合规）
+              // 主题 chips
               Scroll() {
                 Row() {
                   ForEach(this.themes, (theme: Theme) => {
@@ -643,35 +432,30 @@ export struct KnowledgeGraph {
               .edgeEffect(EdgeEffect.Spring)
               .width('100%')
 
-              // 知识节点网络
+              // 知识图谱画布区域
               Column() {
-                Canvas(this.context)
-                  .width('100%')
-                  .height(this.canvasHeight)
-                  .onReady(() => {
-                    this.drawGraph();
-                  })
-                  .onAreaChange((_oldValue: Area, _newValue: Area) => {
-                    this.onCanvasArea();
-                  })
-                  .onClick((event: ClickEvent) => {
-                    this.handleCanvasTap(event.x, event.y);
-                  })
+                GraphCanvas({
+                  theme: this.selectedTheme(),
+                  heritages: this.themedHeritages,
+                  onNodeClick: (id: string) => {
+                    this.openDetail(id);
+                  }
+                })
               }
               .width('100%')
-              .padding(12)
+              .height(320)
               .backgroundColor('#FFFFFF')
-              .borderRadius(12)
+              .borderRadius(16)
               .margin({ top: 12 })
+              .shadow({ radius: 8, color: 'rgba(0,0,0,0.06)', offsetX: 0, offsetY: 2 })
 
               if (this.selectedThemeId === '') {
-                // 空态 2：有主题但未选中（理论不可达，兜底）
                 Text('请选择或新建一个主题')
                   .fontSize(13)
                   .fontColor('#8D6E63')
                   .margin({ top: 24 })
               } else if (this.themedHeritages.length === 0) {
-                // 空态 3：主题下无归类 → 引导归类
+                // 空态：主题下无归类
                 Column() {
                   Text('该主题下还没有收藏的遗址')
                     .fontSize(16)
@@ -693,10 +477,11 @@ export struct KnowledgeGraph {
                 .width('100%')
                 .padding(20)
                 .backgroundColor('#FFFFFF')
-                .borderRadius(12)
+                .borderRadius(16)
                 .margin({ top: 12 })
+                .shadow({ radius: 8, color: 'rgba(0,0,0,0.06)', offsetX: 0, offsetY: 2 })
               } else {
-                // 主题操作行 + 图谱 + 归类 + 拓展推荐
+                // 主题操作行
                 Row({ space: 10 }) {
                   Button('归类管理')
                     .fontSize(13)
@@ -726,7 +511,7 @@ export struct KnowledgeGraph {
                 .width('100%')
                 .margin({ top: 12 })
 
-                // 已归类遗址（横向卡片，点击跳详情）
+                // 已归类遗址
                 Row() {
                   Text('主题下已归类')
                     .fontSize(15)
@@ -743,7 +528,9 @@ export struct KnowledgeGraph {
                 Scroll() {
                   Row() {
                     ForEach(this.themedHeritages, (h: Heritage) => {
-                      this.ThemedCard(h)
+                      HeritageCard({ heritage: h, onTap: () => {
+                        this.openDetail(h.id);
+                      } })
                     }, (h: Heritage) => h.id)
                   }
                   .alignItems(VerticalAlign.Top)
@@ -755,7 +542,7 @@ export struct KnowledgeGraph {
                 .width('100%')
                 .height(128)
 
-                // 拓展推荐（基于知识结构的相似推荐，排除已收藏）
+                // 拓展推荐
                 if (this.recommendations.length > 0) {
                   Row() {
                     Text('基于此主题的拓展推荐')
@@ -769,7 +556,9 @@ export struct KnowledgeGraph {
                   Scroll() {
                     Row() {
                       ForEach(this.recommendations, (h: Heritage) => {
-                        this.ThemedCard(h)
+                        HeritageCard({ heritage: h, onTap: () => {
+                          this.openDetail(h.id);
+                        } })
                       }, (h: Heritage) => h.id)
                     }
                     .alignItems(VerticalAlign.Top)
@@ -796,15 +585,46 @@ export struct KnowledgeGraph {
       .height('100%')
       .backgroundColor('#FAF6F0')
 
-      // 弹层：遮罩 + 对话框（一律经显式按钮关闭）
+      // 弹层
       if (this.sheetType !== SheetType.None) {
         Column() {
           if (this.sheetType === SheetType.ThemeEditor) {
-            this.ThemeEditorSheet()
+            ThemeEditorSheet({
+              isRename: this.themeEditorMode,
+              initialName: this.themeNameInput,
+              initialColorIndex: this.themeColorIndex,
+              onSave: (name: string, colorIndex: number) => {
+                this.saveTheme(name, colorIndex);
+              },
+              onCancel: () => {
+                this.closeSheet();
+              }
+            })
           } else if (this.sheetType === SheetType.Manage) {
-            this.ManageSheet()
+            ManageSheet({
+              themeName: this.selectedThemeName(),
+              included: this.manageIncluded,
+              available: this.manageAvailable,
+              onRemove: (itemId: string) => {
+                this.removeFromTheme(itemId);
+              },
+              onAdd: (itemId: string) => {
+                this.addToTheme(itemId);
+              },
+              onDone: () => {
+                this.closeSheet();
+              }
+            })
           } else {
-            this.ConfirmDeleteSheet()
+            ConfirmDeleteSheet({
+              themeName: this.selectedThemeName(),
+              onConfirm: () => {
+                this.confirmDeleteTheme();
+              },
+              onCancel: () => {
+                this.closeSheet();
+              }
+            })
           }
         }
         .width('100%')
@@ -812,276 +632,11 @@ export struct KnowledgeGraph {
         .justifyContent(FlexAlign.Center)
         .backgroundColor('rgba(62,39,35,0.45)')
         .onClick(() => {
-          // 空实现消费点击：防止穿透到主内容；不承担「点遮罩关闭」（子组件冒泡误关，同 Favorites）
+          // 消费点击防穿透
         })
       }
     }
     .width('100%')
     .height('100%')
-  }
-
-  /** 遗址卡（已归类 / 拓展推荐共用；内容静态来自列表，@Builder 参数化渲染安全，踩坑 15） */
-  @Builder
-  ThemedCard(h: Heritage) {
-    Column() {
-      Text(h.name)
-        .fontSize(14)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-      Text(h.summary)
-        .fontSize(12)
-        .fontColor('#8D6E63')
-        .lineHeight(18)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-        .margin({ top: 6 })
-      Text(`${h.era} · ${h.city}`)
-        .fontSize(10)
-        .fontColor(getEraTheme(h.era).deep)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-        .margin({ top: 8 })
-    }
-    .width(150)
-    .alignItems(HorizontalAlign.Start)
-    .padding(12)
-    .backgroundColor(getEraTheme(h.era).soft)
-    .borderRadius(10)
-    .border({ width: 1, color: '#F0EBE5' })
-    .margin({ right: 10 })
-    .onClick(() => {
-      this.openDetail(h.id);
-    })
-  }
-
-  /** 主题编辑器（新建 / 重命名共用；themeEditorMode 区分） */
-  @Builder
-  ThemeEditorSheet() {
-    Column() {
-      Text(this.themeEditorMode ? '重命名主题' : '新建主题')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
-      TextInput({ placeholder: '主题名称（如「彩陶文化」「青铜文明」）', text: this.themeNameInput })
-        .width('100%')
-        .height(42)
-        .fontSize(14)
-        .backgroundColor('#FAF6F0')
-        .borderRadius(8)
-        .margin({ top: 16 })
-        .onChange((value: string) => {
-          this.themeNameInput = value;
-        })
-      if (!this.themeEditorMode) {
-        Text('选择主题颜色')
-          .fontSize(13)
-          .fontColor('#8D6E63')
-          .margin({ top: 16 })
-          .alignSelf(ItemAlign.Start)
-        Row() {
-          ForEach(THEME_PALETTE, (color: string, index: number) => {
-            Row()
-              .width(26)
-              .height(26)
-              .borderRadius(13)
-              .backgroundColor(color)
-              .border({ width: 2, color: this.themeColorIndex === index ? '#3E2723' : '#E0D6CC' })
-              .margin({ right: 10 })
-              .onClick(() => {
-                this.themeColorIndex = index;
-              })
-          }, (color: string, index: number) => `${color}-${index}`)
-        }
-        .width('100%')
-        .margin({ top: 10 })
-      }
-      Row({ space: 12 }) {
-        Button('取消')
-          .fontSize(14)
-          .fontColor('#6D4C41')
-          .backgroundColor('#EFEBE9')
-          .layoutWeight(1)
-          .onClick(() => {
-            this.closeSheet();
-          })
-        Button('保存')
-          .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#6D4C41')
-          .layoutWeight(1)
-          .onClick(() => {
-            this.saveTheme();
-          })
-      }
-      .width('100%')
-      .margin({ top: 20 })
-    }
-    .width('88%')
-    .padding(20)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(16)
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  /** 归类管理：已归类（✕ 移除）/ 未归类收藏（＋ 加入） */
-  @Builder
-  ManageSheet() {
-    Column() {
-      Text('归类管理')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
-      Text(this.selectedThemeName())
-        .fontSize(13)
-        .fontColor('#8D6E63')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .margin({ top: 6 })
-
-      Text('已归类（点击 ✕ 移除）')
-        .fontSize(13)
-        .fontColor('#8D6E63')
-        .margin({ top: 14 })
-        .alignSelf(ItemAlign.Start)
-      Scroll() {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          if (this.manageIncluded.length === 0) {
-            Text('暂无，从下方收藏中添加')
-              .fontSize(12)
-              .fontColor('#BCAAA4')
-              .padding({ top: 4, bottom: 4 })
-          }
-          ForEach(this.manageIncluded, (h: Heritage) => {
-            Row() {
-              Text(h.name)
-                .fontSize(13)
-                .fontColor('#3E2723')
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-              Text('✕')
-                .fontSize(12)
-                .fontColor('#C0392B')
-                .padding({ left: 6, right: 2 })
-            }
-            .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-            .backgroundColor('#FBE9E7')
-            .borderRadius(14)
-            .border({ width: 1, color: '#FFCCBC' })
-            .margin({ right: 8, bottom: 8 })
-            .onClick(() => {
-              this.removeFromTheme(h.id);
-            })
-          }, (h: Heritage) => h.id)
-        }
-        .width('100%')
-      }
-      .align(Alignment.Start)
-      .scrollBar(BarState.Off)
-      .constraintSize({ maxHeight: 140 })
-      .margin({ top: 8 })
-
-      Text('未归类收藏（点击加入）')
-        .fontSize(13)
-        .fontColor('#8D6E63')
-        .margin({ top: 14 })
-        .alignSelf(ItemAlign.Start)
-      Scroll() {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          if (this.manageAvailable.length === 0) {
-            Text('没有可加入的收藏（全部已归类或暂无收藏）')
-              .fontSize(12)
-              .fontColor('#BCAAA4')
-              .padding({ top: 4, bottom: 4 })
-          }
-          ForEach(this.manageAvailable, (h: Heritage) => {
-            Row() {
-              Text(h.name)
-                .fontSize(13)
-                .fontColor('#6D4C41')
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-              Text('＋')
-                .fontSize(13)
-                .fontColor('#2E7D32')
-                .padding({ left: 6, right: 2 })
-            }
-            .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-            .backgroundColor('#E8F5E9')
-            .borderRadius(14)
-            .border({ width: 1, color: '#A5D6A7' })
-            .margin({ right: 8, bottom: 8 })
-            .onClick(() => {
-              this.addToTheme(h.id);
-            })
-          }, (h: Heritage) => h.id)
-        }
-        .width('100%')
-      }
-      .align(Alignment.Start)
-      .scrollBar(BarState.Off)
-      .constraintSize({ maxHeight: 140 })
-      .margin({ top: 8 })
-
-      Button('完成')
-        .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor('#6D4C41')
-        .width('100%')
-        .margin({ top: 16 })
-        .onClick(() => {
-          this.closeSheet();
-        })
-    }
-    .width('88%')
-    .padding(20)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(16)
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  /** 删除主题确认（主题删除不删收藏，文案注明） */
-  @Builder
-  ConfirmDeleteSheet() {
-    Column() {
-      Text('确认删除主题')
-        .fontSize(17)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
-      Text(`「${this.selectedThemeName()}」删除后仅移除主题归类，收藏与笔记保留`)
-        .fontSize(13)
-        .fontColor('#8D6E63')
-        .margin({ top: 10 })
-        .textAlign(TextAlign.Center)
-      Row({ space: 12 }) {
-        Button('再想想')
-          .fontSize(14)
-          .fontColor('#6D4C41')
-          .backgroundColor('#EFEBE9')
-          .layoutWeight(1)
-          .onClick(() => {
-            this.closeSheet();
-          })
-        Button('删除主题')
-          .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#C0392B')
-          .layoutWeight(1)
-          .onClick(() => {
-            this.confirmDeleteTheme();
-          })
-      }
-      .width('100%')
-      .margin({ top: 20 })
-    }
-    .width('76%')
-    .padding(20)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(16)
-    .alignItems(HorizontalAlign.Center)
   }
 }
