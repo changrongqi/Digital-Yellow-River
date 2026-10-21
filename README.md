@@ -73,7 +73,7 @@ entry/src/main/
 - 预置数据集位于 [heritage_data.json](file:///e:/HarmonyOS_coding/entry/src/main/resources/rawfile/heritage_data.json)，共 23 条真实遗址，覆盖 6 市、4 类型、6 个年代段。
 - 为便于预览器调试，[MockHeritages.ets](file:///e:/HarmonyOS_coding/entry/src/main/ets/data/MockHeritages.ets) 提供同结构 mock 数据，与 rawfile 共用同一解析入口，避免字段漂移。
 - 图集图片按相对路径从 `resources/rawfile/` 加载；缺失或加载失败时显示占位卡。
-- 内容深写与搜证方法论详见 [PROJECT_PLAN.md](file:///e:/HarmonyOS_coding/PROJECT_PLAN.md) 第 1.1 节。
+- 内容深写与搜证方法论详见 [CONTENT_METHODOLOGY.md](file:///e:/HarmonyOS_coding/CONTENT_METHODOLOGY.md)（原 [PROJECT_PLAN.md](file:///e:/HarmonyOS_coding/PROJECT_PLAN.md) 第 1.1 节）。
 
 ## 开发进度
 
