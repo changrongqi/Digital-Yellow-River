@@ -18,3 +18,17 @@ export interface Theme {
   updatedAt: number;  // 最后修改时间（LWW 冲突判定用）
   deviceId: string;   // 设备来源（LWW 冲突判定兜底用）
 }
+
+/**
+ * 主题色板（单一来源：主题编辑器选色 + 知识图谱中心节点取色共用）。
+ * 索引越界或负数按取余兜底，任何主题都有可用颜色。
+ */
+export const THEME_PALETTE: string[] = ['#6D4C41', '#C0392B', '#2E7D32', '#1565C0', '#6A1B9A', '#EF6C00'];
+
+/** 按 colorIndex 取主题色（纯函数，越界取余、负数兜底第一色） */
+export function getThemeColor(colorIndex: number): string {
+  if (colorIndex < 0) {
+    return THEME_PALETTE[0];
+  }
+  return THEME_PALETTE[colorIndex % THEME_PALETTE.length];
+}

@@ -1,6 +1,6 @@
 # 踩坑清单（必须遵守，遇坑及时补充）
 
-> 本文件是 [PROJECT_PLAN.md](PROJECT_PLAN.md) 原 §6 的独立分册，共 21 条，内容原样迁移（无删改）。
+> 本文件是 [PROJECT_PLAN.md](PROJECT_PLAN.md) 原 §6 的独立分册，原 21 条内容原样迁移（无删改），C1.4 新增第 22 条。
 > 下文「使用纪律」为硬约束：每个子任务开工前通读全文，编码过程中逐条自查（尤其第 1~5、13、15、16 条），提交前再对照一次；踩到新坑立即补条目并同步 REVISION_LOG.md。
 
 ## 6. 踩坑清单（必须遵守，遇坑及时补充）
@@ -31,3 +31,4 @@
 19. **ArkTS 模板字符串内嵌 JSON 时，字符串值内的 `\n` 会在求值后变成真实换行，导致 JSON.parse 抛「Bad control character」（M1.7 实测）**：MockHeritages 用反引号模板字符串存 JSON 文本（走唯一解析入口保证 R3 双份一致），写入多段正文时在 JSON 字符串值内用 `\n` 分段——但模板字符串求值时 `\n` 被解释为真实换行符，JSON 规范不允许字符串内裸换行，`JSON.parse` 直接抛错 → `MOCK_HERITAGES` 为空数组 → 预览器显示「暂无数据 + 预置数据解析失败」（rawfile 是纯 .json 文件、`\n` 为字面转义合法，故真机/模拟器正常，只有走 mock 的预览器全空）。规则：**模板字符串内嵌的 JSON 文本，字符串值内分段必须写 `\\n`（双反斜杠），不要写 `\n`**；排查「预览器空但真机正常」时优先怀疑 mock 数据的解析失败，可用 Node 模拟「模板求值（把 \\n 还原成 \n）后再 JSON.parse」来复现。
 20. **`layoutWeight` 在无高度约束的容器里会把子组件无限撑高（M1.7 事件页签实测）**：Column 未限定高度时，其内 `Line().layoutWeight(1)` 的竖线被分配到「无限剩余空间」而无限拉伸，连带外层 Row 一起被拉高——时间轴每个条目因此被撑到 280pt+，条目间出现大段空白（截图实测单屏仅 1.5 条）。规则：**`layoutWeight` 只应用于主轴方向有明确约束（父容器固定/占满）的场景**；需要「连接线」时不要用无约束容器里的 layoutWeight，改用内容驱动的分隔（Divider/固定小高度），或给容器显式高度。
 21. **rawfile JSON 正文内嵌引号误用 ASCII 双引号 `"` 会提前闭合字符串，导致 JSON.parse 失败（M1.7 偃师商城深写实测）**：编写 rawfile/heritage_data.json 的事件正文时，把「面朝后市、择中立宫、对称布局」误写成 `"面朝后市..."`（ASCII 引号），字符串在引号处提前闭合，`ConvertFrom-Json`/`JSON.parse` 直接抛 SyntaxError，且 PowerShell 校验报错定位在「column 104」这类误导性位置。规则：**rawfile 与 mock 的 JSON 文本中，正文内嵌引号一律用中文引号「」**（本项目惯例），禁止在字符串值内使用 ASCII 双引号；每批写完先用 PowerShell `ConvertFrom-Json` 校验 rawfile、用 Node 模拟模板求值校验 mock，把 JSON 语法错误拦截在双份同步脚本之前（本次即被 mock 生成脚本的 JSON.parse 首先发现）。
+22. **Canvas 组件三个高频坑（C1.4 图谱重构实测）**：① **Canvas 不会因 @Prop 变化自动重绘**——即使 `@Prop heritages` 已更新，`onReady`/`onAreaChange` 不触发就仍是旧画面；必须给每个影响画面的 @Prop 加 `@Watch` 回调重绘（O9 根因），并对「同对象改字段」（如主题重命名）用版本号兜底。② **自定义组件字段名不能与 CustomComponent 内置属性同名**——本次把视口缩放字段命名为 `scale`，编译报 `Property 'scale' is not assignable to ... CustomComponent`（内置 `scale()` 是通用属性方法）；改用 `viewScale` 等前缀命名，同理避开 `width`/`height`/`position`/`clip`/`opacity` 等。③ **滚动容器内做画布交互不要用裸 `onTouch`**——外层 `Scroll` 的滑动手势会与画布拖动竞争，裸 onTouch 无法稳定抢到手势；改用 `GestureGroup(Exclusive(Tap, Parallel(Pan, Pinch)))` 绑定在 Canvas 上，子组件自定义手势默认优先于父级 Scroll（官方 FAQ：父子同类型手势默认子组件优先），平移/缩放/点选才能各自稳定识别。另附：Canvas 若自行 `fillRect` 铺底色会盖住父卡片 `borderRadius` 圆角，正确做法是 Canvas 不填充、父容器设底色 + `.clip(true)`。

@@ -2,9 +2,7 @@
  * 主题编辑器弹层（新建 / 重命名共用）
  */
 
-import { Theme } from '../../model/Theme';
-
-const THEME_PALETTE: string[] = ['#6D4C41', '#C0392B', '#2E7D32', '#1565C0', '#6A1B9A', '#EF6C00'];
+import { THEME_PALETTE } from '../../model/Theme';
 
 @Component
 export struct ThemeEditorSheet {

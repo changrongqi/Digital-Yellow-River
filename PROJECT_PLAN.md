@@ -20,10 +20,10 @@
 | 文件 | 内容 | 何时读 |
 |---|---|---|
 | **PROJECT_PLAN.md**（本文件） | 产品定位、技术约束、架构目录、数据模型、里程碑 M1~M5、验收标准、开发工作流 | 每次开工前通读 |
-| [PITFALLS.md](PITFALLS.md) | 21 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
-| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O7（环境限制、构建告警基线 O3） | 排障、构建告警比对、评估环境限制时 |
+| [PITFALLS.md](PITFALLS.md) | 22 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式/Canvas 等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
+| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O13（环境限制、构建告警基线 O3、图谱手势待实机验证 O13） | 排障、构建告警比对、评估环境限制时 |
 | [CONTENT_METHODOLOGY.md](CONTENT_METHODOLOGY.md) | 联网搜证 + 内容深写方法论（来源优先级 / 核证纪律 / 事件与文旅结构 / 双份同步 R3 / 图片） | 每批遗址内容深写、事件/文旅/图集开工前 |
-| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（57 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
+| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（58 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
 
 **接手速记（最高优先级硬约束，细节见对应分册）**
 
@@ -86,9 +86,10 @@ entry/src/main/
 │   │   └── SyncPanel.ets      # 同步状态面板
 │   ├── components/            # 可复用 UI 组件（M1.10 起）
 │   │   ├── ImageGallery.ets   # 图集组件：缩略图网格 + 点击 Lightbox 放大（动态布局）
-│   │   └── graph/             # 知识图谱组件集（C1.2 重构拆分，2026-10-01）
-│   │       ├── GraphCanvas.ets    # Canvas 知识节点网络（绘制 + 命中测试）
-│   │       ├── GraphNode.ets      # 图谱节点模型（命中测试用）
+│   │   └── graph/             # 知识图谱组件集（C1.2 拆分，C1.4 布局/渲染分层）
+│   │       ├── GraphCanvas.ets    # Canvas 渲染层：视口变换 + 平移/缩放/拖拽/点选 + 邻接高亮
+│   │       ├── GraphLayout.ets    # 图模型构建 + 确定性力导向布局 + 视口适配（纯函数）
+│   │       ├── GraphNode.ets      # 图谱节点/边/图模型定义（含节点种类与边语义）
 │   │       ├── HeritageCard.ets   # 遗址卡片（已归类/拓展推荐共用）
 │   │       ├── ThemeEditorSheet.ets  # 主题编辑器弹层（新建/重命名）
 │   │       ├── ManageSheet.ets    # 归类管理弹层（已归类/未归类）
@@ -224,6 +225,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | C1.1 | 主题数据模型 + 主题服务 | 新增 model/Theme.ets（id/name/colorIndex/createdAt/updatedAt/deviceId，LWW 兼容）；Favorite 增 themeIds[]（只增字段，旧数据缺省空数组）；service/ThemeService.ets：主题 CRUD（增/改名/删，删除主题仅清关联引用不删收藏）+ 收藏归类 setFavoriteThemes（走 FavoriteService 双写）+ Preferences 持久化（同一 store，theme_json 键）+ 订阅 SyncService.onRemoteChange 做主题远端 LWW 合并 | ✅ |
 | C1.2 | 知识图谱页 + 首页入口 | pages/KnowledgeGraph.ets（Index 第 4 个 Tab「图谱」）：主题 chips 选择/新建/重命名/删除 → Canvas 知识节点网络（中心=主题、环绕节点=已归类遗址，点击带 id 跳详情，O2）+ 归类操作（已归类列表移除 / 弹层从未归类收藏中选取加入）+ 拓展推荐（该主题已收藏遗址的相似推荐，排除已收藏，复用 utils/Recommendation）+ 空态兜底（无主题引导新建 / 有主题无收藏引导归类） | ✅ |
 | C1.3 | 分布式同步扩展 | SyncService 增 theme_ 前缀通道：syncTheme/removeThemeSync、RemoteChanges 增 upsertThemes/deletedThemeIds、远端解析 parseThemeFromWire；FavoriteService 增 updateFavoriteThemes（双写 syncFavorite，themeIds 随收藏走 LWW）；主题同步经 autoSync + 面板「立即同步」一并覆盖；真机联调并入 O7 清单 | ✅ |
+| C1.4 | 知识图谱交互与呈现重构（2026-10-22，用户要求参考 relation-graph / Trilium Notes / Obsidian） | ① 分层：新增 GraphLayout.ets（图模型 + 确定性力导向布局 + 视口适配，纯函数），GraphNode.ets 扩展节点/边/图模型，GraphCanvas.ets 只做渲染与手势；② 视觉：中心主题 + 环形种子力导向布局，节点大小按连接度编码，同类关联（同年代/同城市）二次曲线 + top-3 防毛球，拓展推荐空心节点挂在最相似遗址旁（虚线关系），标签屏幕坐标固定字号 + 缩小时淡出；③ 交互：Tap 选中并出信息卡、Pan 平移/拖拽节点、Pinch 缩放、右上角 ＋/－/⟲，邻接高亮其余淡出，点击空白取消；④ 逻辑：推荐改为多锚点聚合、排除全部已收藏；选中信息卡可直达详情/移出主题/归类管理；空主题补重命名/删除入口（修 O10）；@Watch + 数据签名修复 Canvas 不随数据重绘（修 O9），内容未变时保留用户视口 | ✅ |
 
 > C1 设计要点：
 > - 主题与 M2 收藏标签是**两个维度**：标签是收藏卡片的管理分类（待实地探访/已去过/研究资料 + 自定义），
@@ -235,13 +237,18 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 >   布局：中心主题节点 + 环绕遗址节点（圆周分布）+ 连线，克制简洁（用户偏好：不堆 3D、不做多余视觉）;
 > - 拓展推荐复用 M4 纯函数 recommendHeritages（list=当前数据源全量、currentId=主题下某遗址、favoriteIds=已收藏集合），
 >   过滤出「同主题已收藏」之外的建议条目，横向卡片展示。
+> - C1.4 图谱架构（参考 relation-graph 核心/布局/渲染分离、Trilium Note Map 根节点与关系语义、
+>   Obsidian 力导向参数与节点度数编码）：`GraphLayout.buildGraphModel` 只产出节点/边，`layoutGraph`
+>   只产出世界坐标，`GraphCanvas` 只做视口变换与绘制；推荐节点以「最相似遗址 → 推荐」虚线挂载，
+>   不直接连中心主题，避免推荐被斥力推到画布边缘；同类关联仅取「同年代/同城市」且每节点 top-3，
+>   控制视觉噪声。新增图谱逻辑（构建/布局）不依赖 UI，可脱离设备做几何校验。
 
 - C2 分布式数据备份与恢复（⬜）：设备间收藏/笔记/主题/知识图谱完整迁移 + 一键恢复；依赖真机联调（并入 O7）
 - C3 多端协同编辑（⬜）：双端笔记实时同步 + 补充/修改/合并/排序成结构化文档；依赖真机联调（并入 O7）
 
 ## 6. 踩坑清单（全文见 PITFALLS.md，开工前必读）
 
-> **本节已拆分为独立分册 [PITFALLS.md](PITFALLS.md)**：共 21 条踩坑（含使用纪律与历史教训），内容原样迁移、无删改。
+> **本节已拆分为独立分册 [PITFALLS.md](PITFALLS.md)**：原 21 条踩坑（含使用纪律与历史教训）原样迁移、无删改，C1.4 新增第 22 条（Canvas 重绘/字段名冲突/滚动容器手势）。
 > 纪律不变：每个子任务开工前**通读全文** → 编码中逐条自查（尤其第 1~5、13、15、16 条属 ArkUI/ArkTS 声明式约束，最易反复踩）→ 提交前再对照 → 踩到新坑立即补进 PITFALLS.md、同步 REVISION_LOG.md，**禁止只改代码不改清单**。
 
 ### 6.1 当前阶段遗留问题 / 风险（已拆分至 ISSUES_RISKS.md）
