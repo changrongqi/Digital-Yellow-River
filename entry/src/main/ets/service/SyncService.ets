@@ -312,12 +312,13 @@ export class SyncService {
     return remoteDeviceId < localDeviceId;
   }
 
-  /** 冲突台账登记（M3.2 合并冲突时调用，同步面板展示） */
-  static recordConflict(itemId: string, reason: string): void {
+  /** 冲突台账登记（M3.2 合并冲突时调用；M1 记录胜出版本的最后写入设备，供面板定位） */
+  static recordConflict(itemId: string, reason: string, deviceId: string): void {
     const item: ConflictLogItem = {
       itemId: itemId,
       time: Date.now(),
-      reason: reason
+      reason: reason,
+      deviceId: deviceId
     };
     SyncService.conflictLog.push(item);
     if (SyncService.conflictLog.length > MAX_CONFLICT_LOG) {

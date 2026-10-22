@@ -14,6 +14,8 @@
  *    由 LWW 决定删除与并发编辑谁生效，避免离线端旧主题复活。
  * 5. LWW：updatedAt 新者胜、相等 deviceId 字典序小者胜（与 M3 收藏/笔记判定原语一致，
  *    复用 SyncService.lwwRemoteWins）；墓碑用 deletedAt 作为版本时间。
+ *    M1（第二轮）起 deviceId 统一由 DeviceIdentity 提供，且每次写入刷新；
+ *    updatedAt/deletedAt 经 nextUpdatedAt 保证严格递增（墙钟回拨兜底）。
  * 6. 踩坑 1/2/4：Preferences 读回 JSON 逐字段显式转换 + 合法性校验，非法条目跳过记日志；
  *    全程不用 any、不用解构赋值；可抛异常 SDK 调用包 try/catch。
  */
@@ -27,6 +29,8 @@ import { Favorite } from '../model/Favorite';
 import { Tombstone } from '../model/Tombstone';
 import { FavoriteService } from './FavoriteService';
 import { SyncService, RemoteChanges } from './SyncService';
+import { DeviceIdentity } from './DeviceIdentity';
+import { nextUpdatedAt } from '../utils/LwwVersion';
 
 const DOMAIN = 0x0000;
 const TAG = 'ThemeService';
@@ -38,8 +42,6 @@ export class ThemeService {
   private static readonly KEY_THEMES = 'themes_json';
   /** 主题删除墓碑存储键（M6.3） */
   private static readonly KEY_THEME_TOMBSTONES = 'theme_tombstones_json';
-  /** 本机设备标识存储键（与 FavoriteService 各自存一份，值一致生成） */
-  private static readonly KEY_DEVICE_ID = 'device_id';
 
   /** Preferences 实例（null = 未初始化或初始化失败，降级为纯内存） */
   private static pref: preferences.Preferences | null = null;
@@ -47,8 +49,6 @@ export class ThemeService {
   private static themesCache: Theme[] = [];
   /** 主题删除墓碑（M6.3，id=themeId，参与 LWW） */
   private static themeTombstones: Tombstone[] = [];
-  /** 本机设备标识 */
-  private static device: string = '';
   /** 远端主题合并处理器是否已注册（init 可能重入，只注册一次） */
   private static mergeRegistered: boolean = false;
   /** KV 就绪重放墓碑是否已注册（init 可能重入，只注册一次） */
@@ -64,6 +64,8 @@ export class ThemeService {
     if (ThemeService.pref !== null) {
       return;
     }
+    // M1：共享设备标识（内部幂等；FavoriteService 通常已先初始化）。
+    DeviceIdentity.init(context);
     // 注册远端主题合并处理器（C1.3：主题经分布式 KV 双写 + onRemoteChange 收敛；只注册一次）
     if (!ThemeService.mergeRegistered) {
       ThemeService.mergeRegistered = true;
@@ -95,7 +97,6 @@ export class ThemeService {
       ThemeService.parseThemes(ThemeService.readStored(ThemeService.KEY_THEMES));
     ThemeService.themeTombstones =
       ThemeService.parseTombstones(ThemeService.readStored(ThemeService.KEY_THEME_TOMBSTONES));
-    ThemeService.ensureDeviceId();
     ThemeService.replayThemeTombstonesIfAvailable();
     hilog.info(DOMAIN, TAG, 'init ok: %{public}d themes, %{public}d tombstones',
       ThemeService.themesCache.length, ThemeService.themeTombstones.length);
@@ -133,7 +134,7 @@ export class ThemeService {
       colorIndex: colorIndex,
       createdAt: now,
       updatedAt: now,
-      deviceId: ThemeService.ensureDeviceId()
+      deviceId: DeviceIdentity.get()
     };
     ThemeService.themesCache.push(theme);
     ThemeService.persist(ThemeService.KEY_THEMES, ThemeService.themesCache);
@@ -156,7 +157,8 @@ export class ThemeService {
     if (colorIndex >= 0) {
       theme.colorIndex = colorIndex;
     }
-    theme.updatedAt = Date.now();
+    theme.updatedAt = nextUpdatedAt(theme.updatedAt, Date.now());
+    theme.deviceId = DeviceIdentity.get(); // M1：记录真实最后写入设备
     ThemeService.persist(ThemeService.KEY_THEMES, ThemeService.themesCache);
     SyncService.syncTheme(theme); // C1.3 双写
     ThemeService.notifyDataChanged();
@@ -169,14 +171,17 @@ export class ThemeService {
    * M6.3：删除写墓碑并覆盖 KV 记录，让离线端的旧主题不会复活。
    */
   static removeTheme(id: string): boolean {
+    const existing: Theme | null = ThemeService.findTheme(id);
     const before: number = ThemeService.themesCache.length;
     ThemeService.themesCache = ThemeService.filterOutTheme(ThemeService.themesCache, id);
     const removed: boolean = ThemeService.themesCache.length < before;
     if (removed) {
+      const now: number = Date.now();
       const tomb: Tombstone = {
         id: id,
-        deletedAt: Date.now(),
-        deviceId: ThemeService.ensureDeviceId()
+        // M1：墓碑版本必须严格新于被删主题。
+        deletedAt: existing !== null ? nextUpdatedAt(existing.updatedAt, now) : now,
+        deviceId: DeviceIdentity.get()
       };
       ThemeService.upsertThemeTombstone(tomb);
       ThemeService.persist(ThemeService.KEY_THEMES, ThemeService.themesCache);
@@ -248,12 +253,12 @@ export class ThemeService {
           } else {
             ThemeService.replaceThemeById(remote.id, remote);
           }
-          SyncService.recordConflict(remote.id, '主题删除后远端有更新版本，采纳远端主题');
+          SyncService.recordConflict(remote.id, '主题删除后远端有更新版本，采纳远端主题', remote.deviceId);
           changed = true;
           tombChanged = true;
         } else {
           SyncService.syncThemeTombstone(localTomb);
-          SyncService.recordConflict(remote.id, '远端主题版本早于本地删除，维持删除');
+          SyncService.recordConflict(remote.id, '远端主题版本早于本地删除，维持删除', localTomb.deviceId);
         }
       } else if (local === null) {
         ThemeService.themesCache.push(remote);
@@ -261,11 +266,11 @@ export class ThemeService {
       } else if (local.updatedAt !== remote.updatedAt || local.deviceId !== remote.deviceId) {
         if (SyncService.lwwRemoteWins(local.updatedAt, local.deviceId, remote.updatedAt, remote.deviceId)) {
           ThemeService.replaceThemeById(remote.id, remote);
-          SyncService.recordConflict(remote.id, '主题双端并发修改，保留较新的远端版本');
+          SyncService.recordConflict(remote.id, '主题双端并发修改，保留较新的远端版本', remote.deviceId);
           changed = true;
         } else {
           SyncService.syncTheme(local);
-          SyncService.recordConflict(remote.id, '主题双端并发修改，保留较新的本机版本');
+          SyncService.recordConflict(remote.id, '主题双端并发修改，保留较新的本机版本', local.deviceId);
         }
       }
     }
@@ -291,12 +296,12 @@ export class ThemeService {
         ThemeService.themesCache = ThemeService.filterOutTheme(ThemeService.themesCache, remoteTomb.id);
         ThemeService.upsertThemeTombstone(remoteTomb);
         ThemeService.stripThemeFromFavorites(remoteTomb.id);
-        SyncService.recordConflict(remoteTomb.id, '远端删除比本地主题编辑新，删除生效');
+        SyncService.recordConflict(remoteTomb.id, '远端删除比本地主题编辑新，删除生效', remoteTomb.deviceId);
         changed = true;
         tombChanged = true;
       } else {
         SyncService.syncTheme(local);
-        SyncService.recordConflict(remoteTomb.id, '本地主题编辑比远端删除新，保留本地主题');
+        SyncService.recordConflict(remoteTomb.id, '本地主题编辑比远端删除新，保留本地主题', local.deviceId);
       }
     }
     // 旧版本硬删除（deleteEntries，无时间戳）：兼容保留「删除生效」语义。
@@ -412,35 +417,6 @@ export class ThemeService {
       }
     }
     return false;
-  }
-
-  /** 取本机设备标识：优先读已持久化值，否则生成 UUID 并落盘 */
-  private static ensureDeviceId(): string {
-    if (ThemeService.device !== '') {
-      return ThemeService.device;
-    }
-    let stored: string = '';
-    if (ThemeService.pref !== null) {
-      try {
-        const value = ThemeService.pref.getSync(ThemeService.KEY_DEVICE_ID, '');
-        stored = String(value);
-      } catch (err) {
-        hilog.error(DOMAIN, TAG, 'read device id failed: %{public}s', JSON.stringify(err));
-      }
-    }
-    if (stored === '') {
-      stored = util.generateRandomUUID(false);
-      if (ThemeService.pref !== null) {
-        try {
-          ThemeService.pref.putSync(ThemeService.KEY_DEVICE_ID, stored);
-          ThemeService.pref.flushSync();
-        } catch (err) {
-          hilog.error(DOMAIN, TAG, 'persist device id failed: %{public}s', JSON.stringify(err));
-        }
-      }
-    }
-    ThemeService.device = stored;
-    return stored;
   }
 
   /** 整表序列化落盘（失败仅记日志，内存数据不受影响） */

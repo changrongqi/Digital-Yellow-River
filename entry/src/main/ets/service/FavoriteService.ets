@@ -8,7 +8,9 @@
  *    进程内缓存 + 同步落盘，页面层调用免 async/await；
  *    所有会抛异常的 SDK 调用均包 try/catch（对齐告警基线，不新增 may throw 告警）。
  * 3. 踩坑 3：所有写入自动维护 deviceId + updatedAt（M3 LWW 冲突判定直接复用）。
- *    deviceId 首次生成 UUID 后持久化，单机阶段稳定不变；M3 可由 SyncService 换成分布式设备标识。
+ *    M1（第二轮）起 deviceId 统一由 DeviceIdentity 提供（系统 ODID 优先，回退持久化 UUID），
+ *    且每次写入都刷新为本机 ID（deviceId 表示「最后写入设备」，不能沿用创建者）；
+ *    updatedAt 经 nextUpdatedAt 保证严格递增，避免墙钟回拨/同毫秒连续编辑输给旧版本。
  * 4. 踩坑 1/2/4：从 Preferences 读回的 JSON 必须逐字段显式转换 + 合法性校验，
  *    非法条目跳过并记日志；全程不用 any、不用解构赋值。
  * 5. 降级策略：Preferences 初始化失败（极端场景）时不崩溃——内存缓存照常工作，
@@ -32,6 +34,8 @@ import { Favorite } from '../model/Favorite';
 import { Note } from '../model/Note';
 import { Tombstone } from '../model/Tombstone';
 import { SyncService, RemoteChanges } from './SyncService';
+import { DeviceIdentity } from './DeviceIdentity';
+import { nextUpdatedAt } from '../utils/LwwVersion';
 
 const DOMAIN = 0x0000;
 const TAG = 'FavoriteService';
@@ -47,8 +51,6 @@ export class FavoriteService {
   private static readonly KEY_FAVORITE_TOMBSTONES = 'favorite_tombstones_json';
   /** 笔记删除墓碑存储键（M6.3） */
   private static readonly KEY_NOTE_TOMBSTONES = 'note_tombstones_json';
-  /** 本机设备标识存储键 */
-  private static readonly KEY_DEVICE_ID = 'device_id';
 
   /** 内置标签（与 model/Favorite.ets 约定一致） */
   static readonly BUILT_IN_TAGS: string[] = ['待实地探访', '已去过', '研究资料'];
@@ -63,8 +65,6 @@ export class FavoriteService {
   private static favoriteTombstones: Tombstone[] = [];
   /** 笔记删除墓碑（M6.3，id=noteId，参与 LWW） */
   private static noteTombstones: Tombstone[] = [];
-  /** 本机设备标识（M3 冲突判定兜底用） */
-  private static device: string = '';
   /** 远端变更合并处理器是否已注册（init 可能重入，只注册一次） */
   private static mergeRegistered: boolean = false;
   /** KV 就绪重放墓碑是否已注册（init 可能重入，只注册一次） */
@@ -82,6 +82,8 @@ export class FavoriteService {
     if (FavoriteService.pref !== null) {
       return;
     }
+    // M1：设备标识优先取系统 ODID，回退到持久化 UUID（内部幂等）。
+    DeviceIdentity.init(context);
     // M3.2：先注册远端变更合并处理器，再激活同步骨架（只注册一次）。
     // M6.2：顺序不能反——KV 就绪后可能立刻初次 PULL，监听未注册会丢远端变更。
     if (!FavoriteService.mergeRegistered) {
@@ -115,7 +117,6 @@ export class FavoriteService {
       FavoriteService.parseTombstones(FavoriteService.readStored(FavoriteService.KEY_FAVORITE_TOMBSTONES));
     FavoriteService.noteTombstones =
       FavoriteService.parseTombstones(FavoriteService.readStored(FavoriteService.KEY_NOTE_TOMBSTONES));
-    FavoriteService.ensureDeviceId();
     // KV 可能在本次 init 之前已就绪（其它页面先初始化过同步），补一次重放。
     FavoriteService.replayTombstonesIfAvailable();
     hilog.info(DOMAIN, TAG, 'init ok: %{public}d favorites, %{public}d notes, %{public}d tombstones',
@@ -211,8 +212,8 @@ export class FavoriteService {
       tags: FavoriteService.normalizeTags(tags),
       themeIds: [],
       createdAt: now,
-      updatedAt: tomb !== null ? Math.max(now, tomb.deletedAt + 1) : now,
-      deviceId: FavoriteService.ensureDeviceId()
+      updatedAt: tomb !== null ? nextUpdatedAt(tomb.deletedAt, now) : now,
+      deviceId: DeviceIdentity.get()
     };
     FavoriteService.favoritesCache.push(fav);
     FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
@@ -230,14 +231,17 @@ export class FavoriteService {
    * M6.3：删除写墓碑并覆盖 KV 记录，供对端按 LWW 收敛。
    */
   static removeFavorite(itemId: string): boolean {
+    const existing: Favorite | null = FavoriteService.findFavorite(itemId);
     const before: number = FavoriteService.favoritesCache.length;
     FavoriteService.favoritesCache = FavoriteService.filterOutFavorite(FavoriteService.favoritesCache, itemId);
     const removed: boolean = FavoriteService.favoritesCache.length < before;
     if (removed) {
+      const now: number = Date.now();
       const tomb: Tombstone = {
         id: itemId,
-        deletedAt: Date.now(),
-        deviceId: FavoriteService.ensureDeviceId()
+        // M1：墓碑版本必须严格新于被删记录，避免墙钟回拨时删除在对端输给旧版本。
+        deletedAt: existing !== null ? nextUpdatedAt(existing.updatedAt, now) : now,
+        deviceId: DeviceIdentity.get()
       };
       FavoriteService.upsertFavoriteTombstone(tomb);
       FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
@@ -255,7 +259,8 @@ export class FavoriteService {
       return false;
     }
     fav.tags = FavoriteService.normalizeTags(tags);
-    fav.updatedAt = Date.now();
+    fav.updatedAt = nextUpdatedAt(fav.updatedAt, Date.now());
+    fav.deviceId = DeviceIdentity.get(); // M1：记录真实最后写入设备
     FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
     SyncService.syncFavorite(fav); // M3.2 双写
     FavoriteService.notifyDataChanged();
@@ -273,7 +278,8 @@ export class FavoriteService {
       return false;
     }
     fav.themeIds = FavoriteService.normalizeTags(themeIds);
-    fav.updatedAt = Date.now();
+    fav.updatedAt = nextUpdatedAt(fav.updatedAt, Date.now());
+    fav.deviceId = DeviceIdentity.get(); // M1：记录真实最后写入设备
     FavoriteService.persist(FavoriteService.KEY_FAVORITES, FavoriteService.favoritesCache);
     SyncService.syncFavorite(fav); // M3.2 双写：themeIds 随收藏同步
     FavoriteService.notifyDataChanged();
@@ -303,6 +309,7 @@ export class FavoriteService {
    */
   static removeTag(tag: string): void {
     const affected: Favorite[] = [];
+    const now: number = Date.now();
     for (let i = 0; i < FavoriteService.favoritesCache.length; i++) {
       const fav: Favorite = FavoriteService.favoritesCache[i];
       const idx: number = fav.tags.indexOf(tag);
@@ -310,7 +317,8 @@ export class FavoriteService {
         const next: string[] = fav.tags.slice();
         next.splice(idx, 1);
         fav.tags = next;
-        fav.updatedAt = Date.now();
+        fav.updatedAt = nextUpdatedAt(fav.updatedAt, now);
+        fav.deviceId = DeviceIdentity.get();
         affected.push(fav);
       }
     }
@@ -362,7 +370,7 @@ export class FavoriteService {
       content: trimmed,
       createdAt: now,
       updatedAt: now,
-      deviceId: FavoriteService.ensureDeviceId()
+      deviceId: DeviceIdentity.get()
     };
     FavoriteService.notesCache.push(note);
     FavoriteService.persist(FavoriteService.KEY_NOTES, FavoriteService.notesCache);
@@ -379,7 +387,8 @@ export class FavoriteService {
       return false;
     }
     note.content = trimmed;
-    note.updatedAt = Date.now();
+    note.updatedAt = nextUpdatedAt(note.updatedAt, Date.now());
+    note.deviceId = DeviceIdentity.get(); // M1：记录真实最后写入设备
     FavoriteService.persist(FavoriteService.KEY_NOTES, FavoriteService.notesCache);
     SyncService.syncNote(note); // M3.2 双写
     FavoriteService.notifyDataChanged();
@@ -388,14 +397,17 @@ export class FavoriteService {
 
   /** 删除笔记（M6.3：写墓碑并覆盖 KV 记录，避免离线设备旧笔记复活） */
   static deleteNote(noteId: string): boolean {
+    const existing: Note | null = FavoriteService.findNote(noteId);
     const before: number = FavoriteService.notesCache.length;
     FavoriteService.notesCache = FavoriteService.filterOutNote(FavoriteService.notesCache, noteId);
     const removed: boolean = FavoriteService.notesCache.length < before;
     if (removed) {
+      const now: number = Date.now();
       const tomb: Tombstone = {
         id: noteId,
-        deletedAt: Date.now(),
-        deviceId: FavoriteService.ensureDeviceId()
+        // M1：墓碑版本必须严格新于被删记录。
+        deletedAt: existing !== null ? nextUpdatedAt(existing.updatedAt, now) : now,
+        deviceId: DeviceIdentity.get()
       };
       FavoriteService.upsertNoteTombstone(tomb);
       FavoriteService.persist(FavoriteService.KEY_NOTES, FavoriteService.notesCache);
@@ -461,13 +473,13 @@ export class FavoriteService {
           } else {
             FavoriteService.replaceFavoriteByItemId(remote.itemId, remote);
           }
-          SyncService.recordConflict(remote.itemId, '收藏删除后远端有更新版本，采纳远端记录');
+          SyncService.recordConflict(remote.itemId, '收藏删除后远端有更新版本，采纳远端记录', remote.deviceId);
           favChanged = true;
           favTombChanged = true;
         } else {
           // 墓碑更新：维持删除，并回写墓碑让持有旧记录的对端收敛。
           SyncService.syncFavoriteTombstone(localTomb);
-          SyncService.recordConflict(remote.itemId, '远端收藏版本早于本地删除，维持删除');
+          SyncService.recordConflict(remote.itemId, '远端收藏版本早于本地删除，维持删除', localTomb.deviceId);
         }
       } else if (local === null) {
         FavoriteService.favoritesCache.push(remote);
@@ -475,11 +487,11 @@ export class FavoriteService {
       } else if (local.updatedAt !== remote.updatedAt || local.deviceId !== remote.deviceId) {
         if (SyncService.lwwRemoteWins(local.updatedAt, local.deviceId, remote.updatedAt, remote.deviceId)) {
           FavoriteService.replaceFavoriteByItemId(remote.itemId, remote);
-          SyncService.recordConflict(remote.itemId, '收藏双端并发修改，保留较新的远端版本');
+          SyncService.recordConflict(remote.itemId, '收藏双端并发修改，保留较新的远端版本', remote.deviceId);
           favChanged = true;
         } else {
           SyncService.syncFavorite(local);
-          SyncService.recordConflict(remote.itemId, '收藏双端并发修改，保留较新的本机版本');
+          SyncService.recordConflict(remote.itemId, '收藏双端并发修改，保留较新的本机版本', local.deviceId);
         }
       }
     }
@@ -506,12 +518,12 @@ export class FavoriteService {
         FavoriteService.favoritesCache =
           FavoriteService.filterOutFavorite(FavoriteService.favoritesCache, remoteTomb.id);
         FavoriteService.upsertFavoriteTombstone(remoteTomb);
-        SyncService.recordConflict(remoteTomb.id, '远端删除比本地收藏编辑新，删除生效');
+        SyncService.recordConflict(remoteTomb.id, '远端删除比本地收藏编辑新，删除生效', remoteTomb.deviceId);
         favChanged = true;
         favTombChanged = true;
       } else {
         SyncService.syncFavorite(local);
-        SyncService.recordConflict(remoteTomb.id, '本地收藏编辑比远端删除新，保留本地记录');
+        SyncService.recordConflict(remoteTomb.id, '本地收藏编辑比远端删除新，保留本地记录', local.deviceId);
       }
     }
     // 旧版本硬删除（deleteEntries，无时间戳）：兼容保留「删除生效」语义。
@@ -543,12 +555,12 @@ export class FavoriteService {
           } else {
             FavoriteService.replaceNoteById(remote.id, remote);
           }
-          SyncService.recordConflict(remote.id, '笔记删除后远端有更新版本，采纳远端记录');
+          SyncService.recordConflict(remote.id, '笔记删除后远端有更新版本，采纳远端记录', remote.deviceId);
           noteChanged = true;
           noteTombChanged = true;
         } else {
           SyncService.syncNoteTombstone(localTomb);
-          SyncService.recordConflict(remote.id, '远端笔记版本早于本地删除，维持删除');
+          SyncService.recordConflict(remote.id, '远端笔记版本早于本地删除，维持删除', localTomb.deviceId);
         }
       } else if (local === null) {
         FavoriteService.notesCache.push(remote);
@@ -556,11 +568,11 @@ export class FavoriteService {
       } else if (local.updatedAt !== remote.updatedAt || local.deviceId !== remote.deviceId) {
         if (SyncService.lwwRemoteWins(local.updatedAt, local.deviceId, remote.updatedAt, remote.deviceId)) {
           FavoriteService.replaceNoteById(remote.id, remote);
-          SyncService.recordConflict(remote.id, '笔记双端并发修改，保留较新的远端版本');
+          SyncService.recordConflict(remote.id, '笔记双端并发修改，保留较新的远端版本', remote.deviceId);
           noteChanged = true;
         } else {
           SyncService.syncNote(local);
-          SyncService.recordConflict(remote.id, '笔记双端并发修改，保留较新的本机版本');
+          SyncService.recordConflict(remote.id, '笔记双端并发修改，保留较新的本机版本', local.deviceId);
         }
       }
     }
@@ -585,12 +597,12 @@ export class FavoriteService {
         remoteTomb.deletedAt, remoteTomb.deviceId)) {
         FavoriteService.notesCache = FavoriteService.filterOutNote(FavoriteService.notesCache, remoteTomb.id);
         FavoriteService.upsertNoteTombstone(remoteTomb);
-        SyncService.recordConflict(remoteTomb.id, '远端删除比本地笔记编辑新，删除生效');
+        SyncService.recordConflict(remoteTomb.id, '远端删除比本地笔记编辑新，删除生效', remoteTomb.deviceId);
         noteChanged = true;
         noteTombChanged = true;
       } else {
         SyncService.syncNote(local);
-        SyncService.recordConflict(remoteTomb.id, '本地笔记编辑比远端删除新，保留本地记录');
+        SyncService.recordConflict(remoteTomb.id, '本地笔记编辑比远端删除新，保留本地记录', local.deviceId);
       }
     }
     for (let i = 0; i < changes.deletedNoteIds.length; i++) {
@@ -771,35 +783,6 @@ export class FavoriteService {
       }
     }
     return result;
-  }
-
-  /** 取本机设备标识：优先读已持久化值，否则生成 UUID 并落盘 */
-  private static ensureDeviceId(): string {
-    if (FavoriteService.device !== '') {
-      return FavoriteService.device;
-    }
-    let stored: string = '';
-    if (FavoriteService.pref !== null) {
-      try {
-        const value = FavoriteService.pref.getSync(FavoriteService.KEY_DEVICE_ID, '');
-        stored = String(value);
-      } catch (err) {
-        hilog.error(DOMAIN, TAG, 'read device id failed: %{public}s', JSON.stringify(err));
-      }
-    }
-    if (stored === '') {
-      stored = util.generateRandomUUID(false);
-      if (FavoriteService.pref !== null) {
-        try {
-          FavoriteService.pref.putSync(FavoriteService.KEY_DEVICE_ID, stored);
-          FavoriteService.pref.flushSync();
-        } catch (err) {
-          hilog.error(DOMAIN, TAG, 'persist device id failed: %{public}s', JSON.stringify(err));
-        }
-      }
-    }
-    FavoriteService.device = stored;
-    return stored;
   }
 
   /** 整表序列化落盘（失败仅记日志，内存数据不受影响） */

@@ -122,9 +122,9 @@ export struct SyncPanel {
     this.refresh();
   }
 
-  /** 冲突记录键：条目 + 时间（同条目多次冲突逐条展示） */
+  /** 冲突记录键：条目 + 时间 + 胜出设备（同条目多次冲突逐条展示） */
   private conflictKey(item: ConflictLogItem): string {
-    return `${item.itemId}-${item.time}`;
+    return `${item.itemId}-${item.time}-${item.deviceId}`;
   }
 
   build() {
@@ -352,6 +352,14 @@ export struct SyncPanel {
                   .fontSize(12)
                   .fontColor('#8D6E63')
                   .margin({ top: 4 })
+                if (item.deviceId !== '') {
+                  Text(`最后写入设备 ${item.deviceId}`)
+                    .fontSize(10)
+                    .fontColor('#BCAAA4')
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .margin({ top: 2 })
+                }
               }
               .width('100%')
               .alignItems(HorizontalAlign.Start)
