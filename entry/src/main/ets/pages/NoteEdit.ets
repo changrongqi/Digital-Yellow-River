@@ -359,6 +359,7 @@ struct NoteEdit {
                 .fontColor('#6D4C41')
                 .backgroundColor('#EFEBE9')
                 .layoutWeight(1)
+                .height(44)
                 .onClick(() => {
                   this.confirmDiscarding = false;
                 })
@@ -367,6 +368,7 @@ struct NoteEdit {
                 .fontColor('#FFFFFF')
                 .backgroundColor('#C0392B')
                 .layoutWeight(1)
+                .height(44)
                 .onClick(() => {
                   this.confirmDiscarding = false;
                   this.goBack();

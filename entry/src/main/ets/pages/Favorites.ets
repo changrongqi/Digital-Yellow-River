@@ -386,6 +386,7 @@ export struct Favorites {
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+          .constraintSize({ minHeight: 44 })
           .backgroundColor('#FFFFFF')
           .borderRadius(12)
           .border({ width: 1, color: '#E0D6CC' })
