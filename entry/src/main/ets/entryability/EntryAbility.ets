@@ -24,14 +24,36 @@ export default class EntryAbility extends UIAbility {
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      // M6.12：页面加载完成后再设置色彩模式（官方要求 loadContent 之后）；
+      // 本应用 UI 全为浅色硬编码，明确锁定浅色，避免系统深色模式造成渲染不一致。
+      this.applyLightColorMode(windowStage);
       // M6.1：页面加载完成后申请分布式数据同步权限（user_grant，需 UIAbilityContext）。
       this.ensureSyncPermission();
     });
+  }
 
+  /**
+   * M6.12：锁定浅色模式，并把状态栏/导航栏内容色设为深色（浅底深字）。
+   * 官方 ApplicationContext.setColorMode 要求窗口已创建且页面已加载，
+   * 因此必须放在 loadContent 成功回调中调用，不能在 onCreate 提前调用。
+   */
+  private async applyLightColorMode(windowStage: window.WindowStage): Promise<void> {
     try {
-      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
+    }
+    try {
+      const mainWindow: window.Window = windowStage.getMainWindowSync();
+      await mainWindow.setWindowSystemBarProperties({
+        statusBarColor: '#FAF6F0',
+        statusBarContentColor: '#000000',
+        navigationBarColor: '#FAF6F0',
+        navigationBarContentColor: '#000000'
+      });
+      hilog.info(DOMAIN, 'testTag', 'Applied light color mode and system bar colors');
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', 'Failed to set system bar properties. Cause: %{public}s', JSON.stringify(err));
     }
   }
 
