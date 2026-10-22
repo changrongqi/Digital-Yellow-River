@@ -99,6 +99,7 @@ export struct ThemeEditorSheet {
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
       .width('100%')
+      .height(44)
       .margin({ top: 10 })
 
       Row({ space: 12 }) {
