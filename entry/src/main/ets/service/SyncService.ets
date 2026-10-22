@@ -50,6 +50,10 @@ const KEY_NOTE_PREFIX = 'note_';
 const KEY_THEME_PREFIX = 'theme_';
 /** conflictLog 条数上限（超出丢最旧，避免无限增长） */
 const MAX_CONFLICT_LOG = 50;
+/** 初始化失败后的自动重试间隔（ms）：避免页面频繁 init 造成重复创建 */
+const INIT_RETRY_MIN_INTERVAL = 3000;
+/** 自动同步最小间隔（ms）：设备上下线/回前台可能连续触发，避免重复 sync */
+const AUTO_SYNC_MIN_INTERVAL = 2000;
 
 /**
  * 远端变更事件（已解析、去噪）。
@@ -65,17 +69,27 @@ export interface RemoteChanges {
   deletedThemeIds: string[];    // 远端删除的主题（themeId，C1.3）
 }
 
-/** 在线（可信）设备信息（M3.3 同步面板展示） */
+/**
+ * 在线（可信）设备信息（M3.3 同步面板展示）。
+ * sync 目标必须用 DeviceBasicInfo.networkId；DeviceBasicInfo.deviceId 是 UDID 混淆值，
+ * 不能作为 KV sync 的 deviceIds（官方 d.ts sync() 参数说明 + 官方示例双重确认）。
+ */
 export interface SyncDeviceInfo {
-  deviceId: string;   // 分布式 deviceId（sync 目标列表用，d.ts 实测）
+  networkId: string;   // 网络 ID（KV sync 目标列表用）
   deviceName: string;  // 设备显示名
 }
 
 export class SyncService {
   private static kvManager: distributedKVStore.KVManager | null = null;
   private static kvStore: distributedKVStore.SingleKVStore | null = null;
-  /** 初始化只跑一次（无论成功或降级） */
+  /** 初始化成功标记（只有 KV store 真正就绪才置 true；失败保留可重试） */
   private static initialized: boolean = false;
+  /** 初始化进行中标记（防止并发重复创建 KVManager/KVStore） */
+  private static initializing: boolean = false;
+  /** 上次初始化尝试时间（失败后按 INIT_RETRY_MIN_INTERVAL 节流） */
+  private static lastInitAttempt: number = 0;
+  /** 上次自动同步请求时间（设备上下线/回前台节流） */
+  private static lastAutoSyncRequest: number = 0;
   /** 权限未授予的日志只打一次，避免多个页面 init 重复刷屏 */
   private static permissionWarned: boolean = false;
   /** 远端变更监听者（M3.2 起 FavoriteService 注册消费） */
@@ -84,8 +98,8 @@ export class SyncService {
   private static statusListeners: Array<() => void> = [];
   /** DeviceManager 实例（M3.3：在线设备查询，懒创建） */
   private static deviceManager: distributedDeviceManager.DeviceManager | null = null;
-  /** DeviceManager 创建已失败标记（失败不重试，避免每次调用重复抛异常） */
-  private static deviceManagerFailed: boolean = false;
+  /** 上次 DeviceManager 创建尝试时间（失败后节流重试，不再永久熔断） */
+  private static lastDeviceManagerAttempt: number = 0;
   /** 冲突台账（内存态，上限 50；M3.4 结论：本端诊断信息不持久化不同步，重启清零） */
   private static conflictLog: ConflictLogItem[] = [];
   private static lastSyncTime: number = 0;
@@ -93,10 +107,11 @@ export class SyncService {
 
   /**
    * 初始化：创建 KVManager + SingleKVStore（autoSync），订阅远端变更。
-   * 幂等，页面 aboutToAppear / FavoriteService.init 调用均可；失败降级为纯本地。
+   * 幂等，页面 aboutToAppear / FavoriteService.init 调用均可。
+   * M6.2：失败不再永久熔断，保留可重试状态；本地功能始终不受影响。
    */
   static init(context: common.Context): void {
-    if (SyncService.initialized) {
+    if (SyncService.initialized || SyncService.initializing) {
       return;
     }
     // M6.1：DISTRIBUTED_DATASYNC 是 user_grant，未授权时不能创建/使用分布式 KV。
@@ -109,8 +124,14 @@ export class SyncService {
       }
       return;
     }
+    // M6.2：失败后允许重试，但按间隔节流，避免页面 aboutToAppear 连续触发重复创建。
+    const now: number = Date.now();
+    if (now - SyncService.lastInitAttempt < INIT_RETRY_MIN_INTERVAL) {
+      return;
+    }
+    SyncService.lastInitAttempt = now;
     SyncService.permissionWarned = false;
-    SyncService.initialized = true;
+    SyncService.initializing = true;
     try {
       const config: distributedKVStore.KVManagerConfig = {
         context: context,
@@ -118,35 +139,55 @@ export class SyncService {
       };
       SyncService.kvManager = distributedKVStore.createKVManager(config);
     } catch (err) {
-      hilog.error(DOMAIN, TAG, 'createKVManager failed, degrade to local only: %{public}s', JSON.stringify(err));
+      hilog.error(DOMAIN, TAG, 'createKVManager failed, retry later: %{public}s', JSON.stringify(err));
       SyncService.kvManager = null;
+      SyncService.initializing = false;
+      SyncService.initialized = false;
+      SyncService.notifyStatusListeners();
       return;
     }
     const options: distributedKVStore.Options = {
       createIfMissing: true,
       encrypt: false,
       backup: false,
-      autoSync: true, // put 后自动向组网设备同步；模拟器无组网，等效空操作
+      autoSync: true, // 数据变更自动同步；不等价于初次拉取，需 M6.2 显式 PUSH_PULL 追赶
       kvStoreType: distributedKVStore.KVStoreType.SINGLE_VERSION,
       securityLevel: distributedKVStore.SecurityLevel.S1
     };
     const manager = SyncService.kvManager;
     if (manager === null) {
+      SyncService.initializing = false;
+      SyncService.initialized = false;
       return;
     }
     manager.getKVStore<distributedKVStore.SingleKVStore>(STORE_ID, options)
       .then((store: distributedKVStore.SingleKVStore) => {
         SyncService.kvStore = store;
+        SyncService.initializing = false;
+        SyncService.initialized = true;
         SyncService.subscribeRemoteChanges();
         SyncService.subscribeSyncComplete();
         hilog.info(DOMAIN, TAG, 'distributed kv store ready');
         // M6.1：KV 就绪后主动通知面板，避免面板停留在「单机模式」（O11 的同一触发点）。
         SyncService.notifyStatusListeners();
+        // M6.2：autoSync 只在数据变更时自动推拉；新设备首次启动/离线期间的数据
+        // 需要通过一次 PUSH_PULL 主动追赶。无在线设备时为空操作，设备上线事件会再触发。
+        SyncService.syncWhenOnline();
       })
       .catch((err: BusinessError) => {
-        hilog.error(DOMAIN, TAG, 'getKVStore failed, degrade to local only: %{public}s', JSON.stringify(err));
+        hilog.error(DOMAIN, TAG, 'getKVStore failed, retry later: %{public}s', JSON.stringify(err));
         SyncService.kvStore = null;
+        SyncService.kvManager = null;
+        SyncService.initializing = false;
+        SyncService.initialized = false;
+        SyncService.notifyStatusListeners();
       });
+  }
+
+  /** 显式重试初始化：面板「重试初始化」入口调用（绕过失败节流） */
+  static retryInit(context: common.Context): void {
+    SyncService.lastInitAttempt = 0;
+    SyncService.init(context);
   }
 
   // ==================== 同步可用性 / 状态 ====================
@@ -347,7 +388,9 @@ export class SyncService {
    * 在线（可信）设备列表。
    * API 事实（本机 SDK d.ts + 官方「跨设备同步 KV Store」指南双核对）：
    * - getAvailableDeviceListSync 仅需 ohos.permission.DISTRIBUTED_DATASYNC（M3.1 已声明，无新增权限）；
-   * - 官方 sync 示例即用该列表的 deviceId 作为同步目标；
+   * - sync(deviceIds) 的 deviceIds 实际是 DeviceBasicInfo.networkId；DeviceBasicInfo.deviceId
+   *   是 UDID 混淆值，不能作为同步目标（官方 d.ts 参数说明 + 官方示例）；
+   * - 缺 networkId 的设备跳过（无法 sync），不影响其余设备展示；
    * - 降级（DeviceManager 创建失败/查询异常）返回空数组，不影响其余功能。
    */
   static getOnlineDevices(): SyncDeviceInfo[] {
@@ -363,8 +406,12 @@ export class SyncService {
       const list: Array<distributedDeviceManager.DeviceBasicInfo> = dm.getAvailableDeviceListSync();
       const result: SyncDeviceInfo[] = [];
       for (let i = 0; i < list.length; i++) {
+        const networkId: string | undefined = list[i].networkId;
+        if (networkId === undefined || networkId === '') {
+          continue;
+        }
         const info: SyncDeviceInfo = {
-          deviceId: list[i].deviceId,
+          networkId: networkId,
           deviceName: list[i].deviceName
         };
         result.push(info);
@@ -376,14 +423,31 @@ export class SyncService {
     }
   }
 
+  /** 自动追赶同步（M6.2）：KV ready / 设备上线 / 回前台调用；无在线设备时空操作 */
+  static syncWhenOnline(): void {
+    SyncService.requestSync(false);
+  }
+
   /**
    * 手动同步入口（同步面板「立即同步」）：
    * 对全部在线可信设备 PUSH_PULL（推本端 + 拉远端）；完成经 syncComplete 回调刷新状态。
    * @return sync 是否成功受理（false = KV 未就绪 / 无在线设备 / 调用异常）
    */
   static manualSync(): boolean {
+    return SyncService.requestSync(true);
+  }
+
+  /**
+   * 统一 PUSH_PULL 请求。
+   * @param force true=用户手动（不节流、不延迟）；false=自动追赶（2s 节流 + 1s 合并延迟）
+   */
+  private static requestSync(force: boolean): boolean {
     const store = SyncService.kvStore;
     if (store === null) {
+      return false;
+    }
+    const now: number = Date.now();
+    if (!force && now - SyncService.lastAutoSyncRequest < AUTO_SYNC_MIN_INTERVAL) {
       return false;
     }
     const devices: SyncDeviceInfo[] = SyncService.getOnlineDevices();
@@ -392,13 +456,22 @@ export class SyncService {
     }
     const ids: string[] = [];
     for (let i = 0; i < devices.length; i++) {
-      ids.push(devices[i].deviceId);
+      ids.push(devices[i].networkId);
     }
+    if (ids.length === 0) {
+      return false;
+    }
+    SyncService.lastAutoSyncRequest = now;
     try {
-      store.sync(ids, distributedKVStore.SyncMode.PUSH_PULL);
+      SyncService.progress = 10;
+      SyncService.notifyStatusListeners();
+      // delayMs：自动同步给 1s 合并窗口；手动同步立即执行。
+      store.sync(ids, distributedKVStore.SyncMode.PUSH_PULL, force ? 0 : 1000);
       return true;
     } catch (err) {
-      hilog.error(DOMAIN, TAG, 'manual sync failed: %{public}s', JSON.stringify(err));
+      hilog.error(DOMAIN, TAG, 'sync failed: %{public}s', JSON.stringify(err));
+      SyncService.progress = 0;
+      SyncService.notifyStatusListeners();
       return false;
     }
   }
@@ -422,26 +495,27 @@ export class SyncService {
     }
   }
 
-  /** DeviceManager 懒创建 + 失败熔断（已失败不再重试） */
+  /** DeviceManager 懒创建 + 失败节流重试（不再永久熔断，避免一次瞬时失败导致设备列表永远为空） */
   private static ensureDeviceManager(): distributedDeviceManager.DeviceManager | null {
     if (SyncService.deviceManager !== null) {
       return SyncService.deviceManager;
     }
-    if (SyncService.deviceManagerFailed) {
+    const now: number = Date.now();
+    if (now - SyncService.lastDeviceManagerAttempt < INIT_RETRY_MIN_INTERVAL) {
       return null;
     }
+    SyncService.lastDeviceManagerAttempt = now;
     try {
       SyncService.deviceManager = distributedDeviceManager.createDeviceManager(BUNDLE_NAME);
-      SyncService.subscribeDeviceStateChange();
-      return SyncService.deviceManager;
     } catch (err) {
-      hilog.error(DOMAIN, TAG, 'createDeviceManager failed, device query degrade: %{public}s', JSON.stringify(err));
-      SyncService.deviceManagerFailed = true;
+      hilog.error(DOMAIN, TAG, 'createDeviceManager failed, retry later: %{public}s', JSON.stringify(err));
       return null;
     }
+    SyncService.subscribeDeviceStateChange();
+    return SyncService.deviceManager;
   }
 
-  /** 设备上下线 → 通知面板刷新设备列表与状态（回调载荷不使用，零参函数结构兼容官方签名） */
+  /** 设备上下线 → 通知面板刷新 + 主动追赶同步（回调载荷不使用，零参函数结构兼容官方签名） */
   private static subscribeDeviceStateChange(): void {
     const dm = SyncService.deviceManager;
     if (dm === null) {
@@ -450,6 +524,8 @@ export class SyncService {
     try {
       dm.on('deviceStateChange', () => {
         SyncService.notifyStatusListeners();
+        // M6.2：设备上线后主动 PUSH_PULL，保证新设备/离线期间的数据能收敛。
+        SyncService.syncWhenOnline();
       });
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'subscribe deviceStateChange failed: %{public}s', JSON.stringify(err));

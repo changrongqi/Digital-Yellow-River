@@ -1,5 +1,6 @@
-# 黄河记忆 · 全项目优化计划（第一轮）
+# 黄河记忆 · 全项目优化计划（V1 · 第一轮）
 
+> **版本：V1（第一版，2026-10-22）**。文件名 `OPTIMIZATION_PLAN_V1.md` 即版本标识；后续大版本另建 V2，不覆盖本版历史。
 > 来源：2026-10-22 全项目优化审计（只读审计，未改代码）。
 > 本文件是优化轮次的**唯一总表**：所有优化项、优先级、依赖、验收标准、执行顺序均以此为准；
 > 完成一项即更新本文件状态，并同步 `PROJECT_PLAN.md`、`ISSUES_RISKS.md`、`REVISION_LOG.md`。
@@ -18,6 +19,8 @@
    自定义组件字段避开 `scale` 等内置名；Canvas 手势用 `GestureGroup`；数据双份同构。
 5. 部署只用 `hdc install -r`，禁止 `hdc uninstall`；真机/模拟器验证结果如实登记，不把未验证项标为已完成。
 6. 本文件可动态修订；理由写入 `REVISION_LOG.md`，状态同步到 `PROJECT_PLAN.md`。
+7. **已完成项必须显式标注**：条目状态改为 `已完成`，并写清完成日期、commit、验收范围（代码/构建/设备验证）；
+   同时在 `PROJECT_PLAN.md` M6 表与下方「完成汇总」同步。只改 `[x]` 不算完成，未做设备验证不得写「全部通过」。
 
 ---
 
@@ -35,6 +38,15 @@
 **不重复项**（已完成或已知遗留，不在本计划重新打开）：
 O1 图片占位、O7 真机分布式联调、O8 Mock 修复、O11 同步面板时序、O12 诗词删除、
 O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4~C1.7 不重新拆分。
+
+### 1.1 完成汇总（V1 内持续更新）
+
+| 项 | 子任务 | 完成日期 | commit | 验收范围 | 状态 |
+|---|---|---|---|---|---|
+| B1 | M6.1 分布式同步运行时权限 | 2026-10-22 | `de6b8c1` | 代码 + 构建；权限弹窗/拒绝/重试待 O7 设备验证 | 已完成（代码/构建） |
+| H1 | M6.2 同步追赶 / 初始化重试 / sync 目标 networkId | 2026-10-22 | `[M6.2]` 本次提交 | 代码 + 构建；双端首次拉取与设备上线收敛待 O7 设备验证 | 已完成（代码/构建） |
+
+> 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
 ---
 
@@ -63,19 +75,20 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 问题：只声明权限；全库无 `requestPermissionsFromUser`。SDK `PermissionDefinitions.json` 中该权限 `grantMode=user_grant`；`getAvailableDeviceListSync` 未授权抛 201，被 catch 后返回空数组，UI 显示“暂无在线设备”。
   - 建议：新增 `PermissionService`；启动时申请一次；`SyncService.init` 以权限为门禁；拒绝时面板提供“去设置授权”；授予后重试初始化。
   - 验收：首次启动出现权限弹窗；授予后 KV 就绪、面板不再显示“未授权”；拒绝后本地功能不受影响、面板显示权限状态与重试入口；构建成功。
-  - 完成记录（2026-10-22）：新增 `service/PermissionService.ets`（查询/首次申请/拒绝后 requestPermissionOnSetting）；`SyncService.init` 权限门禁且未授权不置 initialized；KV ready 后 `notifyStatusListeners()`（顺带补 O11 的触发点）；EntryAbility 启动申请、回前台重试初始化；SyncPanel 三态文案 + 授权按钮。构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致。当前无连接设备，弹窗/拒绝/重试待设备验证。
+  - 完成记录（2026-10-22，commit `de6b8c1`）：新增 `service/PermissionService.ets`（查询/首次申请/拒绝后 requestPermissionOnSetting）；`SyncService.init` 权限门禁且未授权不置 initialized；KV ready 后 `notifyStatusListeners()`（顺带补 O11 的触发点）；EntryAbility 启动申请、回前台重试初始化；SyncPanel 三态文案 + 授权按钮。构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致。当前无连接设备，弹窗/拒绝/重试待设备验证。
   - 依赖：无。
   - 风险：不修则真机 M3.4/C1.3/C2/C3 全部无法验收，且会被误判为 O7 组网问题。
 
 ### 3.2 高
 
-- [ ] **H1 同步只订阅不追赶，初始化失败不可恢复**
-  - 位置：[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L95-L134)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L309-L329)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L397-L409)
-  - 问题：KV ready 后无 `getEntries`/`PUSH_PULL` 追赶；`deviceStateChange` 只刷 UI；`initialized=true` 在成功前设置，失败后本进程不再重试。
-  - 建议：KV ready/设备上线时主动 PUSH_PULL；初始化失败保留可重试状态；必要时读取 KV entries 与本地缓存合并。
-  - 验收：第二台设备首次打开能拉到已有数据；离线写入在设备上线后收敛；初始化失败后可在权限授予/面板重试后恢复。
-  - 依赖：B1。
-  - 风险：双端长期不收敛；验收误判同步失效。
+- [x] **H1 同步只订阅不追赶，初始化失败不可恢复**（已完成：代码/构建；双端验证待 O7）
+  - 位置：[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L108-L190)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L386-L476)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L497-L532)
+  - 问题：KV ready 后无 `PUSH_PULL` 追赶；`deviceStateChange` 只刷 UI；`initialized=true` 在成功前设置，失败后本进程不再重试。另外 `manualSync` 把 `DeviceBasicInfo.deviceId` 当作 sync 目标，而官方 d.ts 明确 `sync(deviceIds)` 传的是 **networkId**（deviceId 是 UDID 混淆值），真机会同步失败。
+  - 建议：KV ready/设备上线/回前台时主动 PUSH_PULL（auto 节流、manual 强制）；sync 目标改用 `DeviceBasicInfo.networkId`（缺失跳过）；初始化失败保留可重试状态并给面板重试入口。
+  - 验收：第二台设备首次打开能拉到已有数据；离线写入在设备上线后收敛；初始化失败后可在面板重试后恢复；sync 目标确认使用 networkId。
+  - 完成记录（2026-10-22，commit `[M6.2]`）：`SyncDeviceInfo` 改为 `networkId` 并跳过缺失项；新增 `requestSync(force)` 统一 PUSH_PULL（auto 2s 节流 + 1s delay，manual 立即）；KV ready/设备上线/回前台触发追赶；`initialized` 改为成功后才置 true，新增 `initializing` 并发保护与 3s 重试节流，`retryInit` 供面板绕过节流；DeviceManager 失败不再永久熔断；SyncPanel 增加「重试初始化」入口与「同步服务未就绪 · 可重试」文案。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端首次拉取/设备上线收敛需真机验证，登记 O19/O7。
+  - 依赖：B1（已完成）。
+  - 风险：双端长期不收敛；验收误判同步失效；networkId 用错会让 M3 全部同步调用无效。
 
 - [ ] **H2 删除无墓碑，存在复活与删除覆盖编辑**
   - 位置：[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L183-L193)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L334-L344)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L381-L443)、[ThemeService.ets](entry/src/main/ets/service/ThemeService.ets#L146-L157)
@@ -243,7 +256,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-22）**：B1 已完成（代码/构建；设备验证待 O7）；下一步 H1 同步追赶与初始化重试。
+**当前进度（2026-10-22）**：B1、H1 已完成（代码/构建；设备验证待 O7）；下一步 H2 删除墓碑。
 
 ---
 
@@ -309,3 +322,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 |---|---|---|
 | 2026-10-22 | 建立本文件，收录审计 1 阻塞 + 4 高 + 11 中 + 10 低，共 26 项；第一轮定为 B1/H1/H2/H3/H4；B1 开始执行 | 用户要求把审计项固化为第一轮优化目标，并按项目流程逐项实施 |
 | 2026-10-22 | B1 完成代码与构建验证；新增 PermissionService、SyncService 权限门禁与 KV ready 通知、EntryAbility 启动申请、SyncPanel 授权入口；设备验证登记待 O7 | 构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致；当前无连接设备，不能把弹窗/拒绝/重试验收标为已通过 |
+| 2026-10-22 | 文件更名 `OPTIMIZATION_PLAN_V1.md`，增加 V1 版本标识；新增「已完成项显式标注」规则、完成汇总表；H1 完成并记录 | 用户要求文件名体现第一版、计划书已完成项必须标注；H1 代码/构建完成，双端验证待 O7 |

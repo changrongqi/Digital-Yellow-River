@@ -45,6 +45,8 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
     // 用户可能刚从系统设置授予权限：回到前台时重试初始化（已初始化则直接返回）。
     SyncService.init(this.context);
+    // M6.2：回前台主动追赶一次（后台/离线期间对端可能已写入）；无在线设备时空操作。
+    SyncService.syncWhenOnline();
   }
 
   /** 申请分布式数据同步权限；授予后 SyncService 会立即重试初始化（M6.1） */

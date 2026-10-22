@@ -83,7 +83,7 @@ export struct SyncPanel {
     if (!this.permissionGranted) {
       return '未授权分布式同步';
     }
-    return '单机模式 · 等待设备上线';
+    return '同步服务未就绪 · 可重试';
   }
 
   /**
@@ -107,6 +107,18 @@ export struct SyncPanel {
     } catch (err) {
       this.syncTip = '授权失败，请稍后重试';
     }
+    this.refresh();
+  }
+
+  /** 初始化失败重试（M6.2）：绕过失败节流；KV ready 后状态监听会自动刷新面板 */
+  private doRetryInit(): void {
+    const host = this.getUIContext().getHostContext();
+    if (host === undefined) {
+      this.syncTip = '无法获取应用上下文，请稍后重试';
+      return;
+    }
+    SyncService.retryInit(host as common.UIAbilityContext);
+    this.syncTip = '正在重试初始化，就绪后会自动刷新';
     this.refresh();
   }
 
@@ -230,7 +242,7 @@ export struct SyncPanel {
               .backgroundColor('#FAF6F0')
               .borderRadius(8)
               .margin({ top: 10 })
-            }, (device: SyncDeviceInfo) => device.deviceId)
+            }, (device: SyncDeviceInfo) => device.networkId)
           }
         }
         .width('100%')
@@ -265,7 +277,25 @@ export struct SyncPanel {
                 this.doAuthorize();
               })
           }
-          if (this.permissionGranted) {
+          if (this.permissionGranted && !this.syncAvailable) {
+            Text('同步服务尚未就绪，可重试初始化；本地收藏与笔记不受影响。')
+              .fontSize(12)
+              .fontColor('#8D6E63')
+              .lineHeight(19)
+              .margin({ top: 8 })
+            Button('重试初始化')
+              .fontSize(15)
+              .fontColor('#6D4C41')
+              .backgroundColor('#EFEBE9')
+              .width('100%')
+              .height(44)
+              .borderRadius(22)
+              .margin({ top: 10 })
+              .onClick(() => {
+                this.doRetryInit();
+              })
+          }
+          if (this.permissionGranted && this.syncAvailable) {
             Button('立即同步')
               .fontSize(15)
               .fontColor('#FFFFFF')
