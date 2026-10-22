@@ -4,6 +4,9 @@
  * - 收藏：Favorites（M2.2 收藏列表，按标签分组）
  * - 同步：SyncPanel（M3.3 分布式同步状态面板）
  * - 图谱：KnowledgeGraph（C1.2 文化主题聚合 + 知识节点网络可视化）
+ *
+ * M6.10（M5）：数据刷新改为各 Tab 直接订阅业务服务（单通道）；
+ * 本页只负责服务初始化与 Tab 容器，不再中转刷新信号。
  */
 
 import { Discovery } from './Discovery';
@@ -18,8 +21,6 @@ import { SyncService } from '../service/SyncService';
 @Component
 struct Index {
   @State currentIndex: number = 0;
-  /** 收藏页刷新信号：onPageShow（含从详情页返回）时 +1，经 @Prop @Watch 驱动 Favorites 重载数据 */
-  @State favoriteRefreshTick: number = 0;
 
   aboutToAppear(): void {
     // 提前初始化用户数据服务（幂等）：注册 SyncService 远端变更合并处理器，
@@ -34,19 +35,6 @@ struct Index {
       // 此时 SyncService 会挂起 initialSyncPending，这里负责真正发起。
       SyncService.syncWhenOnline();
     }
-    // 用户数据变化（本地 CRUD 与远端 LWW 合并后均会触发）→ 刷新收藏页（M3.2 列表联动）
-    FavoriteService.onDataChanged(() => {
-      this.favoriteRefreshTick += 1;
-    });
-  }
-
-  /**
-   * 页面重新显示（含从详情页收藏/取消收藏后返回）：通知收藏页刷新列表（M2.4 列表联动）。
-   * 收藏 Tab 的 aboutToAppear 只在首次构建时执行一次，若不做此联动，
-   * 从详情页返回后收藏页不会感知 FavoriteService 的数据变化。
-   */
-  onPageShow(): void {
-    this.favoriteRefreshTick += 1;
   }
 
   build() {
@@ -57,7 +45,7 @@ struct Index {
       .tabBar(this.TabLabel('发现', 0))
 
       TabContent() {
-        Favorites({ refreshTick: this.favoriteRefreshTick })
+        Favorites()
       }
       .tabBar(this.TabLabel('收藏', 1))
 
@@ -67,7 +55,7 @@ struct Index {
       .tabBar(this.TabLabel('同步', 2))
 
       TabContent() {
-        KnowledgeGraph({ refreshTick: this.favoriteRefreshTick })
+        KnowledgeGraph()
       }
       .tabBar(this.TabLabel('图谱', 3))
     }

@@ -7,6 +7,9 @@
  * - 一切变更（取消收藏/编辑标签/删除自定义标签）走 FavoriteService，完成后重新组装 groups；
  *   M2（第二轮）起标签编辑器区分「编辑期」与「提交期」：删除自定义标签只先改本地候选/勾选状态，
  *   点「保存」时才统一提交，点「取消」不产生任何持久化副作用；
+ * - 刷新（M6.10）：本页直接订阅 FavoriteService.onDataChanged（aboutToAppear 注册、
+ *   aboutToDisappear 同引用注销），本地 CRUD 与远端 LWW 合并只经这一条单通道刷新，
+ *   不再依赖父页面 Index 的刷新 tick；
  * - 卡片点击统一带 id 跳详情页（O2 约定）；
  * - 取消收藏不级联删除笔记（项目约定，确认弹层文案中注明）。
  *
@@ -102,18 +105,20 @@ export struct Favorites {
   private heritageMap: Map<string, Heritage> = new Map();
 
   /**
-   * 父页面刷新信号（M2.4 列表联动）：Index.onPageShow（含从详情页返回）时 +1，
-   * @Watch 触发重载数据——收藏 Tab 的 aboutToAppear 仅首次构建执行一次，
-   * 详情页收藏/取消收藏后的变化只能靠该信号感知。
+   * 用户数据变化处理器（M6.10 / M5）：收藏 Tab 直接订阅 FavoriteService，
+   * 详情页收藏/取消收藏、标签编辑以及远端 LWW 合并都只经这一条通道刷新，
+   * 不再依赖 Index 的刷新 tick（避免与同一变化重复触发）。
    */
-  @Prop @Watch('onRefreshTick') refreshTick: number = 0;
-
-  private onRefreshTick(): void {
+  private dataChangedHandler: () => void = (): void => {
     // 加载中不重复刷（loadHeritages 完成后自带一次 refreshGroups）
-    if (this.refreshTick > 0 && !this.isLoading) {
-      this.refreshGroups();
+    if (this.isLoading || this.submittingTags) {
+      return;
     }
-  }
+    this.refreshGroups();
+  };
+
+  /** 标签保存提交期间暂挂订阅刷新，提交完成后统一刷新一次（一次操作只重建一次列表） */
+  private submittingTags: boolean = false;
 
   aboutToAppear(): void {
     const context = this.getUIContext().getHostContext();
@@ -125,7 +130,13 @@ export struct Favorites {
       return;
     }
     FavoriteService.init(context);
+    // M6.10：订阅用户数据变化（本地 CRUD 与远端合并），加载预置数据前注册，避免漏刷。
+    FavoriteService.onDataChanged(this.dataChangedHandler);
     this.loadHeritages(context);
+  }
+
+  aboutToDisappear(): void {
+    FavoriteService.offDataChanged(this.dataChangedHandler);
   }
 
   /** 加载预置遗产数据构建映射表（M4：repository 统一加载并缓存 id 映射） */
@@ -316,19 +327,27 @@ export struct Favorites {
     this.newTagInput = '';
   }
 
-  /** 保存标签编辑：先提交待删除标签（全局），再提交当前收藏的勾选集合 */
+  /**
+   * 保存标签编辑：先提交待删除标签（全局），再提交当前收藏的勾选集合。
+   * M6.10：一次保存会产生多条服务通知，暂挂订阅刷新，提交完成后统一刷新一次。
+   */
   private saveTags(): void {
-    for (let i = 0; i < this.editorRemovedTags.length; i++) {
-      FavoriteService.removeTag(this.editorRemovedTags[i]);
+    this.submittingTags = true;
+    try {
+      for (let i = 0; i < this.editorRemovedTags.length; i++) {
+        FavoriteService.removeTag(this.editorRemovedTags[i]);
+      }
+      FavoriteService.updateFavoriteTags(this.sheetItemId, this.editorSelected);
+    } finally {
+      this.submittingTags = false;
     }
-    FavoriteService.updateFavoriteTags(this.sheetItemId, this.editorSelected);
     this.refreshGroups();
     this.closeSheet();
   }
 
   private confirmRemove(): void {
+    // M6.10：列表刷新由 onDataChanged 单通道驱动，此处不再重复刷新。
     FavoriteService.removeFavorite(this.sheetItemId);
-    this.refreshGroups();
     this.closeSheet();
   }
 

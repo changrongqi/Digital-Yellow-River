@@ -95,7 +95,7 @@ export struct GraphCanvas {
     }
     const signature: string = this.dataSignature();
     if (signature === this.lastDataSignature) {
-      // 数据内容未变（如页面刷新 tick）：保留用户当前视口与节点位置，仅重绘
+      // 数据内容未变（如服务通知但图数据未变）：保留用户当前视口与节点位置，仅重绘
       this.drawGraph();
       return;
     }

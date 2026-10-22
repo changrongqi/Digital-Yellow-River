@@ -89,15 +89,6 @@ export struct KnowledgeGraph {
     this.refreshSelected();
   };
 
-  /** 父页面刷新信号 */
-  @Prop @Watch('onRefreshTick') refreshTick: number = 0;
-
-  private onRefreshTick(): void {
-    if (this.refreshTick > 0 && !this.isLoading) {
-      this.refreshSelected();
-    }
-  }
-
   aboutToAppear(): void {
     this.updateGraphHeight();
     const context = this.getUIContext().getHostContext();
@@ -481,8 +472,8 @@ export struct KnowledgeGraph {
       }
     }
     FavoriteService.updateFavoriteThemes(itemId, next);
+    // M6.10：图谱数据由 FavoriteService.onDataChanged 单通道刷新，这里只重建弹层候选。
     this.rebuildManage();
-    this.refreshSelected();
   }
 
   private addToTheme(itemId: string): void {
@@ -493,8 +484,8 @@ export struct KnowledgeGraph {
     const next: string[] = fav.themeIds.slice();
     next.push(this.selectedThemeId);
     FavoriteService.updateFavoriteThemes(itemId, next);
+    // M6.10：图谱数据由 FavoriteService.onDataChanged 单通道刷新，这里只重建弹层候选。
     this.rebuildManage();
-    this.refreshSelected();
   }
 
   private closeSheet(): void {
