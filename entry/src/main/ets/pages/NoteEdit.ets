@@ -10,6 +10,9 @@
  *   编辑走 updateNote（自动刷 updatedAt），页面不手写任何时间；
  * - 空正文拒绝：服务层已实现（返回 false），UI 层先行拦截并显示行内提示，双重保险；
  * - 删除走 deleteNote + 二次确认弹层（与收藏页同款 Stack 弹层模式）。
+ * - M6.4 未保存退出保护：正文与载入时的原始内容不一致即视为脏数据，
+ *   顶部返回与系统返回（onBackPress）统一走 handleBack；有未保存内容先弹「放弃修改」确认，
+ *   取消留在本页、确认放弃才离开；保存/删除成功后直接离开，不重复拦截。
  *
  * 标签说明（计划书 M2.3 修订，动态演进首例）：标签属于收藏维度（M2.2 已在收藏页
  * 实现标签管理），Note 模型不带 tags（M3 分布式同步保持轻量）；本页聚焦纯文字编辑。
@@ -44,12 +47,18 @@ struct NoteEdit {
   /** 原笔记时间戳（编辑模式显示；新建为 0） */
   @State createdAt: number = 0;
   @State updatedAt: number = 0;
+  /** 载入时的原始正文（M6.4 脏标记基准；新建为空串） */
+  @State originalContent: string = '';
   /** 行内提示（空正文/保存失败；空串 = 不显示），输入即清除 */
   @State warnText: string = '';
   /** 删除确认弹层开关 */
   @State confirmDeleting: boolean = false;
+  /** 未保存退出确认弹层开关（M6.4） */
+  @State confirmDiscarding: boolean = false;
   /** 条目语境加载中 */
   @State isLoading: boolean = true;
+  /** 已进入离开流程（保存/删除/确认放弃后），防止 router.back 再次触发拦截 */
+  private leaving: boolean = false;
 
   aboutToAppear(): void {
     const params = router.getParams() as Record<string, Object> | undefined;
@@ -99,6 +108,7 @@ struct NoteEdit {
       for (let i = 0; i < notes.length; i++) {
         if (notes[i].id === this.noteId) {
           this.content = notes[i].content;
+          this.originalContent = notes[i].content;
           this.createdAt = notes[i].createdAt;
           this.updatedAt = notes[i].updatedAt;
           break;
@@ -135,8 +145,44 @@ struct NoteEdit {
     this.goBack();
   }
 
+  /** 是否有未保存修改（M6.4） */
+  private isDirty(): boolean {
+    return this.content !== this.originalContent;
+  }
+
+  /**
+   * 统一返回入口（顶部返回按钮与系统返回共用，M6.4）：
+   * 有未保存内容先弹确认；无修改或已确认放弃则直接离开。
+   * 始终消费本次返回事件，实际导航由 goBack 显式执行，避免与 onBackPress 默认逻辑重复出栈。
+   */
+  private handleBack(): boolean {
+    if (this.confirmDeleting) {
+      this.confirmDeleting = false;
+      return true;
+    }
+    if (this.confirmDiscarding) {
+      this.confirmDiscarding = false;
+      return true;
+    }
+    if (!this.isDirty()) {
+      this.goBack();
+      return true;
+    }
+    this.confirmDiscarding = true;
+    return true;
+  }
+
+  /** 系统返回拦截（M6.4）：保存/删除后的离开流程不再重复拦截 */
+  onBackPress(): boolean {
+    if (this.leaving) {
+      return true;
+    }
+    return this.handleBack();
+  }
+
   /** 返回上一页（router.back 唯一调用点，收敛 deprecate 告警） */
   private goBack(): void {
+    this.leaving = true;
     router.back();
   }
 
@@ -152,7 +198,7 @@ struct NoteEdit {
             .height(36)
             .textAlign(TextAlign.Center)
             .onClick(() => {
-              this.goBack();
+              this.handleBack();
             })
           Text(this.noteId === '' ? '新建笔记' : '编辑笔记')
             .fontSize(18)
@@ -283,6 +329,55 @@ struct NoteEdit {
                 .layoutWeight(1)
                 .onClick(() => {
                   this.deleteCurrent();
+                })
+            }
+            .width('100%')
+            .margin({ top: 20 })
+          }
+          .width('76%')
+          .padding(20)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(16)
+          .alignItems(HorizontalAlign.Center)
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor('rgba(62,39,35,0.45)')
+        .onClick(() => {
+          // 空实现消费点击：防穿透到主内容；不承担关闭（点击冒泡会误关）
+        })
+      }
+
+      // 未保存退出确认弹层（M6.4：与删除弹层同款 Stack 模式，一律显式按钮关闭）
+      if (this.confirmDiscarding) {
+        Column() {
+          Column() {
+            Text('放弃未保存的修改？')
+              .fontSize(17)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#3E2723')
+            Text('返回后本次编辑的内容将丢失')
+              .fontSize(13)
+              .fontColor('#8D6E63')
+              .margin({ top: 10 })
+            Row({ space: 12 }) {
+              Button('继续编辑')
+                .fontSize(14)
+                .fontColor('#6D4C41')
+                .backgroundColor('#EFEBE9')
+                .layoutWeight(1)
+                .onClick(() => {
+                  this.confirmDiscarding = false;
+                })
+              Button('放弃修改')
+                .fontSize(14)
+                .fontColor('#FFFFFF')
+                .backgroundColor('#C0392B')
+                .layoutWeight(1)
+                .onClick(() => {
+                  this.confirmDiscarding = false;
+                  this.goBack();
                 })
             }
             .width('100%')
