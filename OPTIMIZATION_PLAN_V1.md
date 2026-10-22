@@ -54,6 +54,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M4 | M6.9 统一数据仓库与 JSON 字段助手 | 2026-10-23 | `4c39ff1` | 代码 + 构建；7 页 UI 回归待 O26 设备验证 | 已完成（代码/构建） |
 | M5 | M6.10 状态刷新收敛为单通道 | 2026-10-23 | `6e79281` | 代码 + 构建；单通道刷新行为待 O27 设备验证 | 已完成（代码/构建） |
 | M6 | M6.11 无障碍、触控目标与对比度 | 2026-10-23 | `5732dc5` + 补强 `0c9b973` | 代码 + 构建 + 对比度核算；TalkBack/字体缩放待 O28 设备验证 | 已完成（代码/构建/核算） |
+| M7 | M6.12 深色模式口径：锁定浅色 + 系统栏内容色 | 2026-10-23 | `0f3fcc6` | 代码 + 构建；系统深浅切换/状态栏可读性待 O29 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -175,12 +176,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-23，commit `5732dc5` + 触控补强 `0c9b973`，执行编号 M6.11）：① **触控目标**——四页返回（Detail/NoteEdit/EventDetail/MyNotes）与详情收藏/写笔记/删除、收藏卡「⋯」、信息卡「✕」、图谱 ＋/－/⟲ 与图层开关/主题 chips、图集关闭/前后切换、各弹层按钮（含笔记退出确认）、搜索框与筛选 chips、标签/归类 chips、主题色点、我的笔记入口全部提升到 ≥44vp（文字 chips 用 `constraintSize({ minHeight: 44 })` 允许随字体缩放增高）。② **对比度**——次要文字 `#8D6E63`→`#7A5C52`、`#BCAAA4`→`#77635C`、`#A1887F`（仅文字）→`#7D655B`；卡片年代徽标 `#FFE0B2`→`#FFFFFF`、缺失数据徽标 `#9E9E9E`→`#757575`；汉唐/宋横幅渐变 mid 下调（`#A87C3B`→`#8A622B`、`#6F908A`→`#4E726C`），Hero 摘要改纯白、HeroTag 底改 `rgba(62,39,35,0.30)`；图谱 Canvas 标签与空态文字同步加深。核算（最终文字色/实际背景）：`#7A5C52` 5.09~6.03、`#77635C` 4.76~5.64、`#7D655B` 4.78~4.99、白字/`#8D6E63` 4.62、白字/六个年代 mid 4.62~6.74；非文字图标/虚线 ≥3.0。③ **无障碍**——glyph 控件补 `accessibilityText` + `accessibilityLevel('yes')`（返回/更多操作/关闭节点信息/关闭预览/上一张/下一张/放大/缩小/重置/删除标签）；收藏按钮播报状态，chips/图层/底栏补 `accessibilitySelected`；Canvas 补画布说明。**未用 `accessibilityRole`**：本机 SDK 标注 `@since 18`，高于最低运行 API 16。④ **字体缩放**——全部字号为 fp、无 `maxFontScale/minFontScale` 限制；文字型 chips 改为最小高度约束而非固定高度。⑤ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（行号漂移：Discovery 294→296、Detail 193→195、EventDetail 147→149）。⑥ **验证范围**——当前无连接设备；TalkBack 播报、字号 1.0/1.5/2.0 布局、实际点按手感与新增配色的主观观感登记 O28，未冒充通过。
   - 依赖：无。
 
-- [ ] **M7 跟随系统深色模式但 UI 全为浅色硬编码**
-  - 位置：[EntryAbility.ets](entry/src/main/ets/entryability/EntryAbility.ets#L29)
+- [x] **M7 跟随系统深色模式但 UI 全为浅色硬编码**（已完成：代码/构建；系统深浅切换待设备验证）
+  - 位置：[EntryAbility.ets](entry/src/main/ets/entryability/EntryAbility.ets#L21-L58)
   - 问题：`COLOR_MODE_NOT_SET` + 浅色硬编码；dark 资源只有启动背景。
   - 建议：明确只支持浅色则设 `COLOR_MODE_LIGHT`；或补齐 dark 资源/token。
   - 验收：系统深色/浅色切换下状态栏与页面可读性一致。
-  - 依赖：L1（token）。
+  - 完成记录（2026-10-23，commit `0f3fcc6`，执行编号 M6.12）：① **决策**——当前 UI 为 402 处硬编码浅色且 L1 token 未完成，补齐全套 dark 资源成本与回归风险高，按 M7 建议选择「明确只支持浅色」：页面/画布/系统栏统一浅色体系，深色主题留待 L1 token 完成后另立任务。② **调用时机**——官方 `ApplicationContext.setColorMode` 要求窗口已创建且 `loadContent` 完成，原实现紧跟 `loadContent(...)` 调用属于过早且被 try/catch 吞掉；改为在 loadContent 成功回调内执行 `COLOR_MODE_LIGHT`。③ **系统栏**——`getMainWindowSync().setWindowSystemBarProperties` 设置 `statusBarColor/navigationBarColor = #FAF6F0`、`statusBarContentColor/navigationBarContentColor = #000000`，保证浅底深字；所有 SDK 调用包 try/catch。④ **启动窗**——dark 资源仅 `start_window_background`，保留深色启动底（系统深色模式下白字状态栏仍可读），页面加载后立即切浅色；不补全套 dark 资源。⑤ **构建**——`BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致零新增。⑥ **验证范围**——当前无连接设备；系统深/浅切换后页面与状态栏可读性、启动到页面的切换观感登记 O29，未冒充通过。
+  - 依赖：L1（token）——本次选择浅色分支，暂不依赖 L1；若后续要深色主题，必须先完成 L1 token + dark 资源。
 
 - [ ] **M8 节点信息卡在首屏下方，平板正文行宽过长**
   - 位置：[KnowledgeGraph.ets](entry/src/main/ets/pages/KnowledgeGraph.ets#L718-L780)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L407-L412)
@@ -273,7 +275,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M6 已完成（代码/构建；设备验证待 O23~O28/O7），下一步 M7 深色模式口径。
+**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M7 已完成（代码/构建；设备验证待 O23~O29/O7），下一步 M8 节点信息卡位置与平板行宽。
 
 ---
 
@@ -351,3 +353,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-23 | 第二轮 M4 完成并记录（commit `4c39ff1`，M6.9）：新增 HeritageRepository（rawfile/mock + id 映射缓存）与 JsonField；7 页迁移、4 份 JSON 助手去重；detail null/非法对象降级为空 detail 不丢条目；7 页 UI 回归待 O26 | 每页重复 try/catch+mock+Map，异常数据处理不一致；detail:null 会整条丢弃。统一仓库与类型校验，降低后续页面复制成本 |
 | 2026-10-23 | 第二轮 M5 完成并记录（commit `6e79281`，M6.10）：移除 Index 刷新 tick 与匿名数据订阅（消除双通道与监听累积）；Favorites 直接订阅 FavoriteService（成对注册/注销），标签保存期间合并刷新；KnowledgeGraph 删除 tick、保留 Favorite/Theme 订阅，归类操作只重建弹层候选；单通道刷新待 O27 | Index tick 与 KG 服务订阅同时生效导致一次收藏变化刷新两次；Favorites 只靠 tick；Index 匿名监听未注销且重建会累积。统一为各 Tab 直接订阅服务 |
 | 2026-10-23 | 第二轮 M6 完成并记录（commit `5732dc5` + 触控补强 `0c9b973`，M6.11）：关键触控区 ≥44vp；次要文字与徽标对比度提升至 ≥4.5:1（#7A5C52/#77635C/#7D655B、年代 mid 下调、白字徽标）；glyph 控件补 accessibilityText/Level/Selected，Canvas 补说明；未用 API 18 的 accessibilityRole；TalkBack/字体缩放待 O28 | 原次要文字最低 2.07:1、多处触控区 <44vp、glyph 无播报文本；按 WCAG 与最低 API 16 约束补齐可读性与可操作性 |
+| 2026-10-23 | 第二轮 M7 完成并记录（commit `0f3fcc6`，M6.12）：明确只支持浅色，`setColorMode(COLOR_MODE_LIGHT)` 移到 loadContent 成功回调；系统栏设置浅底深字（#FAF6F0/#000000）；dark 启动底保留；系统深浅切换待 O29 | UI 全为浅色硬编码，跟随系统深色会出现启动窗深、页面浅的割裂且状态栏图标可能不可读；L1 token 未完成，选择浅色分支成本最低、可读性最稳 |
