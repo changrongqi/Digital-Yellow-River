@@ -53,6 +53,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M3 | M6.8 MyNotes 订阅数据变化 | 2026-10-23 | `b1786b0` | 代码 + 构建；页面停留刷新待 O25 设备验证 | 已完成（代码/构建） |
 | M4 | M6.9 统一数据仓库与 JSON 字段助手 | 2026-10-23 | `4c39ff1` | 代码 + 构建；7 页 UI 回归待 O26 设备验证 | 已完成（代码/构建） |
 | M5 | M6.10 状态刷新收敛为单通道 | 2026-10-23 | `6e79281` | 代码 + 构建；单通道刷新行为待 O27 设备验证 | 已完成（代码/构建） |
+| M6 | M6.11 无障碍、触控目标与对比度 | 2026-10-23 | `5732dc5` + 补强 `0c9b973` | 代码 + 构建 + 对比度核算；TalkBack/字体缩放待 O28 设备验证 | 已完成（代码/构建/核算） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -166,11 +167,12 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-23，commit `6e79281`，执行编号 M6.10）：① **Index 去中转**——删除 `favoriteRefreshTick`、`onPageShow` 与匿名 `FavoriteService.onDataChanged` 订阅（同时消除未注销监听与重建累积），只保留 Favorite/Theme 初始化与 `syncWhenOnline`；Favorites/KnowledgeGraph 不再接收 `refreshTick`。② **Favorites 直接订阅**——新增稳定 `dataChangedHandler`，`aboutToAppear` 注册、`aboutToDisappear` 同引用注销；收藏/取消收藏、标签编辑与远端 LWW 合并统一由服务通知刷新；标签保存（全局删标签 + 提交勾选）期间用 `submittingTags` 暂挂订阅，结束统一刷新一次；`confirmRemove` 不再重复调用 `refreshGroups`。③ **KnowledgeGraph 去双通道**——删除 `@Prop @Watch refreshTick` 与 `onRefreshTick`，保留 Favorite/Theme 服务订阅；归类添加/移除只 `rebuildManage()`，图数据由订阅单通道刷新。④ **构建**——clean + 增量均 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（KnowledgeGraph pushUrl 509→500、Favorites 217→228 / 577→596 行号漂移）。⑤ **验证范围**——当前无连接设备，一次收藏变化仅刷新一次、返回后收藏页/图谱即时一致登记 O27，未冒充通过。
   - 依赖：M3（已完成）。
 
-- [ ] **M6 无障碍、触控目标与对比度**
-  - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L207-L214)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L571-L578)、[NodeInfoPanel.ets](entry/src/main/ets/components/graph/NodeInfoPanel.ets#L64-L70)
+- [x] **M6 无障碍、触控目标与对比度**（已完成：代码/构建/对比度核算；TalkBack/字体缩放待设备验证）
+  - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L184-L196)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L600-L611)、[NodeInfoPanel.ets](entry/src/main/ets/components/graph/NodeInfoPanel.ets#L64-L74)、[GraphCanvas.ets](entry/src/main/ets/components/graph/GraphCanvas.ets#L362-L376)
   - 问题：无 `accessibilityText/role`；多个触控区 <44vp；次要文字对比度 2.07~4.29:1。
   - 建议：触控区 ≥44vp；文字 ≥4.5:1；补无障碍文本；支持字体缩放。
   - 验收：关键按钮可点区域达标；对比度核算通过；TalkBack 可读出主要操作。
+  - 完成记录（2026-10-23，commit `5732dc5` + 触控补强 `0c9b973`，执行编号 M6.11）：① **触控目标**——四页返回（Detail/NoteEdit/EventDetail/MyNotes）与详情收藏/写笔记/删除、收藏卡「⋯」、信息卡「✕」、图谱 ＋/－/⟲ 与图层开关/主题 chips、图集关闭/前后切换、各弹层按钮（含笔记退出确认）、搜索框与筛选 chips、标签/归类 chips、主题色点、我的笔记入口全部提升到 ≥44vp（文字 chips 用 `constraintSize({ minHeight: 44 })` 允许随字体缩放增高）。② **对比度**——次要文字 `#8D6E63`→`#7A5C52`、`#BCAAA4`→`#77635C`、`#A1887F`（仅文字）→`#7D655B`；卡片年代徽标 `#FFE0B2`→`#FFFFFF`、缺失数据徽标 `#9E9E9E`→`#757575`；汉唐/宋横幅渐变 mid 下调（`#A87C3B`→`#8A622B`、`#6F908A`→`#4E726C`），Hero 摘要改纯白、HeroTag 底改 `rgba(62,39,35,0.30)`；图谱 Canvas 标签与空态文字同步加深。核算（最终文字色/实际背景）：`#7A5C52` 5.09~6.03、`#77635C` 4.76~5.64、`#7D655B` 4.78~4.99、白字/`#8D6E63` 4.62、白字/六个年代 mid 4.62~6.74；非文字图标/虚线 ≥3.0。③ **无障碍**——glyph 控件补 `accessibilityText` + `accessibilityLevel('yes')`（返回/更多操作/关闭节点信息/关闭预览/上一张/下一张/放大/缩小/重置/删除标签）；收藏按钮播报状态，chips/图层/底栏补 `accessibilitySelected`；Canvas 补画布说明。**未用 `accessibilityRole`**：本机 SDK 标注 `@since 18`，高于最低运行 API 16。④ **字体缩放**——全部字号为 fp、无 `maxFontScale/minFontScale` 限制；文字型 chips 改为最小高度约束而非固定高度。⑤ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（行号漂移：Discovery 294→296、Detail 193→195、EventDetail 147→149）。⑥ **验证范围**——当前无连接设备；TalkBack 播报、字号 1.0/1.5/2.0 布局、实际点按手感与新增配色的主观观感登记 O28，未冒充通过。
   - 依赖：无。
 
 - [ ] **M7 跟随系统深色模式但 UI 全为浅色硬编码**
@@ -271,7 +273,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2、M3、M4、M5 已完成（代码/构建；设备验证待 O23/O24/O25/O26/O27/O7），下一步 M6 无障碍、触控目标与对比度。
+**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M6 已完成（代码/构建；设备验证待 O23~O28/O7），下一步 M7 深色模式口径。
 
 ---
 
@@ -348,3 +350,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-23 | 第二轮 M3 完成并记录（commit `b1786b0`，M6.8）：MyNotes 订阅 FavoriteService.onDataChanged 并在 aboutToDisappear 用同一引用注销；保留 onPageShow 兜底；页面停留刷新待 O25 设备验证 | 页面停留时远端合并/其它页面增删笔记不会刷新，用户看到过期聚合列表；按审计建议补订阅闭环 |
 | 2026-10-23 | 第二轮 M4 完成并记录（commit `4c39ff1`，M6.9）：新增 HeritageRepository（rawfile/mock + id 映射缓存）与 JsonField；7 页迁移、4 份 JSON 助手去重；detail null/非法对象降级为空 detail 不丢条目；7 页 UI 回归待 O26 | 每页重复 try/catch+mock+Map，异常数据处理不一致；detail:null 会整条丢弃。统一仓库与类型校验，降低后续页面复制成本 |
 | 2026-10-23 | 第二轮 M5 完成并记录（commit `6e79281`，M6.10）：移除 Index 刷新 tick 与匿名数据订阅（消除双通道与监听累积）；Favorites 直接订阅 FavoriteService（成对注册/注销），标签保存期间合并刷新；KnowledgeGraph 删除 tick、保留 Favorite/Theme 订阅，归类操作只重建弹层候选；单通道刷新待 O27 | Index tick 与 KG 服务订阅同时生效导致一次收藏变化刷新两次；Favorites 只靠 tick；Index 匿名监听未注销且重建会累积。统一为各 Tab 直接订阅服务 |
+| 2026-10-23 | 第二轮 M6 完成并记录（commit `5732dc5` + 触控补强 `0c9b973`，M6.11）：关键触控区 ≥44vp；次要文字与徽标对比度提升至 ≥4.5:1（#7A5C52/#77635C/#7D655B、年代 mid 下调、白字徽标）；glyph 控件补 accessibilityText/Level/Selected，Canvas 补说明；未用 API 18 的 accessibilityRole；TalkBack/字体缩放待 O28 | 原次要文字最低 2.07:1、多处触控区 <44vp、glyph 无播报文本；按 WCAG 与最低 API 16 约束补齐可读性与可操作性 |
