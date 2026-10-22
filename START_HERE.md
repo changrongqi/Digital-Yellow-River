@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，26 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，27 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN_V1.md`；查决策史 → `REVISION_LOG.md`
 
@@ -19,6 +19,7 @@
 - 用户数据 Favorite/Note/Theme 必有 `deviceId`+`updatedAt`；冲突 LWW（新者胜，平局 deviceId 字典序小者胜）
 - 分布式键前缀 `fav_`/`note_`/`theme_`；独立 Preferences store：`yellow_river_user_data`、`yellow_river_themes`
 - 删除用户数据写墓碑（`deletedAt`+`deviceId`）覆盖同一 KV 键并参与 LWW，禁直接删键；KV 未就绪时的写入排队，ready 后补写
+- 笔记编辑页返回必须拦截未保存修改：脏基准=载入原文；顶部返回与系统返回共用 `handleBack`；保存/删除后直接离开
 - 零网络；图片只能放 `resources/rawfile/images/` 并由 `path` 引用
 - 同文件禁并行改；改完回读；一次一个子任务 → build 成功 → commit `[M?.?] 摘要`
 - 计划书可改，但理由必须写进 `REVISION_LOG.md`；「改计划」优先于「绕过计划」
