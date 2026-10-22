@@ -45,6 +45,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 |---|---|---|---|---|---|
 | B1 | M6.1 分布式同步运行时权限 | 2026-10-22 | `de6b8c1` | 代码 + 构建；权限弹窗/拒绝/重试待 O7 设备验证 | 已完成（代码/构建） |
 | H1 | M6.2 同步追赶 / 初始化重试 / sync 目标 networkId | 2026-10-22 | `40f990f` + 复核补强 | 代码 + 构建；双端首次拉取与设备上线收敛待 O7 设备验证 | 已完成（代码/构建） |
+| H2 | M6.3 删除墓碑与主题引用校验 | 2026-10-22 | `bdb18ee` | 代码 + 构建；双端删除/复活/并发编辑场景待 O7 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -90,12 +91,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 依赖：B1（已完成）。
   - 风险：双端长期不收敛；验收误判同步失效；networkId 用错会让 M3 全部同步调用无效。
 
-- [ ] **H2 删除无墓碑，存在复活与删除覆盖编辑**
-  - 位置：[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L183-L193)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L334-L344)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L381-L443)、[ThemeService.ets](entry/src/main/ets/service/ThemeService.ets#L146-L157)
+- [x] **H2 删除无墓碑，存在复活与删除覆盖编辑**（已完成：代码/构建；双端验证待 O7）
+  - 位置：[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L378-L400)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L435-L604)、[ThemeService.ets](entry/src/main/ets/service/ThemeService.ets#L166-L190)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L262-L295)
   - 问题：删除直接删 KV key；远端删除无条件生效；离线端旧记录可复活；远端删除可覆盖较新的本地编辑。
   - 建议：删除写 tombstone（`deletedAt + deviceId`）并参与 LWW；合并收藏时校验 `themeIds` 是否仍存在。
   - 验收：A 删除、B 离线修改后上线，不复活且编辑不静默丢失；主题删除后无悬挂引用；构建成功。
-  - 依赖：H1。
+  - 完成记录（2026-10-22，commit `bdb18ee`）：① 新增 `model/Tombstone.ets`（id + deletedAt + deviceId）；收藏/笔记墓碑存 `favorite_tombstones_json` / `note_tombstones_json`，主题墓碑存 `theme_tombstones_json`。② 删除改为以墓碑覆盖同一 KV 键（`fav_/note_/theme_` 前缀不变），远端按 `deletedAt` 字段识别墓碑；收藏/笔记/主题的合并全部改为「实体 vs 实体、实体 vs 墓碑、墓碑 vs 墓碑」三路 LWW（实体 updatedAt vs 墓碑 deletedAt，相等 deviceId 兜底）。③ 语义明确：删除晚于编辑→维持删除（不复活，冲突登记）；编辑晚于删除→保留编辑（不静默丢失）；本机无记录但收到墓碑→记墓碑，防止其它设备旧记录日后复活；旧版本 `deleteEntries` 硬删除保留兼容。④ 重新收藏已删除条目时 `updatedAt = max(now, deletedAt + 1)`，保证新记录严格新于墓碑。⑤ `themeIds` 校验：ThemeService 通过 `FavoriteService.setThemeIdValidator` 注册回调（避免循环 import），采纳远端收藏时剔除「已有墓碑」的主题引用；不按「缓存中不存在」判定，避免远端主题与收藏同批到达时误删有效引用。⑥ KV 未就绪时的写入（含墓碑）进入 SyncService 待写队列（同键保留最后一次、上限 200），KV ready 后先补写再重放墓碑，避免旧墓碑残留 KV 与本地新状态冲突。⑦ 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增；当前无连接设备，双端删除/复活/并发编辑场景登记 O20/O7，未冒充通过。
+  - 依赖：H1（已完成）。
   - 风险：收藏/笔记/主题丢失或复活；C2 备份恢复会放大。
 
 - [ ] **H3 笔记编辑未保存退出直接丢失**
@@ -256,7 +258,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-22）**：B1、H1 已完成（代码/构建；设备验证待 O7）；下一步 H2 删除墓碑。
+**当前进度（2026-10-22）**：B1、H1、H2 已完成（代码/构建；设备验证待 O7）；下一步 H3 笔记未保存退出保护。
 
 ---
 
@@ -323,3 +325,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-22 | 建立本文件，收录审计 1 阻塞 + 4 高 + 11 中 + 10 低，共 26 项；第一轮定为 B1/H1/H2/H3/H4；B1 开始执行 | 用户要求把审计项固化为第一轮优化目标，并按项目流程逐项实施 |
 | 2026-10-22 | B1 完成代码与构建验证；新增 PermissionService、SyncService 权限门禁与 KV ready 通知、EntryAbility 启动申请、SyncPanel 授权入口；设备验证登记待 O7 | 构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致；当前无连接设备，不能把弹窗/拒绝/重试验收标为已通过 |
 | 2026-10-22 | 文件更名 `OPTIMIZATION_PLAN_V1.md`，增加 V1 版本标识；新增「已完成项显式标注」规则、完成汇总表；H1 完成并记录 | 用户要求文件名体现第一版、计划书已完成项必须标注；H1 代码/构建完成，双端验证待 O7 |
+| 2026-10-22 | H2 删除墓碑完成并记录（commit `bdb18ee`）：新增 Tombstone 模型、三类实体墓碑持久化与 KV 覆盖写、实体/墓碑三路 LWW 合并、重新收藏版本推进、themeIds 墓碑校验、KV 未就绪待写队列与墓碑重放；双端验证登记 O20/O7 | 删除直接删键会导致离线旧记录复活、远端删除覆盖较新编辑；按审计建议以墓碑参与 LWW，并将无法在当前环境验证的双端场景如实登记 |
