@@ -5,6 +5,8 @@
  * - aboutToAppear：FavoriteService.init(context)（幂等）→ 加载预置遗产映射表
  *   （HeritageDataLoader 进程内缓存）→ 组装分组显示模型；groups 用 @State 整体赋值刷新（踩坑 5）；
  * - 一切变更（取消收藏/编辑标签/删除自定义标签）走 FavoriteService，完成后重新组装 groups；
+ *   M2（第二轮）起标签编辑器区分「编辑期」与「提交期」：删除自定义标签只先改本地候选/勾选状态，
+ *   点「保存」时才统一提交，点「取消」不产生任何持久化副作用；
  * - 卡片点击统一带 id 跳详情页（O2 约定）；
  * - 取消收藏不级联删除笔记（项目约定，确认弹层文案中注明）。
  *
@@ -92,6 +94,8 @@ export struct Favorites {
   @State editorAllTags: string[] = [];
   /** 标签编辑器：当前已勾选标签 */
   @State editorSelected: string[] = [];
+  /** 标签编辑器：本次编辑中待删除的自定义标签（保存时才全局提交；取消则丢弃） */
+  @State editorRemovedTags: string[] = [];
   /** 标签编辑器：新标签输入框内容 */
   @State newTagInput: string = '';
 
@@ -244,6 +248,7 @@ export struct Favorites {
     }
     this.editorAllTags = FavoriteService.getAllTags();
     this.editorSelected = fav.tags.slice();
+    this.editorRemovedTags = [];
     this.newTagInput = '';
     this.sheetType = SheetType.TagEditor;
   }
@@ -254,6 +259,7 @@ export struct Favorites {
     this.sheetItemName = '';
     this.editorAllTags = [];
     this.editorSelected = [];
+    this.editorRemovedTags = [];
     this.newTagInput = '';
   }
 
@@ -269,13 +275,20 @@ export struct Favorites {
     this.editorSelected = next;
   }
 
-  /** 删除自定义标签：removeTag 全局移除使用处；内置标签不提供删除（removeTag 只清使用处、内置候选保留，UI 上易造成误解） */
+  /**
+   * 删除自定义标签（M2）：编辑期只在本地暂存，保存时才全局提交；
+   * 点「取消」直接丢弃暂存，原有收藏关联不变。
+   * 内置标签不提供删除（removeTag 只清使用处、内置候选保留，UI 上易造成误解）。
+   */
   private removeEditorTag(tag: string): void {
     if (this.isBuiltInTag(tag)) {
       return;
     }
-    FavoriteService.removeTag(tag);
-    this.refreshGroups();
+    if (this.editorRemovedTags.indexOf(tag) < 0) {
+      const nextRemoved: string[] = this.editorRemovedTags.slice();
+      nextRemoved.push(tag);
+      this.editorRemovedTags = nextRemoved;
+    }
     const allIdx: number = this.editorAllTags.indexOf(tag);
     if (allIdx >= 0) {
       const nextAll: string[] = this.editorAllTags.slice();
@@ -296,6 +309,13 @@ export struct Favorites {
     if (name === '') {
       return;
     }
+    // 同名标签曾在本轮被删除：重新新增视为撤销删除，避免保存时又全局移除。
+    const removedIdx: number = this.editorRemovedTags.indexOf(name);
+    if (removedIdx >= 0) {
+      const nextRemoved: string[] = this.editorRemovedTags.slice();
+      nextRemoved.splice(removedIdx, 1);
+      this.editorRemovedTags = nextRemoved;
+    }
     if (this.editorAllTags.indexOf(name) < 0) {
       const nextAll: string[] = this.editorAllTags.slice();
       nextAll.push(name);
@@ -309,7 +329,11 @@ export struct Favorites {
     this.newTagInput = '';
   }
 
+  /** 保存标签编辑：先提交待删除标签（全局），再提交当前收藏的勾选集合 */
   private saveTags(): void {
+    for (let i = 0; i < this.editorRemovedTags.length; i++) {
+      FavoriteService.removeTag(this.editorRemovedTags[i]);
+    }
     FavoriteService.updateFavoriteTags(this.sheetItemId, this.editorSelected);
     this.refreshGroups();
     this.closeSheet();
