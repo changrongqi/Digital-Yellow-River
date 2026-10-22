@@ -107,7 +107,11 @@ struct NoteEdit {
       const notes: Note[] = FavoriteService.getNotesByItem(this.itemId);
       for (let i = 0; i < notes.length; i++) {
         if (notes[i].id === this.noteId) {
-          this.content = notes[i].content;
+          // M6.4 复核补强：载入前用户可能已开始输入（TextArea 在加载中仍可编辑），
+          // 此时不能覆盖输入内容；原始基准仍取服务层原稿，保证脏标记正确。
+          if (!this.isDirty()) {
+            this.content = notes[i].content;
+          }
           this.originalContent = notes[i].content;
           this.createdAt = notes[i].createdAt;
           this.updatedAt = notes[i].updatedAt;
