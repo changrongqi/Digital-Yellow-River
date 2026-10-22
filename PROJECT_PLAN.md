@@ -266,7 +266,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M6.3 | H2 删除墓碑 | 新增 Tombstone 模型；收藏/笔记/主题删除改为墓碑覆盖同一 KV 键并参与 LWW（实体 vs 墓碑 vs 墓碑）；重新收藏版本推进；themeIds 按墓碑校验；KV 未就绪待写队列 + 墓碑重放。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端删除/复活/并发编辑待设备验证（并入 O20/O7） | ✅ 已完成（`bdb18ee`；代码/构建，设备验证待 O7） |
 | M6.4 | H3 笔记未保存退出保护 | 新增原稿基准与脏标记；顶部返回与系统返回统一拦截；有未保存内容弹「放弃修改」确认，取消留下、确认才离开；保存/删除成功直接返回；复核补强：载入原稿不覆盖已输入内容。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。返回确认交互待设备验证（O21） | ✅ 已完成（`27378bc` + 复核补强；代码/构建，设备验证待 O21） |
 | M6.5 | H4 API 兼容口径 | 保持 `compatibleSdkVersion: 5.0.4(16)`；README/PROJECT_PLAN/START_HERE/代码注释统一为「最低 API 16（任务书要求 ≥ 12）」；未下调配置。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。目标设备安装待验证（O22） | ✅ 已完成（`2a5d0bb`；文档/构建，设备安装待 O22） |
-| M6.6 | 第二轮 M1 LWW 版本标识 | 新增共享 DeviceIdentity（系统 ODID 优先、UUID 回退、旧 store 迁移）；所有写入刷新 deviceId；nextUpdatedAt 保证版本严格递增；冲突台账记录胜方设备并在 SyncPanel 展示。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端平局与备份恢复待设备验证（O23/O7） | ✅ 已完成（`7b9043d`；代码/构建，设备验证待 O23/O7） |
+| M6.6 | 第二轮 M1 LWW 版本标识 | 新增共享 DeviceIdentity（系统 ODID 优先、cache UUID 回退，回退值不参与系统备份）；所有写入刷新 deviceId；nextUpdatedAt 保证版本严格递增；冲突台账记录胜方设备并在 SyncPanel 展示。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端平局待设备验证（O23/O7） | ✅ 已完成（`7b9043d` + 复核补强；代码/构建，设备验证待 O23/O7） |
 | M6.x | 第二轮 M2~M11 | 见 OPTIMIZATION_PLAN_V1.md 3.3；M1 已并入 M6.6 完成 | ⬜ 未开始 |
 | M6.y | 第三轮 L1~L10 | 见 OPTIMIZATION_PLAN_V1.md 3.4 | ⬜ 未开始 |
 
