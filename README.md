@@ -22,7 +22,7 @@
 |---|---|
 | 平台 | OpenHarmony / HarmonyOS（Stage 模型） |
 | 语言 / 框架 | ArkTS + ArkUI 声明式范式 |
-| API 版本 | ≥ 12（工程 `compatibleSdkVersion: 5.0.4(16)`） |
+| API 版本 | 最低 API 16（`compatibleSdkVersion: 5.0.4(16)`；任务书要求 ≥ 12） |
 | IDE | DevEco Studio |
 | 设备类型 | phone / tablet |
 | 网络 | 零网络依赖，文化资源全部离线预置 |
@@ -59,7 +59,7 @@ entry/src/main/
 
 ## 快速开始
 
-1. 使用 **DevEco Studio** 打开本工程（需配置 HarmonyOS SDK，API 12 及以上）。
+1. 使用 **DevEco Studio** 打开本工程（需配置 HarmonyOS SDK：编译 SDK 26，最低运行 API 16，满足任务书 ≥ 12 的要求）。
 2. 首次打开后等待 `oh_modules` 依赖同步完成。
 3. 连接手机 / 平板 / 模拟器，选择 `entry` 模块运行。
 4. 命令行构建（可选）：

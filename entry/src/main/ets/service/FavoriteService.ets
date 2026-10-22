@@ -4,7 +4,7 @@
  * 设计说明：
  * 1. 存储选型 Preferences（计划书 M2.1「Preferences/RDB」二选一）：
  *    收藏/笔记是小体量用户数据（预计几十条），整表 JSON 存取简单可靠，重启不丢。
- * 2. 全同步 API（getPreferencesSync/putSync/flushSync，API 12 SDK 实测存在）：
+ * 2. 全同步 API（getPreferencesSync/putSync/flushSync，本机 SDK 实测存在）：
  *    进程内缓存 + 同步落盘，页面层调用免 async/await；
  *    所有会抛异常的 SDK 调用均包 try/catch（对齐告警基线，不新增 may throw 告警）。
  * 3. 踩坑 3：所有写入自动维护 deviceId + updatedAt（M3 LWW 冲突判定直接复用）。

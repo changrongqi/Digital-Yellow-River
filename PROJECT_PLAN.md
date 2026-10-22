@@ -20,16 +20,16 @@
 | 文件 | 内容 | 何时读 |
 |---|---|---|
 | **PROJECT_PLAN.md**（本文件） | 产品定位、技术约束、架构目录、数据模型、里程碑 M1~M6、验收标准、开发工作流 | 每次开工前通读 |
-| [PITFALLS.md](PITFALLS.md) | 27 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式/Canvas/权限/同步目标/墓碑/返回拦截 等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
-| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O21（环境限制、构建告警基线 O3、同步/图谱/编辑保护验证） | 排障、构建告警比对、评估环境限制时 |
+| [PITFALLS.md](PITFALLS.md) | 28 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式/Canvas/权限/同步目标/墓碑/返回拦截/API 口径 等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
+| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O22（环境限制、构建告警基线 O3、同步/图谱/编辑保护/API 口径验证） | 排障、构建告警比对、评估环境限制时 |
 | [OPTIMIZATION_PLAN_V1.md](OPTIMIZATION_PLAN_V1.md) | 全项目优化总表（26 项、分级、依赖、第一轮 B1/H1~H4、状态与验收） | 开始/推进优化轮次时，与 §5 M6 配合使用 |
 | [CONTENT_METHODOLOGY.md](CONTENT_METHODOLOGY.md) | 联网搜证 + 内容深写方法论（来源优先级 / 核证纪律 / 事件与文旅结构 / 双份同步 R3 / 图片） | 每批遗址内容深写、事件/文旅/图集开工前 |
-| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（当前 68 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
+| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（当前 69 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
 
 **接手速记（最高优先级硬约束，细节见对应分册）**
 
 1. **产品定位**：沉浸式文化遗产体验产品，非精简知识库；信息量目标 = 现状 10 倍，内容必须联网搜证官方/权威来源并核证，**禁止凭记忆写精简数据**；事件须可点开子详情、文旅须含行程规划/参观指引/深度解说、考古内容需真实图片（可点开放大）。
-2. **技术栈**：ArkTS + ArkUI 声明式（禁 `any`、禁解构），API 12 Stage 模型，**零网络依赖**（资源全部 rawfile 预置离线），本地 Preferences 为基线 + distributedKVStore 分布式同步。
+2. **技术栈**：ArkTS + ArkUI 声明式（禁 `any`、禁解构），API 16+ Stage 模型（任务书要求 ≥ 12），**零网络依赖**（资源全部 rawfile 预置离线），本地 Preferences 为基线 + distributedKVStore 分布式同步。
 3. **用户数据**：Favorite/Note/Theme 必须携带 `deviceId` + `updatedAt`；冲突按 **LWW**（updatedAt 新者胜，相等时 deviceId 字典序小者胜）。
 4. **数据纪律**：rawfile 与 Mock 双份同构（R3）；JSON 正文内嵌引号用中文引号「」；mock 模板字符串内分段写 `\\n`；整表 0 条视为加载失败（抛异常，供 mock 兜底）。
 5. **路由**：目标页必须注册 `resources/base/profile/main_pages.json`；详情/事件/笔记/推荐跳转统一带 `id`。
@@ -64,7 +64,7 @@
 |---|---|---|
 | IDE | DevEco Studio | — |
 | 系统 | OpenHarmony / HarmonyOS | — |
-| API 版本 | **12**（现状沿用，≥ 12 过线） | 任务书要求 ≥ 12 |
+| API 版本 | **最低 16**（`compatibleSdkVersion: 5.0.4(16)`） | 任务书要求 ≥ 12；当前编译 SDK 26，最低运行 API 16 |
 | 语言/框架 | **ArkTS + ArkUI 声明式范式** | 全程必须遵守，禁 any、禁 JS 魔法 |
 | 模型 | Stage 模型 | 工程已就绪（apiType: stageMode） |
 | 硬件 | 手机/平板/模拟器 | 不依赖额外采购 |
@@ -240,7 +240,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 > - 模型只增不改：Theme 全新增、Favorite 仅增字段，解析层 getStrArray 缺省空数组天然兼容旧数据（踩坑 1/2/4）；
 > - 分层：ThemeService 是主题数据唯一权威（仿 FavoriteService 模式：内存缓存 + Preferences + 分布式双写 + 远端 LWW 合并）；
 >   归类写 FavoriteService.updateFavoriteThemes（收藏唯一权威不变，避免两个权威改同一份数据）；
-> - 知识节点网络用 ArkUI Canvas 绘制（API 12 CanvasRenderingContext2D，d.ts 双重核对，官方 ts-components-canvas）；
+> - 知识节点网络用 ArkUI Canvas 绘制（CanvasRenderingContext2D，d.ts 双重核对，官方 ts-components-canvas）；
 >   布局：中心主题节点 + 环绕遗址节点（圆周分布）+ 连线，克制简洁（用户偏好：不堆 3D、不做多余视觉）;
 > - 拓展推荐复用 M4 纯函数 recommendHeritages（list=当前数据源全量、currentId=主题下某遗址、favoriteIds=已收藏集合），
 >   过滤出「同主题已收藏」之外的建议条目，横向卡片展示。
@@ -265,7 +265,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M6.2 | H1 同步追赶与失败恢复 | 见 OPTIMIZATION_PLAN_V1.md H1；含 sync 目标 networkId 修正、初次 PULL 监听时序补强 | ✅ 已完成（`40f990f` + 复核补强；代码/构建，双端验证待 O7） |
 | M6.3 | H2 删除墓碑 | 新增 Tombstone 模型；收藏/笔记/主题删除改为墓碑覆盖同一 KV 键并参与 LWW（实体 vs 墓碑 vs 墓碑）；重新收藏版本推进；themeIds 按墓碑校验；KV 未就绪待写队列 + 墓碑重放。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端删除/复活/并发编辑待设备验证（并入 O20/O7） | ✅ 已完成（`bdb18ee`；代码/构建，设备验证待 O7） |
 | M6.4 | H3 笔记未保存退出保护 | 新增原稿基准与脏标记；顶部返回与系统返回统一拦截；有未保存内容弹「放弃修改」确认，取消留下、确认才离开；保存/删除成功直接返回；复核补强：载入原稿不覆盖已输入内容。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。返回确认交互待设备验证（O21） | ✅ 已完成（`27378bc` + 复核补强；代码/构建，设备验证待 O21） |
-| M6.5 | H4 API 兼容口径 | 见 OPTIMIZATION_PLAN_V1.md H4 | ⬜ 未开始 |
+| M6.5 | H4 API 兼容口径 | 保持 `compatibleSdkVersion: 5.0.4(16)`；README/PROJECT_PLAN/START_HERE/代码注释统一为「最低 API 16（任务书要求 ≥ 12）」；未下调配置。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。目标设备安装待验证（O22） | ✅ 已完成（文档/构建；设备安装待 O22） |
 | M6.x | 第二轮 M1~M11 | 见 OPTIMIZATION_PLAN_V1.md 3.3 | ⬜ 未开始 |
 | M6.y | 第三轮 L1~L10 | 见 OPTIMIZATION_PLAN_V1.md 3.4 | ⬜ 未开始 |
 
@@ -281,7 +281,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 ### 6.1 当前阶段遗留问题 / 风险（已拆分至 ISSUES_RISKS.md）
 
 > 完整表格与观察项见独立分册 **[ISSUES_RISKS.md](ISSUES_RISKS.md)**（内容原样迁移、无删改）。
-> 当前状态速览：R1~R4 全部 ✅（M2 前置已清零，解决方式见分册）；观察项 O1~O21 持续跟踪——O3 为构建告警基线（比对按「文件 + 告警类型」，行号漂移不算新增），O7 为「普通本地模拟器无法真实分布式组网」的实证结论，O18/O19/O20 为 M6.1/M6.2/M6.3 已修但待真机验证的同步项，O21 为 M6.4 已修但待设备验证的笔记未保存保护，双向同步与 LWW 冲突以真机联调为准。
+> 当前状态速览：R1~R4 全部 ✅（M2 前置已清零，解决方式见分册）；观察项 O1~O22 持续跟踪——O3 为构建告警基线（比对按「文件 + 告警类型」，行号漂移不算新增），O7 为「普通本地模拟器无法真实分布式组网」的实证结论，O18/O19/O20 为 M6.1/M6.2/M6.3 已修但待真机验证的同步项，O21 为 M6.4 已修但待设备验证的笔记未保存保护，O22 为 M6.5 文档口径已统一但待目标设备安装验证，双向同步与 LWW 冲突以真机联调为准。
 > 新增问题随时追加到 ISSUES_RISKS.md，不允许「知道有问题但不登记」。
 
 ## 7. 验收标准（M1 阶段）
@@ -315,5 +315,5 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 ## 9. 修订记录（已拆分至 REVISION_LOG.md）
 
-> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 68 条，以分册为准）。
+> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 69 条，以分册为准）。
 > 维护规则：新增/调整子任务、范围、顺序、数据结构或踩坑条目时，先在 REVISION_LOG.md 表格顶部插入一行（`| 日期 | 修订内容 |`）写明理由，再同步更新本计划书状态、PITFALLS.md / ISSUES_RISKS.md / CONTENT_METHODOLOGY.md 等受影响分册。

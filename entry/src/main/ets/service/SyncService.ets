@@ -5,7 +5,8 @@
  * - 本服务只负责「传输 + 冲突判定原语 + 冲突台账 + 在线设备/手动同步 + 同步状态」；
  * - 收藏/笔记数据的唯一权威仍是 FavoriteService（M2.1 内存缓存 + Preferences），
  *   M3.2 起由其执行双写与远端变更合并（LWW 用本服务的判定原语）；
- * - API 用法对齐华为官方文档（@kit.ArkData distributedKVStore + @kit.DistributedServiceKit，API 12）。
+ * - API 用法对齐华为官方文档（@kit.ArkData distributedKVStore + @kit.DistributedServiceKit，
+ *   API 12 文档口径；本机编译 SDK 26，工程最低运行 API 16）；
  *
  * 设计说明：
  * 1. distributedKVStore 单版本 KV（SINGLE_VERSION）+ autoSync：
