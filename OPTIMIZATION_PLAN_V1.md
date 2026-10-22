@@ -50,6 +50,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | H4 | M6.5 API 兼容口径统一 | 2026-10-22 | `2a5d0bb` | 文档 + 构建；目标设备安装待 O22 | 已完成（文档/构建） |
 | M1 | M6.6 共享 DeviceIdentity / LWW 版本推进 / 冲突台账设备标识 | 2026-10-22 | `7b9043d` + 复核补强 | 代码 + 构建；双端平局待 O23/O7 | 已完成（代码/构建） |
 | M2 | M6.7 标签删除改为保存时提交 | 2026-10-23 | `01bdb1e` | 代码 + 构建；取消/保存交互待 O24 设备验证 | 已完成（代码/构建） |
+| M3 | M6.8 MyNotes 订阅数据变化 | 2026-10-23 | `b1786b0` | 代码 + 构建；页面停留刷新待 O25 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -139,11 +140,12 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-23，commit `01bdb1e`，执行编号 M6.7）：① 新增 `editorRemovedTags` 暂存本次编辑中待删除的自定义标签；`removeEditorTag` 只从本地候选 `editorAllTags` 与勾选集合 `editorSelected` 移除，不再调用 `FavoriteService.removeTag`。② `saveTags` 先逐条提交待删除标签（全局 `removeTag`），再提交当前收藏的勾选集合（`updateFavoriteTags`），最后统一刷新分组并关闭弹层。③ 同名标签在本轮删除后又通过输入框重新新增时，从 `editorRemovedTags` 撤销删除，避免保存时被误全局移除。④ `closeSheet` / `openTagEditor` 清空暂存；点「取消」不产生任何持久化或同步副作用。⑤ 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（Favorites 行号漂移：pushUrl 226→230、566→590）；当前无连接设备，取消/保存交互登记 O24，未冒充通过。
   - 依赖：无。
 
-- [ ] **M3 MyNotes 不订阅数据变化**
-  - 位置：[MyNotes.ets](entry/src/main/ets/pages/MyNotes.ets#L60-L75)
+- [x] **M3 MyNotes 不订阅数据变化**（已完成：代码/构建；页面停留刷新待设备验证）
+  - 位置：[MyNotes.ets](entry/src/main/ets/pages/MyNotes.ets#L60-L86)
   - 问题：只在 aboutToAppear/onPageShow 刷新；远端合并时页面停留不更新。
   - 建议：订阅 `FavoriteService.onDataChanged` 并注销。
   - 验收：页面停留时远端新增/删除笔记，列表自动刷新。
+  - 完成记录（2026-10-23，commit `b1786b0`，执行编号 M6.8）：① 新增稳定的 `dataChangedHandler` 函数引用（箭头函数字段），在 `aboutToAppear` 中 `FavoriteService.onDataChanged(this.dataChangedHandler)` 注册，命中远端合并或其它页面增删笔记时调用 `refreshList()` 整体重算聚合列表。② `aboutToDisappear` 用同一引用 `offDataChanged` 注销，防监听泄漏与销毁后回调。③ 保留 `onPageShow` 刷新作为从 NoteEdit 返回的兜底；`loadHeritages` 完成后的首次刷新不变。④ 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（MyNotes 行号漂移：pushUrl 125→141、back 133→149）；当前无连接设备，页面停留时的远端增删刷新登记 O25，未冒充通过。
   - 依赖：B1/H1（真机验证）。
 
 - [ ] **M4 数据访问层重复，JSON 解析助手 4 份**
@@ -265,7 +267,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2 已完成（代码/构建；设备验证待 O23/O24/O7），下一步 M3 MyNotes 订阅数据变化。
+**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2、M3 已完成（代码/构建；设备验证待 O23/O24/O25/O7），下一步 M4 数据访问层去重。
 
 ---
 
@@ -339,3 +341,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-22 | 第二轮 M1 完成并记录（commit `7b9043d`，M6.6）：新增共享 DeviceIdentity（ODID 优先、UUID 回退与旧 store 迁移）、所有写入刷新 deviceId、nextUpdatedAt 严格递增、冲突台账记录胜方设备并在同步面板展示；残余 UUID 备份复制风险登记 O23 | 更新不刷新 deviceId 会让平局兜底指向创建者而非最后写入者；各服务独立生成 ID 导致跨实体判定不一致；墙钟回拨会让新编辑输给旧版本。按审计建议共享设备标识并显式化版本推进 |
 | 2026-10-22 | 第二轮 M1 复核补强（commit `35f9dcf`）：回退设备标识从 Preferences 移到 `cacheDir/lww_device_id.txt` | 官方备份默认 includes 不包含 cache，彻底规避「备份恢复到新设备复制同一 deviceId」；cache 清理换 ID 仅影响平局归因，不影响数据与同步收敛 |
 | 2026-10-23 | 第二轮 M2 完成并记录（commit `01bdb1e`，M6.7）：标签编辑器删除自定义标签改为本地暂存、保存时统一提交；取消不产生持久化副作用；同名重新新增视为撤销删除；交互待 O24 设备验证 | 原实现删除即全局落盘+同步，取消无法撤销；按审计建议区分编辑期与提交期 |
+| 2026-10-23 | 第二轮 M3 完成并记录（commit `b1786b0`，M6.8）：MyNotes 订阅 FavoriteService.onDataChanged 并在 aboutToDisappear 用同一引用注销；保留 onPageShow 兜底；页面停留刷新待 O25 设备验证 | 页面停留时远端合并/其它页面增删笔记不会刷新，用户看到过期聚合列表；按审计建议补订阅闭环 |
