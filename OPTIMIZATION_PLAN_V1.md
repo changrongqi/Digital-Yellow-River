@@ -51,6 +51,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M1 | M6.6 共享 DeviceIdentity / LWW 版本推进 / 冲突台账设备标识 | 2026-10-22 | `7b9043d` + 复核补强 | 代码 + 构建；双端平局待 O23/O7 | 已完成（代码/构建） |
 | M2 | M6.7 标签删除改为保存时提交 | 2026-10-23 | `01bdb1e` | 代码 + 构建；取消/保存交互待 O24 设备验证 | 已完成（代码/构建） |
 | M3 | M6.8 MyNotes 订阅数据变化 | 2026-10-23 | `b1786b0` | 代码 + 构建；页面停留刷新待 O25 设备验证 | 已完成（代码/构建） |
+| M4 | M6.9 统一数据仓库与 JSON 字段助手 | 2026-10-23 | `4c39ff1` | 代码 + 构建；7 页 UI 回归待 O26 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -148,12 +149,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-23，commit `b1786b0`，执行编号 M6.8）：① 新增稳定的 `dataChangedHandler` 函数引用（箭头函数字段），在 `aboutToAppear` 中 `FavoriteService.onDataChanged(this.dataChangedHandler)` 注册，命中远端合并或其它页面增删笔记时调用 `refreshList()` 整体重算聚合列表。② `aboutToDisappear` 用同一引用 `offDataChanged` 注销，防监听泄漏与销毁后回调。③ 保留 `onPageShow` 刷新作为从 NoteEdit 返回的兜底；`loadHeritages` 完成后的首次刷新不变。④ 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（MyNotes 行号漂移：pushUrl 125→141、back 133→149）；当前无连接设备，页面停留时的远端增删刷新登记 O25，未冒充通过。
   - 依赖：B1/H1（真机验证）。
 
-- [ ] **M4 数据访问层重复，JSON 解析助手 4 份**
-  - 位置：7 个页面加载兜底（Discovery/Detail/EventDetail/Favorites/MyNotes/NoteEdit/KnowledgeGraph）；4 份 `getStr/getNum/getStrArray`
+- [x] **M4 数据访问层重复，JSON 解析助手 4 份**（已完成：代码/构建；7 页 UI 回归待设备验证）
+  - 位置：[HeritageRepository.ets](entry/src/main/ets/data/HeritageRepository.ets#L1-L80)、[JsonField.ets](entry/src/main/ets/utils/JsonField.ets#L1-L65)、[HeritageDataLoader.ets](entry/src/main/ets/data/HeritageDataLoader.ets#L83-L106)
   - 问题：每页重复 try/catch + mock + Map；类型校验弱；`detail:null` 会丢弃整条。
   - 建议：`HeritageRepository.load(context)` 返回 `{list,isMock}` 并缓存 Map；抽 `utils/JsonField`；修 null detail。
   - 验收：7 页行为一致，新增页面不再复制兜底；异常数据不静默丢条目。
-  - 依赖：H3（避免同文件冲突）。
+  - 完成记录（2026-10-23，commit `4c39ff1`，执行编号 M6.9）：① **统一仓库**——新增 `data/HeritageRepository.ets`：`load(context | undefined)` 内部走 `HeritageDataLoader`（rawfile 优先 + 进程内缓存），失败/无上下文时统一注入 `MOCK_HERITAGES`，返回 `{ list, byId, isMock }`；真实/mock 的 id 映射分别缓存；任何失败不向页面抛异常。② **7 页迁移**——Discovery / Detail / EventDetail / Favorites / MyNotes / NoteEdit / KnowledgeGraph 全部改为 `await HeritageRepository.load(...)` + `result.list` / `result.byId` / `result.isMock`，删除各自的 try/catch、MOCK 注入与手建 Map；页面不再直接依赖 `HeritageDataLoader` / `MockHeritages`。③ **JSON 助手**——新增 `utils/JsonField.ets`（`getStr/getNum/getStrArray`，集中类型校验：字符串字段拒绝对象/数组、数字仅接受 number、数组逐项过滤非法项）；替换 `HeritageDataLoader`、`FavoriteService`、`ThemeService`、`SyncService` 共 4 份重复实现并删除原私有方法。④ **detail 修复**——`detail` 缺失/null/非对象时降级为空 detail 并告警，不再因 `null` 进入字段读取抛错而丢失整条遗址；数组与非法类型同样走降级。⑤ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（行号整体漂移）。⑥ **验证范围**——7 页数据/空态/mock 提示的 UI 回归与异常数据注入登记 O26；当前无连接设备，未冒充通过。
+  - 依赖：H3（已完成）。
 
 - [ ] **M5 状态刷新双通道**
   - 位置：[Index.ets](entry/src/main/ets/pages/Index.ets#L30-L32)、[KnowledgeGraph.ets](entry/src/main/ets/pages/KnowledgeGraph.ets#L94-L115)
@@ -267,7 +269,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2、M3 已完成（代码/构建；设备验证待 O23/O24/O25/O7），下一步 M4 数据访问层去重。
+**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2、M3、M4 已完成（代码/构建；设备验证待 O23/O24/O25/O26/O7），下一步 M5 状态刷新双通道。
 
 ---
 
@@ -342,3 +344,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-22 | 第二轮 M1 复核补强（commit `35f9dcf`）：回退设备标识从 Preferences 移到 `cacheDir/lww_device_id.txt` | 官方备份默认 includes 不包含 cache，彻底规避「备份恢复到新设备复制同一 deviceId」；cache 清理换 ID 仅影响平局归因，不影响数据与同步收敛 |
 | 2026-10-23 | 第二轮 M2 完成并记录（commit `01bdb1e`，M6.7）：标签编辑器删除自定义标签改为本地暂存、保存时统一提交；取消不产生持久化副作用；同名重新新增视为撤销删除；交互待 O24 设备验证 | 原实现删除即全局落盘+同步，取消无法撤销；按审计建议区分编辑期与提交期 |
 | 2026-10-23 | 第二轮 M3 完成并记录（commit `b1786b0`，M6.8）：MyNotes 订阅 FavoriteService.onDataChanged 并在 aboutToDisappear 用同一引用注销；保留 onPageShow 兜底；页面停留刷新待 O25 设备验证 | 页面停留时远端合并/其它页面增删笔记不会刷新，用户看到过期聚合列表；按审计建议补订阅闭环 |
+| 2026-10-23 | 第二轮 M4 完成并记录（commit `4c39ff1`，M6.9）：新增 HeritageRepository（rawfile/mock + id 映射缓存）与 JsonField；7 页迁移、4 份 JSON 助手去重；detail null/非法对象降级为空 detail 不丢条目；7 页 UI 回归待 O26 | 每页重复 try/catch+mock+Map，异常数据处理不一致；detail:null 会整条丢弃。统一仓库与类型校验，降低后续页面复制成本 |
