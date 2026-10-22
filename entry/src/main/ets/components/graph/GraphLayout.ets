@@ -127,6 +127,36 @@ function bestAnchorIndex(item: Heritage, heritages: Heritage[]): number {
   return bestIndex;
 }
 
+/**
+ * 推荐条目的最佳锚点遗址。
+ * 与 layoutGraph 的虚线锚点同源（同一 bestAnchorIndex 规则），
+ * 页面信息卡据此解释「为什么推荐」，保证文案与图上关系一致。
+ */
+export function findBestAnchor(item: Heritage, heritages: Heritage[]): Heritage | null {
+  if (heritages.length === 0) {
+    return null;
+  }
+  return heritages[bestAnchorIndex(item, heritages)];
+}
+
+/** 推荐依据文案：与锚点共享的年代/城市/类型；无共享特征时说明为知识库补充推荐 */
+export function buildRecommendReason(item: Heritage, anchor: Heritage): string {
+  const traits: string[] = [];
+  if (item.era === anchor.era) {
+    traits.push(`同年代（${item.era}）`);
+  }
+  if (item.city === anchor.city) {
+    traits.push(`同城市（${item.city}）`);
+  }
+  if (item.type === anchor.type) {
+    traits.push(`同类型（${item.type}）`);
+  }
+  if (traits.length === 0) {
+    return `与「${anchor.name}」暂无强关联特征，作为知识库补充推荐`;
+  }
+  return `与「${anchor.name}」${traits.join('、')}，故作为拓展推荐`;
+}
+
 /** 创建主题节点 */
 function makeThemeNode(theme: Theme, heritageCount: number): GraphNode {
   const color: string = getThemeColor(theme.colorIndex);

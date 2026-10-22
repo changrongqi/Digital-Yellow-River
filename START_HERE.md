@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，22 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，23 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；查决策史 → `REVISION_LOG.md`
 

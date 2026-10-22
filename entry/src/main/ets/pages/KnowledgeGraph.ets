@@ -12,7 +12,7 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { router } from '@kit.ArkUI';
+import { display, router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
@@ -25,6 +25,7 @@ import { getEraTheme } from '../utils/EraTheme';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 import { GraphNodeKind } from '../components/graph/GraphNode';
 import { GraphCanvas } from '../components/graph/GraphCanvas';
+import { findBestAnchor, buildRecommendReason } from '../components/graph/GraphLayout';
 import { HeritageCard } from '../components/graph/HeritageCard';
 import { ThemeEditorSheet } from '../components/graph/ThemeEditorSheet';
 import { ManageSheet } from '../components/graph/ManageSheet';
@@ -64,6 +65,8 @@ export struct KnowledgeGraph {
   @State selectedNodeKind: GraphNodeKind = GraphNodeKind.NONE;
   /** 图数据版本：主题重命名等「同对象改字段」场景也强制 Canvas 重建布局 */
   @State graphVersion: number = 0;
+  /** 画布高度（按屏幕宽度自适应：手机 360vp、平板最高 520vp） */
+  @State graphHeight: number = 360;
 
   // ==================== 弹层状态 ====================
   @State sheetType: SheetType = SheetType.None;
@@ -96,6 +99,7 @@ export struct KnowledgeGraph {
   }
 
   aboutToAppear(): void {
+    this.updateGraphHeight();
     const context = this.getUIContext().getHostContext();
     if (context === undefined) {
       hilog.error(DOMAIN, TAG, 'host context unavailable');
@@ -113,6 +117,18 @@ export struct KnowledgeGraph {
   aboutToDisappear(): void {
     ThemeService.offDataChanged(this.themeChangedHandler);
     FavoriteService.offDataChanged(this.favChangedHandler);
+  }
+
+  /** 画布高度自适应：按屏幕宽度计算，平板获得更大的图谱区（失败时保持 360vp） */
+  private updateGraphHeight(): void {
+    try {
+      const widthPx: number = display.getDefaultDisplaySync().width;
+      const widthVp: number = this.getUIContext().px2vp(widthPx);
+      const next: number = Math.min(520, Math.max(360, (widthVp - 32) * 0.92));
+      this.graphHeight = Math.round(next);
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'compute graph height failed: %{public}s', JSON.stringify(err));
+    }
   }
 
   /** 加载预置遗产数据构建映射表 */
@@ -324,6 +340,81 @@ export struct KnowledgeGraph {
     return heritage === null ? '' : heritage.summary;
   }
 
+  /** 选中节点类型徽标：区分主题 / 已归类 / 拓展推荐 */
+  private selectedNodeKindLabel(): string {
+    if (this.selectedNodeKind === GraphNodeKind.THEME) {
+      return '主题';
+    }
+    if (this.selectedNodeKind === GraphNodeKind.HERITAGE) {
+      return '已归类';
+    }
+    if (this.selectedNodeKind === GraphNodeKind.RECOMMEND) {
+      return '拓展推荐';
+    }
+    return '';
+  }
+
+  /** 选中遗址的核心看点（最多 2 条，无则空串） */
+  private selectedHeritageHighlights(): string {
+    const heritage: Heritage | null = this.findSelectedHeritage();
+    if (heritage === null) {
+      return '';
+    }
+    const highlights: string[] = heritage.detail.highlights;
+    if (highlights.length === 0) {
+      return '';
+    }
+    let text: string = '';
+    const limit: number = Math.min(2, highlights.length);
+    for (let i = 0; i < limit; i++) {
+      if (i > 0) {
+        text += ' · ';
+      }
+      text += highlights[i];
+    }
+    return text;
+  }
+
+  /** 推荐依据：与图上虚线的锚点同源，解释「为什么推荐」 */
+  private selectedRecommendationReason(): string {
+    if (this.selectedNodeKind !== GraphNodeKind.RECOMMEND) {
+      return '';
+    }
+    const recommendation: Heritage | null = this.findSelectedHeritage();
+    if (recommendation === null) {
+      return '';
+    }
+    const anchor: Heritage | null = findBestAnchor(recommendation, this.themedHeritages);
+    if (anchor === null) {
+      return '';
+    }
+    return buildRecommendReason(recommendation, anchor);
+  }
+
+  /** 主题覆盖：已归类遗址数 + 年代数 + 城市数（信息卡用） */
+  private themeCoverageText(): string {
+    const eras: string[] = [];
+    const cities: string[] = [];
+    for (let i = 0; i < this.themedHeritages.length; i++) {
+      const heritage: Heritage = this.themedHeritages[i];
+      if (eras.indexOf(heritage.era) < 0) {
+        eras.push(heritage.era);
+      }
+      if (cities.indexOf(heritage.city) < 0) {
+        cities.push(heritage.city);
+      }
+    }
+    return `${this.themedHeritages.length} 处遗址 · ${eras.length} 个年代 · ${cities.length} 座城市`;
+  }
+
+  /** 推荐图层开关：关闭时同步清除已选推荐节点，避免信息卡指向已不存在的节点 */
+  private toggleRecommendLayer(): void {
+    this.showRecommendInGraph = !this.showRecommendInGraph;
+    if (!this.showRecommendInGraph && this.selectedNodeKind === GraphNodeKind.RECOMMEND) {
+      this.clearSelection();
+    }
+  }
+
   /** 选中遗址移出当前主题（不影响收藏本身） */
   private removeSelectedFromTheme(): void {
     if (this.selectedNodeKind !== GraphNodeKind.HERITAGE || this.selectedNodeId === '') {
@@ -370,7 +461,7 @@ export struct KnowledgeGraph {
 
   private saveTheme(name: string, colorIndex: number): void {
     if (this.themeEditorMode) {
-      ThemeService.renameTheme(this.selectedThemeId, name);
+      ThemeService.renameTheme(this.selectedThemeId, name, colorIndex);
     } else {
       const created: Theme | null = ThemeService.addTheme(name, colorIndex);
       if (created !== null) {
@@ -474,7 +565,7 @@ export struct KnowledgeGraph {
         .onClick(() => {
           this.openManage();
         })
-      Button('重命名')
+      Button('编辑主题')
         .fontSize(13)
         .fontColor('#6D4C41')
         .backgroundColor('#EFEBE9')
@@ -514,6 +605,13 @@ export struct KnowledgeGraph {
             .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.selectedNodeKindLabel())
+            .fontSize(10)
+            .fontColor('#8D6E63')
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .backgroundColor('#F5EFE9')
+            .borderRadius(6)
+            .margin({ left: 6 })
           Text('✕')
             .fontSize(16)
             .fontColor('#8D6E63')
@@ -525,7 +623,7 @@ export struct KnowledgeGraph {
         .width('100%')
 
         if (this.selectedNodeKind === GraphNodeKind.THEME) {
-          Text(`${this.themedHeritages.length} 处遗址已归入该主题`)
+          Text(this.themeCoverageText())
             .fontSize(12)
             .fontColor('#8D6E63')
             .margin({ top: 6 })
@@ -543,6 +641,18 @@ export struct KnowledgeGraph {
             .fontSize(11)
             .fontColor('#8D6E63')
             .margin({ top: 6 })
+          if (this.selectedNodeKind === GraphNodeKind.RECOMMEND) {
+            Text(this.selectedRecommendationReason())
+              .fontSize(11)
+              .fontColor('#8D6E63')
+              .lineHeight(17)
+              .maxLines(3)
+              .width('100%')
+              .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+              .backgroundColor('#FBF7F2')
+              .borderRadius(6)
+              .margin({ top: 8 })
+          }
           Text(this.selectedHeritageSummary())
             .fontSize(12)
             .fontColor('#6D4C41')
@@ -551,6 +661,16 @@ export struct KnowledgeGraph {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .width('100%')
             .margin({ top: 6 })
+          if (this.selectedHeritageHighlights() !== '') {
+            Text(`看点：${this.selectedHeritageHighlights()}`)
+              .fontSize(11)
+              .fontColor('#8D6E63')
+              .lineHeight(17)
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
+              .margin({ top: 6 })
+          }
           Row({ space: 10 }) {
             Button('查看详情')
               .fontSize(13)
@@ -731,7 +851,7 @@ export struct KnowledgeGraph {
                     .border({ width: 1, color: this.showRecommendInGraph ? '#D7CCC8' : '#E0D6CC' })
                     .margin({ left: 8 })
                     .onClick(() => {
-                      this.showRecommendInGraph = !this.showRecommendInGraph;
+                      this.toggleRecommendLayer();
                     })
                   }
                 }
@@ -755,7 +875,7 @@ export struct KnowledgeGraph {
                 })
               }
               .width('100%')
-              .height(360)
+              .height(this.graphHeight)
               .backgroundColor('#FDFBF8')
               .borderRadius(16)
               .clip(true)

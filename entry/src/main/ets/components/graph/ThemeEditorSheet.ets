@@ -1,5 +1,5 @@
 /**
- * 主题编辑器弹层（新建 / 重命名共用）
+ * 主题编辑器弹层（新建 / 编辑共用；C1.5 起重命名也可改主题色）
  */
 
 import { THEME_PALETTE } from '../../model/Theme';
@@ -35,7 +35,7 @@ export struct ThemeEditorSheet {
 
   build() {
     Column() {
-      Text(this.isRename ? '重命名主题' : '新建主题')
+      Text(this.isRename ? '编辑主题' : '新建主题')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor('#3E2723')
@@ -51,29 +51,27 @@ export struct ThemeEditorSheet {
           this.themeNameInput = value;
         })
 
-      if (!this.isRename) {
-        Text('选择主题颜色')
-          .fontSize(13)
-          .fontColor('#8D6E63')
-          .margin({ top: 16 })
-          .alignSelf(ItemAlign.Start)
-        Row() {
-          ForEach(THEME_PALETTE, (color: string, index: number) => {
-            Row()
-              .width(26)
-              .height(26)
-              .borderRadius(13)
-              .backgroundColor(color)
-              .border({ width: 2, color: this.themeColorIndex === index ? '#3E2723' : '#E0D6CC' })
-              .margin({ right: 10 })
-              .onClick(() => {
-                this.themeColorIndex = index;
-              })
-          }, (color: string, index: number) => `${color}-${index}`)
-        }
-        .width('100%')
-        .margin({ top: 10 })
+      Text('主题颜色')
+        .fontSize(13)
+        .fontColor('#8D6E63')
+        .margin({ top: 16 })
+        .alignSelf(ItemAlign.Start)
+      Row() {
+        ForEach(THEME_PALETTE, (color: string, index: number) => {
+          Row()
+            .width(26)
+            .height(26)
+            .borderRadius(13)
+            .backgroundColor(color)
+            .border({ width: 2, color: this.themeColorIndex === index ? '#3E2723' : '#E0D6CC' })
+            .margin({ right: 10 })
+            .onClick(() => {
+              this.themeColorIndex = index;
+            })
+        }, (color: string, index: number) => `${color}-${index}`)
       }
+      .width('100%')
+      .margin({ top: 10 })
 
       Row({ space: 12 }) {
         Button('取消')

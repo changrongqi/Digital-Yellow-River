@@ -5,8 +5,8 @@
  * - relation-graph：核心图数据 / 布局 / 渲染分离，渲染层只做「世界坐标 → 屏幕坐标」变换，
  *   并提供平移、缩放、命中测试与视图复位；
  * - Trilium Notes Note Map：中心根节点 + 周围关系节点，点击节点进入对应内容，相邻节点高亮；
- * - Obsidian Graph View：点按选中后邻接边/节点高亮、其余淡出；缩放较小时标签淡出，
- *   避免小画布上文字互相压盖。
+ * - Obsidian Graph View：点按选中后邻接边/节点高亮、其余淡出；标签做碰撞避让，
+ *   按「选中 > 邻接 > 连接度」优先级逐条放置，避免小画布上文字互相压盖。
  *
  * 交互（手势仲裁由 ArkUI 统一处理，Canvas 子手势优先于外层 Scroll）：
  * - 单指点按节点 = 选中并交给页面展示信息卡；点按空白 = 取消选中；
@@ -32,12 +32,25 @@ import {
 /** 用户缩放范围（视口初始适配范围更窄，见 GraphLayout） */
 const MIN_USER_SCALE: number = 0.45;
 const MAX_USER_SCALE: number = 2.6;
-/** 标签字号（世界坐标 vp） */
+/** 标签字号（屏幕坐标 vp，不随缩放变小） */
 const LABEL_FONT_SIZE: number = 11;
-/** 缩放到该阈值以下时隐藏普通节点标签（Obsidian 文字淡出策略） */
-const LABEL_FADE_SCALE: number = 0.72;
 /** 画布底色（比页面米白更亮一档，衬出节点） */
 const CANVAS_BACKGROUND: string = '#FDFBF8';
+
+/** 标签绘制候选（排序后逐个尝试放置） */
+interface LabelCandidate {
+  node: GraphNode;
+  priority: number; // 0=选中 1=邻接 2=其余
+  alpha: number;
+}
+
+/** 屏幕坐标占位矩形（节点圆或已放置标签） */
+interface LabelBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
 
 @Component
 export struct GraphCanvas {
@@ -243,6 +256,12 @@ export struct GraphCanvas {
   }
 
   private handlePanEnd(): void {
+    if (this.draggingNode !== null) {
+      // 节点被手动移动后包围盒会变化：重算并收敛视口，避免节点被拖出可平移找回的范围
+      this.bounds = computeBounds(this.model);
+      this.clampViewport();
+      this.drawGraph();
+    }
     this.draggingNode = null;
   }
 
@@ -352,20 +371,10 @@ export struct GraphCanvas {
     }
     ctx.restore();
 
-    // 标签最后画在屏幕坐标系：字号不随缩放变小，避免小画布文字不可读
-    for (let i = 0; i < this.model.nodes.length; i++) {
-      const node: GraphNode = this.model.nodes[i];
-      if (node.kind === GraphNodeKind.THEME) {
-        continue;
-      }
-      let alpha: number = 1;
-      if (selected !== null) {
-        const isSelf: boolean = node.key === selected.key;
-        const isNeighbor: boolean = neighbors.get(node.key) === true;
-        alpha = isSelf || isNeighbor ? 1 : 0.28;
-      }
-      this.drawNodeLabel(ctx, node, alpha, selected);
-    }
+    // 文字统一画在屏幕坐标系：字号不随缩放变小，并做碰撞避让
+    this.drawThemeLabel(ctx, selected, neighbors);
+    this.drawNodeLabels(ctx, selected, neighbors);
+    this.drawEmptyHint(ctx);
   }
 
   private findSelectedNode(): GraphNode | null {
@@ -483,7 +492,6 @@ export struct GraphCanvas {
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 2.5;
       ctx.stroke();
-      this.drawThemeText(ctx, node);
     } else if (node.kind === GraphNodeKind.RECOMMEND) {
       ctx.fillStyle = '#FFFFFF';
       ctx.fill();
@@ -519,53 +527,191 @@ export struct GraphCanvas {
     ctx.globalAlpha = 1;
   }
 
-  private drawThemeText(ctx: CanvasRenderingContext2D, node: GraphNode): void {
-    ctx.fillStyle = '#FFFFFF';
+  /** 中心主题文字：屏幕坐标固定字号（缩放只改变圆的大小，不影响可读性） */
+  private drawThemeLabel(ctx: CanvasRenderingContext2D, selected: GraphNode | null,
+    neighbors: Map<string, boolean>): void {
+    const themeNode: GraphNode | null = this.findThemeNode();
+    if (themeNode === null) {
+      return;
+    }
+    const screenX: number = themeNode.x * this.viewScale + this.offsetX;
+    const screenY: number = themeNode.y * this.viewScale + this.offsetY;
+    const screenRadius: number = themeNode.radius * this.viewScale;
+    if (screenRadius < 8) {
+      return;
+    }
+    let alpha: number = 1;
+    if (selected !== null) {
+      const isSelf: boolean = themeNode.key === selected.key;
+      const isNeighbor: boolean = neighbors.get(themeNode.key) === true;
+      alpha = isSelf || isNeighbor ? 1 : 0.28;
+    }
+    ctx.globalAlpha = alpha;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `15vp sans-serif`;
-    const name: string = this.fitLabelByWidth(ctx, node.label, node.radius * 1.55);
-    ctx.fillText(name, node.x, node.y - 3);
-    ctx.font = `10vp sans-serif`;
-    ctx.globalAlpha = ctx.globalAlpha * 0.82;
-    ctx.fillText(`${this.countHeritageNodes()} 处`, node.x, node.y + node.radius * 0.45);
+    ctx.fillStyle = '#FFFFFF';
+    const count: number = this.countHeritageNodes();
+    const hasCount: boolean = count > 0;
+    const titleSize: number = this.clamp(screenRadius * 0.36, 9, 16);
+    ctx.font = `${titleSize}vp sans-serif`;
+    const name: string = this.fitLabelByWidth(ctx, themeNode.label,
+      Math.max(18, screenRadius * 1.55));
+    ctx.fillText(name, screenX, screenY + (hasCount ? -screenRadius * 0.16 : 0));
+    if (hasCount) {
+      ctx.font = `${this.clamp(screenRadius * 0.23, 7, 11)}vp sans-serif`;
+      ctx.globalAlpha = alpha * 0.82;
+      ctx.fillText(`${count} 处`, screenX, screenY + screenRadius * 0.48);
+    }
+    ctx.globalAlpha = 1;
   }
 
-  /** 屏幕坐标标签（字号固定，缩放只影响节点位置与大小） */
-  private drawNodeLabel(ctx: CanvasRenderingContext2D, node: GraphNode,
-    alpha: number, selected: GraphNode | null): void {
-    const isSelected: boolean = selected !== null && selected.key === node.key;
-    if (!isSelected && this.viewScale < LABEL_FADE_SCALE) {
+  /**
+   * 遗址/推荐标签：屏幕坐标固定字号 + 碰撞避让。
+   * 先按「选中 > 邻接 > 连接度」排序，再逐条放入空位；放不下就跳过该条，
+   * 而不是在低缩放时把所有标签整体隐藏（C1.5）。
+   */
+  private drawNodeLabels(ctx: CanvasRenderingContext2D, selected: GraphNode | null,
+    neighbors: Map<string, boolean>): void {
+    // 节点圆先占位：普通标签不得压住任何节点
+    const circles: LabelBox[] = [];
+    for (let i = 0; i < this.model.nodes.length; i++) {
+      const node: GraphNode = this.model.nodes[i];
+      const screenX: number = node.x * this.viewScale + this.offsetX;
+      const screenY: number = node.y * this.viewScale + this.offsetY;
+      const screenRadius: number = node.radius * this.viewScale;
+      const circle: LabelBox = {
+        left: screenX - screenRadius - 2,
+        top: screenY - screenRadius - 2,
+        right: screenX + screenRadius + 2,
+        bottom: screenY + screenRadius + 2
+      };
+      circles.push(circle);
+    }
+
+    const candidates: LabelCandidate[] = [];
+    for (let i = 0; i < this.model.nodes.length; i++) {
+      const node: GraphNode = this.model.nodes[i];
+      if (node.kind === GraphNodeKind.THEME) {
+        continue;
+      }
+      let priority: number = 2;
+      let alpha: number = 1;
+      if (selected !== null) {
+        const isSelf: boolean = node.key === selected.key;
+        const isNeighbor: boolean = neighbors.get(node.key) === true;
+        alpha = isSelf || isNeighbor ? 1 : 0.28;
+        priority = isSelf ? 0 : (isNeighbor ? 1 : 2);
+      }
+      const candidate: LabelCandidate = { node: node, priority: priority, alpha: alpha };
+      candidates.push(candidate);
+    }
+    candidates.sort((a: LabelCandidate, b: LabelCandidate): number => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      if (a.node.degree !== b.node.degree) {
+        return b.node.degree - a.node.degree;
+      }
+      return a.node.key < b.node.key ? -1 : (a.node.key > b.node.key ? 1 : 0);
+    });
+
+    const placed: LabelBox[] = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate: LabelCandidate = candidates[i];
+      const node: GraphNode = candidate.node;
+      const screenX: number = node.x * this.viewScale + this.offsetX;
+      const screenY: number = node.y * this.viewScale + this.offsetY;
+      const screenRadius: number = node.radius * this.viewScale;
+      if (screenRadius < 5) {
+        continue;
+      }
+      ctx.font = `${LABEL_FONT_SIZE}vp sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const maxWidth: number = Math.max(44, screenRadius * 3.4);
+      const label: string = this.fitLabelByWidth(ctx, node.label, maxWidth);
+      const labelWidth: number = ctx.measureText(label).width;
+      // 贴边节点标签内收，避免被画布裁掉（文字仍尽量居中对齐节点）
+      let drawX: number = screenX;
+      if (labelWidth + 8 <= this.canvasWidth) {
+        drawX = this.clamp(screenX, labelWidth / 2 + 4, this.canvasWidth - labelWidth / 2 - 4);
+      } else {
+        drawX = this.canvasWidth / 2;
+      }
+      const labelY: number = screenY + screenRadius + 4;
+      const textBox: LabelBox = {
+        left: drawX - labelWidth / 2 - 3,
+        top: labelY - 2,
+        right: drawX + labelWidth / 2 + 3,
+        bottom: labelY + LABEL_FONT_SIZE + 3
+      };
+      if (textBox.right < 0 || textBox.left > this.canvasWidth ||
+        textBox.bottom < 0 || textBox.top > this.canvasHeight) {
+        continue;
+      }
+      // 选中节点的标签优先保证（允许压住其他节点圆，但不覆盖已放置标签）
+      if (candidate.priority !== 0 && this.intersectsBox(textBox, circles)) {
+        continue;
+      }
+      if (this.intersectsBox(textBox, placed)) {
+        continue;
+      }
+      placed.push(textBox);
+      ctx.globalAlpha = candidate.priority === 0 ? 1 : candidate.alpha * 0.95;
+      // 浅色描边文字：压在连线/节点上仍可读
+      ctx.strokeStyle = CANVAS_BACKGROUND;
+      ctx.lineWidth = 3;
+      ctx.strokeText(label, drawX, labelY);
+      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? '#8D6E63' : '#5D4037';
+      ctx.fillText(label, drawX, labelY);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /** 空主题画布内引导（页面下方已有空态卡，这里补画布内的下一步动作） */
+  private drawEmptyHint(ctx: CanvasRenderingContext2D): void {
+    if (this.model.nodes.length === 0 || this.countHeritageNodes() > 0) {
       return;
     }
-    const screenX: number = node.x * this.viewScale + this.offsetX;
-    const screenY: number = node.y * this.viewScale + this.offsetY;
-    const screenRadius: number = node.radius * this.viewScale;
-    if (screenRadius < 5) {
+    const themeNode: GraphNode | null = this.findThemeNode();
+    if (themeNode === null) {
       return;
     }
-    ctx.font = `${LABEL_FONT_SIZE}vp sans-serif`;
+    const screenX: number = themeNode.x * this.viewScale + this.offsetX;
+    const screenY: number = themeNode.y * this.viewScale + this.offsetY;
+    const screenRadius: number = themeNode.radius * this.viewScale;
+    const hintY: number = screenY + screenRadius + 14;
+    if (hintY + 30 > this.canvasHeight) {
+      return;
+    }
+    ctx.globalAlpha = 1;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const maxWidth: number = Math.max(44, screenRadius * 3.4);
-    const label: string = this.fitLabelByWidth(ctx, node.label, maxWidth);
-    const labelWidth: number = ctx.measureText(label).width;
-    // 贴边节点标签内收，避免被画布裁掉（文字仍尽量居中对齐节点）
-    let drawX: number = screenX;
-    if (labelWidth + 8 <= this.canvasWidth) {
-      drawX = this.clamp(screenX, labelWidth / 2 + 4, this.canvasWidth - labelWidth / 2 - 4);
-    } else {
-      drawX = this.canvasWidth / 2;
+    ctx.font = '11vp sans-serif';
+    ctx.fillStyle = '#8D6E63';
+    ctx.fillText('尚未归入遗址', screenX, hintY);
+    ctx.font = '10vp sans-serif';
+    ctx.fillStyle = '#A1887F';
+    ctx.fillText('点击下方「归类管理」开始构建知识网络', screenX, hintY + 16);
+  }
+
+  private intersectsBox(box: LabelBox, boxes: LabelBox[]): boolean {
+    for (let i = 0; i < boxes.length; i++) {
+      if (box.left < boxes[i].right && box.right > boxes[i].left &&
+        box.top < boxes[i].bottom && box.bottom > boxes[i].top) {
+        return true;
+      }
     }
-    const labelY: number = screenY + screenRadius + 4;
-    // 浅色描边文字：压在连线/节点上仍可读
-    ctx.globalAlpha = isSelected ? 1 : alpha * 0.95;
-    ctx.strokeStyle = CANVAS_BACKGROUND;
-    ctx.lineWidth = 3;
-    ctx.strokeText(label, drawX, labelY);
-    ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? '#8D6E63' : '#5D4037';
-    ctx.fillText(label, drawX, labelY);
-    ctx.globalAlpha = 1;
+    return false;
+  }
+
+  private findThemeNode(): GraphNode | null {
+    for (let i = 0; i < this.model.nodes.length; i++) {
+      if (this.model.nodes[i].kind === GraphNodeKind.THEME) {
+        return this.model.nodes[i];
+      }
+    }
+    return null;
   }
 
   /** 按真实测量宽度截断（英文名同样适用） */

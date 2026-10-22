@@ -1,6 +1,6 @@
 # 踩坑清单（必须遵守，遇坑及时补充）
 
-> 本文件是 [PROJECT_PLAN.md](PROJECT_PLAN.md) 原 §6 的独立分册，原 21 条内容原样迁移（无删改），C1.4 新增第 22 条。
+> 本文件是 [PROJECT_PLAN.md](PROJECT_PLAN.md) 原 §6 的独立分册，原 21 条内容原样迁移（无删改），C1.4 新增第 22 条，C1.5 新增第 23 条。
 > 下文「使用纪律」为硬约束：每个子任务开工前通读全文，编码过程中逐条自查（尤其第 1~5、13、15、16 条），提交前再对照一次；踩到新坑立即补条目并同步 REVISION_LOG.md。
 
 ## 6. 踩坑清单（必须遵守，遇坑及时补充）
@@ -32,3 +32,4 @@
 20. **`layoutWeight` 在无高度约束的容器里会把子组件无限撑高（M1.7 事件页签实测）**：Column 未限定高度时，其内 `Line().layoutWeight(1)` 的竖线被分配到「无限剩余空间」而无限拉伸，连带外层 Row 一起被拉高——时间轴每个条目因此被撑到 280pt+，条目间出现大段空白（截图实测单屏仅 1.5 条）。规则：**`layoutWeight` 只应用于主轴方向有明确约束（父容器固定/占满）的场景**；需要「连接线」时不要用无约束容器里的 layoutWeight，改用内容驱动的分隔（Divider/固定小高度），或给容器显式高度。
 21. **rawfile JSON 正文内嵌引号误用 ASCII 双引号 `"` 会提前闭合字符串，导致 JSON.parse 失败（M1.7 偃师商城深写实测）**：编写 rawfile/heritage_data.json 的事件正文时，把「面朝后市、择中立宫、对称布局」误写成 `"面朝后市..."`（ASCII 引号），字符串在引号处提前闭合，`ConvertFrom-Json`/`JSON.parse` 直接抛 SyntaxError，且 PowerShell 校验报错定位在「column 104」这类误导性位置。规则：**rawfile 与 mock 的 JSON 文本中，正文内嵌引号一律用中文引号「」**（本项目惯例），禁止在字符串值内使用 ASCII 双引号；每批写完先用 PowerShell `ConvertFrom-Json` 校验 rawfile、用 Node 模拟模板求值校验 mock，把 JSON 语法错误拦截在双份同步脚本之前（本次即被 mock 生成脚本的 JSON.parse 首先发现）。
 22. **Canvas 组件三个高频坑（C1.4 图谱重构实测）**：① **Canvas 不会因 @Prop 变化自动重绘**——即使 `@Prop heritages` 已更新，`onReady`/`onAreaChange` 不触发就仍是旧画面；必须给每个影响画面的 @Prop 加 `@Watch` 回调重绘（O9 根因），并对「同对象改字段」（如主题重命名）用版本号兜底。② **自定义组件字段名不能与 CustomComponent 内置属性同名**——本次把视口缩放字段命名为 `scale`，编译报 `Property 'scale' is not assignable to ... CustomComponent`（内置 `scale()` 是通用属性方法）；改用 `viewScale` 等前缀命名，同理避开 `width`/`height`/`position`/`clip`/`opacity` 等。③ **滚动容器内做画布交互不要用裸 `onTouch`**——外层 `Scroll` 的滑动手势会与画布拖动竞争，裸 onTouch 无法稳定抢到手势；改用 `GestureGroup(Exclusive(Tap, Parallel(Pan, Pinch)))` 绑定在 Canvas 上，子组件自定义手势默认优先于父级 Scroll（官方 FAQ：父子同类型手势默认子组件优先），平移/缩放/点选才能各自稳定识别。另附：Canvas 若自行 `fillRect` 铺底色会盖住父卡片 `borderRadius` 圆角，正确做法是 Canvas 不填充、父容器设底色 + `.clip(true)`。
+23. **Heritage 的 era/type/city 是字符串枚举，不能与空串 `''` 比较（C1.5 实测）**：在 GraphLayout/KnowledgeGraph 写 `if (item.era !== '' && item.era === anchor.era)` 时 ArkTS 直接报 `This comparison appears to be unintentional because the types 'HeritageEra' and '""' have no overlap`（HeritageCity/HeritageType 同）——虽然运行值是中文字符串，类型上并不与 `''` 重叠。规则：模型层的这三个字段已保证是合法枚举，**直接做相等比较**；「空值」只存在于未解析 JSON 层，应在 Loader 解析时处理，不要下沉到业务/布局层。

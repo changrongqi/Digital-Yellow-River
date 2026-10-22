@@ -118,8 +118,8 @@ export class ThemeService {
     return theme;
   }
 
-  /** 重命名主题（去重后为空返回 false） */
-  static renameTheme(id: string, name: string): boolean {
+  /** 重命名主题（去重后为空返回 false）；colorIndex >= 0 时同时更新主题色（C1.5） */
+  static renameTheme(id: string, name: string, colorIndex: number = -1): boolean {
     const theme: Theme | null = ThemeService.findTheme(id);
     if (theme === null) {
       return false;
@@ -129,6 +129,9 @@ export class ThemeService {
       return false;
     }
     theme.name = trimmed;
+    if (colorIndex >= 0) {
+      theme.colorIndex = colorIndex;
+    }
     theme.updatedAt = Date.now();
     ThemeService.persist(ThemeService.KEY_THEMES, ThemeService.themesCache);
     SyncService.syncTheme(theme); // C1.3 双写
