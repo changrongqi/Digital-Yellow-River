@@ -9,7 +9,10 @@
  * - 从 getAllNotes()（updatedAt 倒序）按 itemId 聚合出 NoteGroup[]：
  *   遗址名（heritageMap 映射，缺失显示「数据缺失」）+ 笔记数 + 最后编辑时间；
  * - 排序按最后编辑时间倒序（最近写的遗址在最前）；
- * - onPageShow 刷新（从 NoteEdit 返回后更新）；点击行跳详情页带 id（O2）。
+ * - onPageShow 刷新（从 NoteEdit 返回后更新）；M3（第二轮）起订阅
+ *   FavoriteService.onDataChanged，页面停留时远端合并/其它页面变更立即刷新，
+ *   aboutToDisappear 注销监听防泄漏；
+ *   点击行跳详情页带 id（O2）。
  *
  * 预览兜底：rawfile 加载失败（预览器）时注入 MOCK_HERITAGES 构建映射表（只读），
  * 顶部提示条与收藏页行为一致；本页无路由入参，直接预览可看空态/数据态。
@@ -56,6 +59,13 @@ struct MyNotes {
 
   /** itemId → Heritage 映射表（只读；预置数据加载完成后一次构建） */
   private heritageMap: Map<string, Heritage> = new Map();
+  /**
+   * 收藏/笔记数据变化处理器（M3）：远端合并或其它页面新增/删除笔记时，
+   * 页面停留期间也能立即刷新聚合列表。
+   */
+  private dataChangedHandler: () => void = (): void => {
+    this.refreshList();
+  };
 
   aboutToAppear(): void {
     const context = this.getUIContext().getHostContext();
@@ -66,7 +76,13 @@ struct MyNotes {
       return;
     }
     FavoriteService.init(context);
+    // M3：订阅数据变化（收藏页/详情页/远端合并都可能增删笔记），卸载时注销。
+    FavoriteService.onDataChanged(this.dataChangedHandler);
     this.loadHeritages(context);
+  }
+
+  aboutToDisappear(): void {
+    FavoriteService.offDataChanged(this.dataChangedHandler);
   }
 
   /** 页面重新显示（含从 NoteEdit 返回的同页实例）：刷新聚合列表 */
