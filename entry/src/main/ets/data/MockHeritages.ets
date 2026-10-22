@@ -2501,7 +2501,6 @@ const MOCK_JSON: string = `
     }
   },
   {
-{
   "id": "mock-shaolin-01",
   "name": "少林寺常住院",
   "era": "汉唐",
@@ -2764,10 +2763,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-mangshan-01",
   "name": "邙山陵墓群",
   "era": "汉唐",
@@ -3026,10 +3023,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-huanye-01",
   "name": "巩义黄冶三彩窑址",
   "era": "汉唐",
@@ -3280,10 +3275,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-tieta-01",
   "name": "开宝寺塔（铁塔）",
   "era": "宋",
@@ -3527,10 +3520,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-fanta-01",
   "name": "繁塔",
   "era": "宋",
@@ -3773,10 +3764,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-miaodigou-01",
   "name": "庙底沟遗址",
   "era": "仰韶",
@@ -4030,10 +4019,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-hangu-01",
   "name": "函谷关",
   "era": "周",
@@ -4289,10 +4276,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-xishuipo-01",
   "name": "西水坡遗址",
   "era": "仰韶",
@@ -4535,10 +4520,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-huailuan-01",
   "name": "回銮碑",
   "era": "宋",
@@ -4792,10 +4775,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-xiudingsi-01",
   "name": "修定寺塔",
   "era": "汉唐",
@@ -5041,10 +5022,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-wenfeng-01",
   "name": "安阳文峰塔",
   "era": "宋",
@@ -5285,10 +5264,8 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
-{
   "id": "mock-lingquan-01",
   "name": "灵泉寺石窟",
   "era": "汉唐",
@@ -5540,7 +5517,6 @@ const MOCK_JSON: string = `
       }
     ]
   }
-}
   },
   {
     "id": "mock-tokyo-01",
