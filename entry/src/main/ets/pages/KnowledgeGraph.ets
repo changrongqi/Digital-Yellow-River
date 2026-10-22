@@ -17,12 +17,11 @@ import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
 import { Theme, getThemeColor } from '../model/Theme';
-import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { ThemeService } from '../service/ThemeService';
 import { buildThemeRecommendations } from '../utils/ThemeRecommendation';
 import { getEraTheme } from '../utils/EraTheme';
-import { MOCK_HERITAGES } from '../data/MockHeritages';
 import { GraphNodeKind } from '../components/graph/GraphNode';
 import { GraphCanvas } from '../components/graph/GraphCanvas';
 import { NodeInfoPanel } from '../components/graph/NodeInfoPanel';
@@ -132,23 +131,12 @@ export struct KnowledgeGraph {
     }
   }
 
-  /** 加载预置遗产数据构建映射表 */
+  /** 加载预置遗产数据构建映射表（M4：repository 统一加载并缓存 id 映射） */
   private async loadHeritages(context: common.Context): Promise<void> {
-    let list: Heritage[] = [];
-    try {
-      list = await HeritageDataLoader.loadHeritageList(context);
-      this.isMockData = false;
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'load heritages failed, fallback to mock: %{public}s', JSON.stringify(err));
-      list = MOCK_HERITAGES;
-      this.isMockData = true;
-    }
-    const map: Map<string, Heritage> = new Map();
-    for (let i = 0; i < list.length; i++) {
-      map.set(list[i].id, list[i]);
-    }
-    this.heritageMap = map;
-    this.allHeritage = list;
+    const result: HeritageLoadResult = await HeritageRepository.load(context);
+    this.heritageMap = result.byId;
+    this.allHeritage = result.list;
+    this.isMockData = result.isMock;
     this.isLoading = false;
     this.loadThemes();
   }

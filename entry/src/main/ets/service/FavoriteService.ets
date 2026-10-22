@@ -36,6 +36,7 @@ import { Tombstone } from '../model/Tombstone';
 import { SyncService, RemoteChanges } from './SyncService';
 import { DeviceIdentity } from './DeviceIdentity';
 import { nextUpdatedAt } from '../utils/LwwVersion';
+import { JsonField } from '../utils/JsonField';
 
 const DOMAIN = 0x0000;
 const TAG = 'FavoriteService';
@@ -840,8 +841,8 @@ export class FavoriteService {
   private static parseFavorite(obj: object, index: number): Favorite | null {
     try {
       const rec = obj as Record<string, Object>;
-      const id: string = FavoriteService.getStr(rec, 'id');
-      const itemId: string = FavoriteService.getStr(rec, 'itemId');
+      const id: string = JsonField.getStr(rec, 'id');
+      const itemId: string = JsonField.getStr(rec, 'itemId');
       if (id === '' || itemId === '') {
         hilog.warn(DOMAIN, TAG, 'skip invalid favorite #%{public}d', index);
         return null;
@@ -849,11 +850,11 @@ export class FavoriteService {
       const fav: Favorite = {
         id: id,
         itemId: itemId,
-        tags: FavoriteService.getStrArray(rec, 'tags'),
-        themeIds: FavoriteService.getStrArray(rec, 'themeIds'),
-        createdAt: FavoriteService.getNum(rec, 'createdAt'),
-        updatedAt: FavoriteService.getNum(rec, 'updatedAt'),
-        deviceId: FavoriteService.getStr(rec, 'deviceId')
+        tags: JsonField.getStrArray(rec, 'tags'),
+        themeIds: JsonField.getStrArray(rec, 'themeIds'),
+        createdAt: JsonField.getNum(rec, 'createdAt'),
+        updatedAt: JsonField.getNum(rec, 'updatedAt'),
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return fav;
     } catch (err) {
@@ -886,9 +887,9 @@ export class FavoriteService {
   private static parseNote(obj: object, index: number): Note | null {
     try {
       const rec = obj as Record<string, Object>;
-      const id: string = FavoriteService.getStr(rec, 'id');
-      const itemId: string = FavoriteService.getStr(rec, 'itemId');
-      const content: string = FavoriteService.getStr(rec, 'content');
+      const id: string = JsonField.getStr(rec, 'id');
+      const itemId: string = JsonField.getStr(rec, 'itemId');
+      const content: string = JsonField.getStr(rec, 'content');
       if (id === '' || itemId === '' || content === '') {
         hilog.warn(DOMAIN, TAG, 'skip invalid note #%{public}d', index);
         return null;
@@ -897,9 +898,9 @@ export class FavoriteService {
         id: id,
         itemId: itemId,
         content: content,
-        createdAt: FavoriteService.getNum(rec, 'createdAt'),
-        updatedAt: FavoriteService.getNum(rec, 'updatedAt'),
-        deviceId: FavoriteService.getStr(rec, 'deviceId')
+        createdAt: JsonField.getNum(rec, 'createdAt'),
+        updatedAt: JsonField.getNum(rec, 'updatedAt'),
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return note;
     } catch (err) {
@@ -932,8 +933,8 @@ export class FavoriteService {
   private static parseTombstone(obj: object, index: number): Tombstone | null {
     try {
       const rec = obj as Record<string, Object>;
-      const id: string = FavoriteService.getStr(rec, 'id');
-      const deletedAt: number = FavoriteService.getNum(rec, 'deletedAt');
+      const id: string = JsonField.getStr(rec, 'id');
+      const deletedAt: number = JsonField.getNum(rec, 'deletedAt');
       if (id === '' || deletedAt <= 0) {
         hilog.warn(DOMAIN, TAG, 'skip invalid tombstone #%{public}d', index);
         return null;
@@ -941,41 +942,12 @@ export class FavoriteService {
       const tomb: Tombstone = {
         id: id,
         deletedAt: deletedAt,
-        deviceId: FavoriteService.getStr(rec, 'deviceId')
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return tomb;
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'parse tombstone #%{public}d error: %{public}s', index, JSON.stringify(err));
       return null;
     }
-  }
-
-  private static getStr(rec: Record<string, Object>, key: string): string {
-    const v: Object | undefined = rec[key];
-    if (v === undefined || v === null) {
-      return '';
-    }
-    return String(v);
-  }
-
-  private static getNum(rec: Record<string, Object>, key: string): number {
-    const v: Object | undefined = rec[key];
-    if (typeof v === 'number') {
-      return v as number;
-    }
-    return 0;
-  }
-
-  private static getStrArray(rec: Record<string, Object>, key: string): string[] {
-    const v: Object | undefined = rec[key];
-    if (v === undefined || v === null) {
-      return [];
-    }
-    const arr = v as Object[];
-    const result: string[] = [];
-    for (let i = 0; i < arr.length; i++) {
-      result.push(String(arr[i]));
-    }
-    return result;
   }
 }

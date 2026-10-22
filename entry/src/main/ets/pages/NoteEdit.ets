@@ -22,16 +22,11 @@
  */
 
 import { router } from '@kit.ArkUI';
-import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Heritage } from '../model/Heritage';
 import { Note } from '../model/Note';
-import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDateTime } from '../utils/TimeFormat';
-import { MOCK_HERITAGES } from '../data/MockHeritages';
-
-const DOMAIN = 0x0000;
-const TAG = 'NoteEdit';
 
 @Entry
 @Component
@@ -82,25 +77,11 @@ struct NoteEdit {
 
   /** 加载条目名（语境行）+ 编辑模式回填原笔记 */
   private async loadContext(): Promise<void> {
-    const hostContext = this.getUIContext().getHostContext();
-    if (hostContext === undefined) {
-      hilog.error(DOMAIN, TAG, 'host context unavailable');
-      this.isLoading = false;
-      return;
-    }
-    let list: Heritage[] = [];
-    try {
-      list = await HeritageDataLoader.loadHeritageList(hostContext);
-    } catch (err) {
-      // 预览器无法读取 rawfile：注入示例数据兜底（与发现页/收藏页行为一致，只读）
-      hilog.error(DOMAIN, TAG, 'load failed, fallback to mock: %{public}s', JSON.stringify(err));
-      list = MOCK_HERITAGES;
-    }
-    for (let i = 0; i < list.length; i++) {
-      if (list[i].id === this.itemId) {
-        this.itemTitle = list[i].name;
-        break;
-      }
+    // M4：统一走 HeritageRepository（rawfile 优先、失败注入 mock、id 映射缓存）。
+    const result: HeritageLoadResult = await HeritageRepository.load(this.getUIContext().getHostContext());
+    const heritage: Heritage | undefined = result.byId.get(this.itemId);
+    if (heritage !== undefined) {
+      this.itemTitle = heritage.name;
     }
     // 编辑模式：按 noteId 回填正文与时间戳（从服务层重新取数，数据单一来源）
     if (this.noteId !== '') {

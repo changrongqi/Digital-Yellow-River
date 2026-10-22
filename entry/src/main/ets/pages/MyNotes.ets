@@ -14,7 +14,7 @@
  *   aboutToDisappear 注销监听防泄漏；
  *   点击行跳详情页带 id（O2）。
  *
- * 预览兜底：rawfile 加载失败（预览器）时注入 MOCK_HERITAGES 构建映射表（只读），
+ * 预览兜底：rawfile 加载失败（预览器）时由 HeritageRepository 注入 MOCK_HERITAGES 构建映射表（只读），
  * 顶部提示条与收藏页行为一致；本页无路由入参，直接预览可看空态/数据态。
  */
 
@@ -23,10 +23,9 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
 import { Note } from '../model/Note';
-import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDateTime } from '../utils/TimeFormat';
-import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
 const TAG = 'MyNotes';
@@ -91,20 +90,9 @@ struct MyNotes {
   }
 
   private async loadHeritages(context: common.Context): Promise<void> {
-    let list: Heritage[] = [];
-    try {
-      list = await HeritageDataLoader.loadHeritageList(context);
-      this.isMockData = false;
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'load heritages failed, fallback to mock: %{public}s', JSON.stringify(err));
-      list = MOCK_HERITAGES;
-      this.isMockData = true;
-    }
-    const map: Map<string, Heritage> = new Map();
-    for (let i = 0; i < list.length; i++) {
-      map.set(list[i].id, list[i]);
-    }
-    this.heritageMap = map;
+    const result: HeritageLoadResult = await HeritageRepository.load(context);
+    this.heritageMap = result.byId;
+    this.isMockData = result.isMock;
     this.isLoading = false;
     this.refreshList();
   }

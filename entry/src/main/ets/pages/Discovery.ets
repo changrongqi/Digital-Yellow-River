@@ -19,8 +19,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { router } from '@kit.ArkUI';
 import { Heritage } from '../model/Heritage';
 import { HeritageEra, HeritageType, HeritageCity } from '../model/Types';
-import { HeritageDataLoader } from '../data/HeritageDataLoader';
-import { MOCK_HERITAGES } from '../data/MockHeritages';
+import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 
 const DOMAIN = 0x0000;
 const TAG = 'Discovery';
@@ -119,26 +118,14 @@ export struct Discovery {
   }
 
   private async loadData(): Promise<void> {
-    try {
-      const hostContext = this.getUIContext().getHostContext();
-      if (hostContext === undefined) {
-        throw new Error('host context unavailable');
-      }
-      const list: Heritage[] = await HeritageDataLoader.loadHeritageList(hostContext);
-      this.heritageList = list;
-      this.loadFailed = false;
-      this.isMockData = false;
-      hilog.info(DOMAIN, TAG, 'render %{public}d heritages', list.length);
-    } catch (err) {
-      // 预览器无法访问 rawfile 时会走到这里：注入示例数据保证 UI 可调试。
-      // 真机正常走 rawfile，不受影响；万一真机失败，列表顶部有「示例数据」标注。
-      hilog.error(DOMAIN, TAG, 'load failed, fallback to mock: %{public}s', JSON.stringify(err));
-      this.heritageList = MOCK_HERITAGES;
-      this.loadFailed = true;
-      this.isMockData = true;
-    } finally {
-      this.isLoading = false;
-    }
+    // M4：统一走 HeritageRepository（rawfile 优先、失败注入 mock、id 映射缓存），页面不再写兜底。
+    const result: HeritageLoadResult = await HeritageRepository.load(this.getUIContext().getHostContext());
+    this.heritageList = result.list;
+    this.loadFailed = result.isMock;
+    this.isMockData = result.isMock;
+    this.isLoading = false;
+    hilog.info(DOMAIN, TAG, 'render %{public}d heritages (mock=%{public}s)',
+      result.list.length, result.isMock ? 'true' : 'false');
   }
 
   /**

@@ -36,6 +36,7 @@ import { Theme } from '../model/Theme';
 import { Tombstone } from '../model/Tombstone';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
 import { PermissionService } from './PermissionService';
+import { JsonField } from '../utils/JsonField';
 
 const DOMAIN = 0x0000;
 const TAG = 'SyncService';
@@ -686,11 +687,11 @@ export class SyncService {
   private static parseTombstone(text: string, key: string): Tombstone | null {
     try {
       const rec = JSON.parse(text) as Record<string, Object>;
-      const deletedAt: number = SyncService.getNum(rec, 'deletedAt');
+      const deletedAt: number = JsonField.getNum(rec, 'deletedAt');
       if (deletedAt <= 0) {
         return null;
       }
-      const id: string = SyncService.getStr(rec, 'id');
+      const id: string = JsonField.getStr(rec, 'id');
       if (id === '') {
         hilog.warn(DOMAIN, TAG, 'skip invalid remote tombstone %{public}s', key);
         return null;
@@ -698,7 +699,7 @@ export class SyncService {
       const tomb: Tombstone = {
         id: id,
         deletedAt: deletedAt,
-        deviceId: SyncService.getStr(rec, 'deviceId')
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return tomb;
     } catch (err) {
@@ -710,8 +711,8 @@ export class SyncService {
   private static parseFavoriteFromWire(text: string, key: string): Favorite | null {
     try {
       const rec = JSON.parse(text) as Record<string, Object>;
-      const id: string = SyncService.getStr(rec, 'id');
-      const itemId: string = SyncService.getStr(rec, 'itemId');
+      const id: string = JsonField.getStr(rec, 'id');
+      const itemId: string = JsonField.getStr(rec, 'itemId');
       if (id === '' || itemId === '') {
         hilog.warn(DOMAIN, TAG, 'skip invalid remote favorite %{public}s', key);
         return null;
@@ -719,11 +720,11 @@ export class SyncService {
       const fav: Favorite = {
         id: id,
         itemId: itemId,
-        tags: SyncService.getStrArray(rec, 'tags'),
-        themeIds: SyncService.getStrArray(rec, 'themeIds'),
-        createdAt: SyncService.getNum(rec, 'createdAt'),
-        updatedAt: SyncService.getNum(rec, 'updatedAt'),
-        deviceId: SyncService.getStr(rec, 'deviceId')
+        tags: JsonField.getStrArray(rec, 'tags'),
+        themeIds: JsonField.getStrArray(rec, 'themeIds'),
+        createdAt: JsonField.getNum(rec, 'createdAt'),
+        updatedAt: JsonField.getNum(rec, 'updatedAt'),
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return fav;
     } catch (err) {
@@ -735,9 +736,9 @@ export class SyncService {
   private static parseNoteFromWire(text: string, key: string): Note | null {
     try {
       const rec = JSON.parse(text) as Record<string, Object>;
-      const id: string = SyncService.getStr(rec, 'id');
-      const itemId: string = SyncService.getStr(rec, 'itemId');
-      const content: string = SyncService.getStr(rec, 'content');
+      const id: string = JsonField.getStr(rec, 'id');
+      const itemId: string = JsonField.getStr(rec, 'itemId');
+      const content: string = JsonField.getStr(rec, 'content');
       if (id === '' || itemId === '' || content === '') {
         hilog.warn(DOMAIN, TAG, 'skip invalid remote note %{public}s', key);
         return null;
@@ -746,9 +747,9 @@ export class SyncService {
         id: id,
         itemId: itemId,
         content: content,
-        createdAt: SyncService.getNum(rec, 'createdAt'),
-        updatedAt: SyncService.getNum(rec, 'updatedAt'),
-        deviceId: SyncService.getStr(rec, 'deviceId')
+        createdAt: JsonField.getNum(rec, 'createdAt'),
+        updatedAt: JsonField.getNum(rec, 'updatedAt'),
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return note;
     } catch (err) {
@@ -760,8 +761,8 @@ export class SyncService {
   private static parseThemeFromWire(text: string, key: string): Theme | null {
     try {
       const rec = JSON.parse(text) as Record<string, Object>;
-      const id: string = SyncService.getStr(rec, 'id');
-      const name: string = SyncService.getStr(rec, 'name');
+      const id: string = JsonField.getStr(rec, 'id');
+      const name: string = JsonField.getStr(rec, 'name');
       if (id === '' || name === '') {
         hilog.warn(DOMAIN, TAG, 'skip invalid remote theme %{public}s', key);
         return null;
@@ -769,44 +770,15 @@ export class SyncService {
       const theme: Theme = {
         id: id,
         name: name,
-        colorIndex: SyncService.getNum(rec, 'colorIndex'),
-        createdAt: SyncService.getNum(rec, 'createdAt'),
-        updatedAt: SyncService.getNum(rec, 'updatedAt'),
-        deviceId: SyncService.getStr(rec, 'deviceId')
+        colorIndex: JsonField.getNum(rec, 'colorIndex'),
+        createdAt: JsonField.getNum(rec, 'createdAt'),
+        updatedAt: JsonField.getNum(rec, 'updatedAt'),
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return theme;
     } catch (err) {
       hilog.error(DOMAIN, TAG, 'parse remote theme %{public}s failed: %{public}s', key, JSON.stringify(err));
       return null;
     }
-  }
-
-  private static getStr(rec: Record<string, Object>, key: string): string {
-    const v: Object | undefined = rec[key];
-    if (v === undefined || v === null) {
-      return '';
-    }
-    return String(v);
-  }
-
-  private static getNum(rec: Record<string, Object>, key: string): number {
-    const v: Object | undefined = rec[key];
-    if (typeof v === 'number') {
-      return v as number;
-    }
-    return 0;
-  }
-
-  private static getStrArray(rec: Record<string, Object>, key: string): string[] {
-    const v: Object | undefined = rec[key];
-    if (v === undefined || v === null) {
-      return [];
-    }
-    const arr = v as Object[];
-    const result: string[] = [];
-    for (let i = 0; i < arr.length; i++) {
-      result.push(String(arr[i]));
-    }
-    return result;
   }
 }

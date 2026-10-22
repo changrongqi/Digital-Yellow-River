@@ -13,6 +13,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { HeritageEra, HeritageType, HeritageCity, isValidEra, isValidType, isValidCity } from '../model/Types';
 import { Heritage, HeritageDetail, HeritageEvent, Poem, SpecItem, Artifact, TourismInfo, TourismGuide, HeritageImage } from '../model/Heritage';
+import { JsonField } from '../utils/JsonField';
 
 const DOMAIN = 0x0000;
 const TAG = 'HeritageDataLoader';
@@ -83,29 +84,34 @@ export class HeritageDataLoader {
   private static parseHeritage(obj: object, index: number): Heritage | null {
     try {
       const rec = obj as Record<string, Object>;
-      const id: string = HeritageDataLoader.getStr(rec, 'id');
-      const eraStr: string = HeritageDataLoader.getStr(rec, 'era');
-      const typeStr: string = HeritageDataLoader.getStr(rec, 'type');
-      const cityStr: string = HeritageDataLoader.getStr(rec, 'city');
+      const id: string = JsonField.getStr(rec, 'id');
+      const eraStr: string = JsonField.getStr(rec, 'era');
+      const typeStr: string = JsonField.getStr(rec, 'type');
+      const cityStr: string = JsonField.getStr(rec, 'city');
       if (id === '' || !isValidEra(eraStr) || !isValidType(typeStr) || !isValidCity(cityStr)) {
         hilog.warn(DOMAIN, TAG, 'skip invalid item #%{public}d', index);
         return null;
       }
 
-      const detailRec = rec['detail'] as Record<string, Object> | undefined;
+      // M4：detail 缺失/null/非对象时使用空 detail，不能丢弃整条数据（原 null 会进入 getStr 抛错）。
       const emptyDetail: Record<string, Object> = {};
-      if (detailRec === undefined || detailRec === null) {
+      const detailValue: Object | undefined = rec['detail'];
+      let detailObj: Record<string, Object> = emptyDetail;
+      if (detailValue === undefined || detailValue === null) {
         hilog.warn(DOMAIN, TAG, 'item %{public}s has no detail, use empty', id);
+      } else if (typeof detailValue === 'object' && !Array.isArray(detailValue)) {
+        detailObj = detailValue as Record<string, Object>;
+      } else {
+        hilog.warn(DOMAIN, TAG, 'item %{public}s has invalid detail, use empty', id);
       }
-      const detailObj: Record<string, Object> = detailRec === undefined ? emptyDetail : detailRec;
 
       const detail: HeritageDetail = {
-        intro: HeritageDataLoader.getStr(detailObj, 'intro'),
-        discovery: HeritageDataLoader.getStr(detailObj, 'discovery'),
+        intro: JsonField.getStr(detailObj, 'intro'),
+        discovery: JsonField.getStr(detailObj, 'discovery'),
         events: HeritageDataLoader.getEventArray(detailObj, 'events'),
         poems: HeritageDataLoader.getPoemArray(detailObj, 'poems'),
         tourism: HeritageDataLoader.getTourism(detailObj, 'tourism'),
-        highlights: HeritageDataLoader.getStrArray(detailObj, 'highlights'),
+        highlights: JsonField.getStrArray(detailObj, 'highlights'),
         specs: HeritageDataLoader.getSpecArray(detailObj, 'specs'),
         artifacts: HeritageDataLoader.getArtifactArray(detailObj, 'artifacts'),
         images: HeritageDataLoader.getImageArray(detailObj, 'images')
@@ -113,12 +119,12 @@ export class HeritageDataLoader {
 
       const item: Heritage = {
         id: id,
-        name: HeritageDataLoader.getStr(rec, 'name'),
+        name: JsonField.getStr(rec, 'name'),
         era: eraStr as HeritageEra,
         type: typeStr as HeritageType,
         city: cityStr as HeritageCity,
-        coverImage: HeritageDataLoader.getStr(rec, 'coverImage'),
-        summary: HeritageDataLoader.getStr(rec, 'summary'),
+        coverImage: JsonField.getStr(rec, 'coverImage'),
+        summary: JsonField.getStr(rec, 'summary'),
         detail: detail
       };
       return item;
@@ -126,27 +132,6 @@ export class HeritageDataLoader {
       hilog.error(DOMAIN, TAG, 'parse error #%{public}d, detail: %{public}s', index, JSON.stringify(err));
       return null;
     }
-  }
-
-  private static getStr(rec: Record<string, Object>, key: string): string {
-    const v: Object | undefined = rec[key];
-    if (v === undefined || v === null) {
-      return '';
-    }
-    return String(v);
-  }
-
-  private static getStrArray(rec: Record<string, Object>, key: string): string[] {
-    const v: Object | undefined = rec[key];
-    if (v === undefined || v === null) {
-      return [];
-    }
-    const arr = v as Object[];
-    const result: string[] = [];
-    for (let i = 0; i < arr.length; i++) {
-      result.push(String(arr[i]));
-    }
-    return result;
   }
 
   /**
@@ -190,21 +175,21 @@ export class HeritageDataLoader {
         });
       } else {
         const obj = item as Record<string, Object>;
-        const title: string = HeritageDataLoader.getStr(obj, 'title');
+        const title: string = JsonField.getStr(obj, 'title');
         if (title === '') {
           continue; // 无标题的事件项跳过
         }
         result.push({
-          year: HeritageDataLoader.getStr(obj, 'year'),
+          year: JsonField.getStr(obj, 'year'),
           title: title,
-          summary: HeritageDataLoader.getStr(obj, 'summary'),
-          background: HeritageDataLoader.getStr(obj, 'background'),
-          process: HeritageDataLoader.getStr(obj, 'process'),
-          impact: HeritageDataLoader.getStr(obj, 'impact'),
-          figures: HeritageDataLoader.getStrArray(obj, 'figures'),
-          artifacts: HeritageDataLoader.getStrArray(obj, 'artifacts'),
-          furtherReading: HeritageDataLoader.getStr(obj, 'furtherReading'),
-          commentary: HeritageDataLoader.getStr(obj, 'commentary'),
+          summary: JsonField.getStr(obj, 'summary'),
+          background: JsonField.getStr(obj, 'background'),
+          process: JsonField.getStr(obj, 'process'),
+          impact: JsonField.getStr(obj, 'impact'),
+          figures: JsonField.getStrArray(obj, 'figures'),
+          artifacts: JsonField.getStrArray(obj, 'artifacts'),
+          furtherReading: JsonField.getStr(obj, 'furtherReading'),
+          commentary: JsonField.getStr(obj, 'commentary'),
           images: HeritageDataLoader.getImageArray(obj, 'images')
         });
       }
@@ -222,9 +207,9 @@ export class HeritageDataLoader {
     for (let i = 0; i < arr.length; i++) {
       const poemObj = arr[i] as Record<string, Object>;
       const poem: Poem = {
-        title: HeritageDataLoader.getStr(poemObj, 'title'),
-        author: HeritageDataLoader.getStr(poemObj, 'author'),
-        content: HeritageDataLoader.getStr(poemObj, 'content')
+        title: JsonField.getStr(poemObj, 'title'),
+        author: JsonField.getStr(poemObj, 'author'),
+        content: JsonField.getStr(poemObj, 'content')
       };
       result.push(poem);
     }
@@ -241,13 +226,13 @@ export class HeritageDataLoader {
     const result: SpecItem[] = [];
     for (let i = 0; i < arr.length; i++) {
       const obj = arr[i] as Record<string, Object>;
-      const label: string = HeritageDataLoader.getStr(obj, 'label');
+      const label: string = JsonField.getStr(obj, 'label');
       if (label === '') {
         continue; // 无名称的档案项跳过
       }
       const spec: SpecItem = {
         label: label,
-        value: HeritageDataLoader.getStr(obj, 'value')
+        value: JsonField.getStr(obj, 'value')
       };
       result.push(spec);
     }
@@ -264,13 +249,13 @@ export class HeritageDataLoader {
     const result: Artifact[] = [];
     for (let i = 0; i < arr.length; i++) {
       const obj = arr[i] as Record<string, Object>;
-      const name: string = HeritageDataLoader.getStr(obj, 'name');
+      const name: string = JsonField.getStr(obj, 'name');
       if (name === '') {
         continue; // 无名称的文物项跳过
       }
       const artifact: Artifact = {
         name: name,
-        desc: HeritageDataLoader.getStr(obj, 'desc')
+        desc: JsonField.getStr(obj, 'desc')
       };
       result.push(artifact);
     }
@@ -302,16 +287,16 @@ export class HeritageDataLoader {
     const obj = v as Record<string, Object>;
     const guideObj = obj['guide'] as Record<string, Object> | undefined;
     const guide: TourismGuide = guideObj === undefined || guideObj === null ? emptyGuide : {
-      hours: HeritageDataLoader.getStr(guideObj, 'hours'),
-      tickets: HeritageDataLoader.getStr(guideObj, 'tickets'),
-      contact: HeritageDataLoader.getStr(guideObj, 'contact'),
-      address: HeritageDataLoader.getStr(guideObj, 'address')
+      hours: JsonField.getStr(guideObj, 'hours'),
+      tickets: JsonField.getStr(guideObj, 'tickets'),
+      contact: JsonField.getStr(guideObj, 'contact'),
+      address: JsonField.getStr(guideObj, 'address')
     };
     const info: TourismInfo = {
-      overview: HeritageDataLoader.getStr(obj, 'overview'),
+      overview: JsonField.getStr(obj, 'overview'),
       guide: guide,
-      itinerary: HeritageDataLoader.getStr(obj, 'itinerary'),
-      interpretation: HeritageDataLoader.getStr(obj, 'interpretation')
+      itinerary: JsonField.getStr(obj, 'itinerary'),
+      interpretation: JsonField.getStr(obj, 'interpretation')
     };
     return info;
   }
@@ -329,15 +314,15 @@ export class HeritageDataLoader {
     const result: HeritageImage[] = [];
     for (let i = 0; i < arr.length; i++) {
       const obj = arr[i] as Record<string, Object>;
-      const path: string = HeritageDataLoader.getStr(obj, 'path');
-      const caption: string = HeritageDataLoader.getStr(obj, 'caption');
+      const path: string = JsonField.getStr(obj, 'path');
+      const caption: string = JsonField.getStr(obj, 'caption');
       if (path === '' && caption === '') {
         continue; // 全空的项跳过
       }
       const img: HeritageImage = {
         path: path,
         caption: caption,
-        source: HeritageDataLoader.getStr(obj, 'source')
+        source: JsonField.getStr(obj, 'source')
       };
       result.push(img);
     }

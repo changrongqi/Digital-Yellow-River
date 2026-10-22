@@ -2,7 +2,7 @@
  * 事件子详情页（M1.8）。
  *
  * 路由：遗址详情页「事件」页签点击某个历史事件 router.pushUrl('pages/EventDetail',
- * { heritageId, eventIndex }) 进入；本页按 heritageId 从 HeritageDataLoader 重新取数
+ * { heritageId, eventIndex }) 进入；本页按 heritageId 从 HeritageRepository 重新取数
  * （数据单一来源，与 Detail 页一致），再取 events[eventIndex] 做专题讲解。
  *
  * 专题结构（计划书 M1.8 要求，M1.9 增补）：
@@ -17,15 +17,10 @@
  */
 
 import { router } from '@kit.ArkUI';
-import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Heritage, HeritageEvent } from '../model/Heritage';
-import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { getEraTheme } from '../utils/EraTheme';
-import { MOCK_HERITAGES } from '../data/MockHeritages';
 import { ImageGallery } from '../components/ImageGallery';
-
-const DOMAIN = 0x0000;
-const TAG = 'EventDetail';
 
 @Entry
 @Component
@@ -54,32 +49,13 @@ struct EventDetail {
   }
 
   private async loadData(): Promise<void> {
-    try {
-      const hostContext = this.getUIContext().getHostContext();
-      if (hostContext === undefined) {
-        throw new Error('host context unavailable');
-      }
-      const list: Heritage[] = await HeritageDataLoader.loadHeritageList(hostContext);
-      this.heritage = this.findById(list, this.heritageId);
-      this.isMockData = false;
-    } catch (err) {
-      // 预览器无法访问 rawfile：注入示例数据兜底（与详情页同源）
-      hilog.error(DOMAIN, TAG, 'load failed, fallback to mock: %{public}s', JSON.stringify(err));
-      this.heritage = this.findById(MOCK_HERITAGES, this.heritageId);
-      this.isMockData = true;
-    } finally {
-      this.isLoading = false;
-      this.event = this.pickEvent();
-    }
-  }
-
-  private findById(list: Heritage[], id: string): Heritage | null {
-    for (let i = 0; i < list.length; i++) {
-      if (list[i].id === id) {
-        return list[i];
-      }
-    }
-    return null;
+    // M4：统一走 HeritageRepository（rawfile 优先、失败注入 mock、id 映射缓存）。
+    const result: HeritageLoadResult = await HeritageRepository.load(this.getUIContext().getHostContext());
+    const found: Heritage | undefined = result.byId.get(this.heritageId);
+    this.heritage = found === undefined ? null : found;
+    this.isMockData = result.isMock;
+    this.isLoading = false;
+    this.event = this.pickEvent();
   }
 
   /** 从当前遗址取 events[eventIndex]，越界/缺失返回 null（不崩溃） */

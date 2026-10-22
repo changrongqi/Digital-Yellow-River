@@ -2,7 +2,7 @@
  * 详情页（M1.5 建立骨架，M4.0 信息架构与视觉改版）。
  *
  * 路由：发现页/收藏页/我的笔记列表点击 router.pushUrl('pages/Detail', { id }) 进入；
- * 本页按 id 从 HeritageDataLoader 重新取数（数据单一来源，便于 M2/M3 联动）。
+ * 本页按 id 从 HeritageRepository（内部 HeritageDataLoader）重新取数（数据单一来源，便于 M2/M3 联动）。
  *
  * M4.0 改版（用户反馈「详情页简陋」，方向经确认：布局重构 + 年代主题色，克制低饱和）：
  * - 英雄横幅：按年代取主题色渐变（utils/EraTheme：仰韶彩陶红/龙山黑陶灰/夏商青铜绿/
@@ -29,12 +29,11 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Heritage, HeritageEvent, SpecItem, Artifact } from '../model/Heritage';
 import { Note } from '../model/Note';
 import { Favorite } from '../model/Favorite';
-import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { getEraTheme } from '../utils/EraTheme';
 import { formatDateTime } from '../utils/TimeFormat';
 import { recommendHeritages } from '../utils/Recommendation';
-import { MOCK_HERITAGES } from '../data/MockHeritages';
 import { ImageGallery } from '../components/ImageGallery';
 
 const DOMAIN = 0x0000;
@@ -97,35 +96,14 @@ struct Detail {
   }
 
   private async loadData(): Promise<void> {
-    try {
-      const hostContext = this.getUIContext().getHostContext();
-      if (hostContext === undefined) {
-        throw new Error('host context unavailable');
-      }
-      const list: Heritage[] = await HeritageDataLoader.loadHeritageList(hostContext);
-      this.allHeritage = list;
-      this.heritage = this.findById(list, this.targetId);
-      this.isMockData = false;
-      this.refreshRecommendations();
-    } catch (err) {
-      // 预览器无法访问 rawfile：注入示例数据兜底（与发现页同源）
-      hilog.error(DOMAIN, TAG, 'load failed, fallback to mock: %{public}s', JSON.stringify(err));
-      this.allHeritage = MOCK_HERITAGES;
-      this.heritage = this.findById(MOCK_HERITAGES, this.targetId);
-      this.isMockData = true;
-      this.refreshRecommendations();
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  private findById(list: Heritage[], id: string): Heritage | null {
-    for (let i = 0; i < list.length; i++) {
-      if (list[i].id === id) {
-        return list[i];
-      }
-    }
-    return null;
+    // M4：统一走 HeritageRepository（rawfile 优先、失败注入 mock、id 映射缓存），页面不再写兜底。
+    const result: HeritageLoadResult = await HeritageRepository.load(this.getUIContext().getHostContext());
+    this.allHeritage = result.list;
+    const found: Heritage | undefined = result.byId.get(this.targetId);
+    this.heritage = found === undefined ? null : found;
+    this.isMockData = result.isMock;
+    this.isLoading = false;
+    this.refreshRecommendations();
   }
 
   /** 切换收藏状态（toggleFavorite 同步完成，按钮样式随 isFav 即时反转） */

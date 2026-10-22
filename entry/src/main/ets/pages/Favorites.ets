@@ -3,7 +3,7 @@
  *
  * 数据流（单一数据源 = FavoriteService，计划书 §3 分层约定）：
  * - aboutToAppear：FavoriteService.init(context)（幂等）→ 加载预置遗产映射表
- *   （HeritageDataLoader 进程内缓存）→ 组装分组显示模型；groups 用 @State 整体赋值刷新（踩坑 5）；
+ *   （HeritageRepository 统一加载，进程内缓存）→ 组装分组显示模型；groups 用 @State 整体赋值刷新（踩坑 5）；
  * - 一切变更（取消收藏/编辑标签/删除自定义标签）走 FavoriteService，完成后重新组装 groups；
  *   M2（第二轮）起标签编辑器区分「编辑期」与「提交期」：删除自定义标签只先改本地候选/勾选状态，
  *   点「保存」时才统一提交，点「取消」不产生任何持久化副作用；
@@ -20,7 +20,7 @@
  *      子组件点击事件会冒泡，若遮罩可点关会造成标签编辑中误关；
  *   ③ 卡片「点主区域跳详情」与「⋯ 菜单按钮」是兄弟节点，避免嵌套点击冒泡。
  *
- * 预览兜底：rawfile 加载失败（预览器）时注入 MOCK_HERITAGES 构建映射表（只读、不写用户数据），
+ * 预览兜底：rawfile 加载失败（预览器）时由 HeritageRepository 注入 MOCK_HERITAGES 构建映射表（只读、不写用户数据），
  * 顶部提示条与发现页行为一致；真机不受影响。
  */
 
@@ -29,10 +29,9 @@ import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
-import { HeritageDataLoader } from '../data/HeritageDataLoader';
+import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDate } from '../utils/TimeFormat';
-import { MOCK_HERITAGES } from '../data/MockHeritages';
 
 const DOMAIN = 0x0000;
 const TAG = 'Favorites';
@@ -129,23 +128,11 @@ export struct Favorites {
     this.loadHeritages(context);
   }
 
-  /** 加载预置遗产数据构建映射表（进程内缓存，发现页加载过一次后此处纯内存取数） */
+  /** 加载预置遗产数据构建映射表（M4：repository 统一加载并缓存 id 映射） */
   private async loadHeritages(context: common.Context): Promise<void> {
-    let list: Heritage[] = [];
-    try {
-      list = await HeritageDataLoader.loadHeritageList(context);
-      this.isMockData = false;
-    } catch (err) {
-      // 预览器无法读取 rawfile：注入示例数据仅作预览调试（只读，不写用户数据），与发现页行为一致
-      hilog.error(DOMAIN, TAG, 'load heritages failed, fallback to mock: %{public}s', JSON.stringify(err));
-      list = MOCK_HERITAGES;
-      this.isMockData = true;
-    }
-    const map: Map<string, Heritage> = new Map();
-    for (let i = 0; i < list.length; i++) {
-      map.set(list[i].id, list[i]);
-    }
-    this.heritageMap = map;
+    const result: HeritageLoadResult = await HeritageRepository.load(context);
+    this.heritageMap = result.byId;
+    this.isMockData = result.isMock;
     this.isLoading = false;
     this.refreshGroups();
   }

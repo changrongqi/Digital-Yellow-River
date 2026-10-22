@@ -31,6 +31,7 @@ import { FavoriteService } from './FavoriteService';
 import { SyncService, RemoteChanges } from './SyncService';
 import { DeviceIdentity } from './DeviceIdentity';
 import { nextUpdatedAt } from '../utils/LwwVersion';
+import { JsonField } from '../utils/JsonField';
 
 const DOMAIN = 0x0000;
 const TAG = 'ThemeService';
@@ -474,8 +475,8 @@ export class ThemeService {
   private static parseTheme(obj: object, index: number): Theme | null {
     try {
       const rec = obj as Record<string, Object>;
-      const id: string = ThemeService.getStr(rec, 'id');
-      const name: string = ThemeService.getStr(rec, 'name');
+      const id: string = JsonField.getStr(rec, 'id');
+      const name: string = JsonField.getStr(rec, 'name');
       if (id === '' || name === '') {
         hilog.warn(DOMAIN, TAG, 'skip invalid theme #%{public}d', index);
         return null;
@@ -483,10 +484,10 @@ export class ThemeService {
       const theme: Theme = {
         id: id,
         name: name,
-        colorIndex: ThemeService.getNum(rec, 'colorIndex'),
-        createdAt: ThemeService.getNum(rec, 'createdAt'),
-        updatedAt: ThemeService.getNum(rec, 'updatedAt'),
-        deviceId: ThemeService.getStr(rec, 'deviceId')
+        colorIndex: JsonField.getNum(rec, 'colorIndex'),
+        createdAt: JsonField.getNum(rec, 'createdAt'),
+        updatedAt: JsonField.getNum(rec, 'updatedAt'),
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       return theme;
     } catch (err) {
@@ -509,8 +510,8 @@ export class ThemeService {
     }
     for (let i = 0; i < parsed.length; i++) {
       const rec = parsed[i] as Record<string, Object>;
-      const id: string = ThemeService.getStr(rec, 'id');
-      const deletedAt: number = ThemeService.getNum(rec, 'deletedAt');
+      const id: string = JsonField.getStr(rec, 'id');
+      const deletedAt: number = JsonField.getNum(rec, 'deletedAt');
       if (id === '' || deletedAt <= 0) {
         hilog.warn(DOMAIN, TAG, 'skip invalid tombstone #%{public}d', i);
         continue;
@@ -518,26 +519,10 @@ export class ThemeService {
       const tomb: Tombstone = {
         id: id,
         deletedAt: deletedAt,
-        deviceId: ThemeService.getStr(rec, 'deviceId')
+        deviceId: JsonField.getStr(rec, 'deviceId')
       };
       result.push(tomb);
     }
     return result;
-  }
-
-  private static getStr(rec: Record<string, Object>, key: string): string {
-    const v: Object | undefined = rec[key];
-    if (v === undefined || v === null) {
-      return '';
-    }
-    return String(v);
-  }
-
-  private static getNum(rec: Record<string, Object>, key: string): number {
-    const v: Object | undefined = rec[key];
-    if (typeof v === 'number') {
-      return v as number;
-    }
-    return 0;
   }
 }
