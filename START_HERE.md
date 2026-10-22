@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，32 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，33 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN_V1.md`；查决策史 → `REVISION_LOG.md`
 
@@ -22,6 +22,7 @@
 - 笔记编辑页返回必须拦截未保存修改：脏基准=载入原文；顶部返回与系统返回共用 `handleBack`；保存/删除后直接离开
 - 编辑弹层中的删除/修改先本地暂存，保存时统一提交；取消/关闭必须无持久化与同步副作用（标签/主题/笔记同理）
 - 服务层订阅：`aboutToAppear` 用稳定函数引用注册，`aboutToDisappear` 用同一引用注销；不要在 `onPageShow` 重复注册
+- 数据刷新单通道：使用数据的页面直接订阅服务，父容器（Index）不中转刷新信号；同一逻辑操作的多条服务通知合并为一次刷新
 - 预置数据加载统一走 `HeritageRepository`（`{list,byId,isMock}`）；JSON 字段统一 `JsonField`；`detail` 缺失/null/非对象降级为空 detail，不得丢整条
 - API 口径以 `build-profile.json5` 为准：最低 API16（任务书要求 ≥12），文档禁写死 12；下调最低版本必须配套 SDK 与安装回归
 - 零网络；图片只能放 `resources/rawfile/images/` 并由 `path` 引用

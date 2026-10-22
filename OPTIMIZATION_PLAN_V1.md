@@ -52,6 +52,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M2 | M6.7 标签删除改为保存时提交 | 2026-10-23 | `01bdb1e` | 代码 + 构建；取消/保存交互待 O24 设备验证 | 已完成（代码/构建） |
 | M3 | M6.8 MyNotes 订阅数据变化 | 2026-10-23 | `b1786b0` | 代码 + 构建；页面停留刷新待 O25 设备验证 | 已完成（代码/构建） |
 | M4 | M6.9 统一数据仓库与 JSON 字段助手 | 2026-10-23 | `4c39ff1` | 代码 + 构建；7 页 UI 回归待 O26 设备验证 | 已完成（代码/构建） |
+| M5 | M6.10 状态刷新收敛为单通道 | 2026-10-23 | `6e79281` | 代码 + 构建；单通道刷新行为待 O27 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -157,12 +158,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-23，commit `4c39ff1`，执行编号 M6.9）：① **统一仓库**——新增 `data/HeritageRepository.ets`：`load(context | undefined)` 内部走 `HeritageDataLoader`（rawfile 优先 + 进程内缓存），失败/无上下文时统一注入 `MOCK_HERITAGES`，返回 `{ list, byId, isMock }`；真实/mock 的 id 映射分别缓存；任何失败不向页面抛异常。② **7 页迁移**——Discovery / Detail / EventDetail / Favorites / MyNotes / NoteEdit / KnowledgeGraph 全部改为 `await HeritageRepository.load(...)` + `result.list` / `result.byId` / `result.isMock`，删除各自的 try/catch、MOCK 注入与手建 Map；页面不再直接依赖 `HeritageDataLoader` / `MockHeritages`。③ **JSON 助手**——新增 `utils/JsonField.ets`（`getStr/getNum/getStrArray`，集中类型校验：字符串字段拒绝对象/数组、数字仅接受 number、数组逐项过滤非法项）；替换 `HeritageDataLoader`、`FavoriteService`、`ThemeService`、`SyncService` 共 4 份重复实现并删除原私有方法。④ **detail 修复**——`detail` 缺失/null/非对象时降级为空 detail 并告警，不再因 `null` 进入字段读取抛错而丢失整条遗址；数组与非法类型同样走降级。⑤ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（行号整体漂移）。⑥ **验证范围**——7 页数据/空态/mock 提示的 UI 回归与异常数据注入登记 O26；当前无连接设备，未冒充通过。
   - 依赖：H3（已完成）。
 
-- [ ] **M5 状态刷新双通道**
-  - 位置：[Index.ets](entry/src/main/ets/pages/Index.ets#L30-L32)、[KnowledgeGraph.ets](entry/src/main/ets/pages/KnowledgeGraph.ets#L94-L115)
-  - 问题：Index tick 与 KG 服务订阅同时生效，收藏变化触发两次；Favorites 只靠 tick，MyNotes 没有。
+- [x] **M5 状态刷新双通道**（已完成：代码/构建；单通道刷新行为待设备验证）
+  - 位置：[Index.ets](entry/src/main/ets/pages/Index.ets#L22-L38)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L107-L140)、[KnowledgeGraph.ets](entry/src/main/ets/pages/KnowledgeGraph.ets#L83-L113)
+  - 问题：Index tick 与 KG 服务订阅同时生效，收藏变化触发两次；Favorites 只靠 tick；Index 的匿名订阅未注销，页面重建会累积监听。
   - 建议：统一 Tab 直接订阅 service；Index 只保留生命周期信号。
   - 验收：一次收藏变化只触发一次刷新；各 Tab 刷新行为一致。
-  - 依赖：M3。
+  - 完成记录（2026-10-23，commit `6e79281`，执行编号 M6.10）：① **Index 去中转**——删除 `favoriteRefreshTick`、`onPageShow` 与匿名 `FavoriteService.onDataChanged` 订阅（同时消除未注销监听与重建累积），只保留 Favorite/Theme 初始化与 `syncWhenOnline`；Favorites/KnowledgeGraph 不再接收 `refreshTick`。② **Favorites 直接订阅**——新增稳定 `dataChangedHandler`，`aboutToAppear` 注册、`aboutToDisappear` 同引用注销；收藏/取消收藏、标签编辑与远端 LWW 合并统一由服务通知刷新；标签保存（全局删标签 + 提交勾选）期间用 `submittingTags` 暂挂订阅，结束统一刷新一次；`confirmRemove` 不再重复调用 `refreshGroups`。③ **KnowledgeGraph 去双通道**——删除 `@Prop @Watch refreshTick` 与 `onRefreshTick`，保留 Favorite/Theme 服务订阅；归类添加/移除只 `rebuildManage()`，图数据由订阅单通道刷新。④ **构建**——clean + 增量均 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（KnowledgeGraph pushUrl 509→500、Favorites 217→228 / 577→596 行号漂移）。⑤ **验证范围**——当前无连接设备，一次收藏变化仅刷新一次、返回后收藏页/图谱即时一致登记 O27，未冒充通过。
+  - 依赖：M3（已完成）。
 
 - [ ] **M6 无障碍、触控目标与对比度**
   - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L207-L214)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L571-L578)、[NodeInfoPanel.ets](entry/src/main/ets/components/graph/NodeInfoPanel.ets#L64-L70)
@@ -269,7 +271,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2、M3、M4 已完成（代码/构建；设备验证待 O23/O24/O25/O26/O7），下一步 M5 状态刷新双通道。
+**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2、M3、M4、M5 已完成（代码/构建；设备验证待 O23/O24/O25/O26/O27/O7），下一步 M6 无障碍、触控目标与对比度。
 
 ---
 
@@ -345,3 +347,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-23 | 第二轮 M2 完成并记录（commit `01bdb1e`，M6.7）：标签编辑器删除自定义标签改为本地暂存、保存时统一提交；取消不产生持久化副作用；同名重新新增视为撤销删除；交互待 O24 设备验证 | 原实现删除即全局落盘+同步，取消无法撤销；按审计建议区分编辑期与提交期 |
 | 2026-10-23 | 第二轮 M3 完成并记录（commit `b1786b0`，M6.8）：MyNotes 订阅 FavoriteService.onDataChanged 并在 aboutToDisappear 用同一引用注销；保留 onPageShow 兜底；页面停留刷新待 O25 设备验证 | 页面停留时远端合并/其它页面增删笔记不会刷新，用户看到过期聚合列表；按审计建议补订阅闭环 |
 | 2026-10-23 | 第二轮 M4 完成并记录（commit `4c39ff1`，M6.9）：新增 HeritageRepository（rawfile/mock + id 映射缓存）与 JsonField；7 页迁移、4 份 JSON 助手去重；detail null/非法对象降级为空 detail 不丢条目；7 页 UI 回归待 O26 | 每页重复 try/catch+mock+Map，异常数据处理不一致；detail:null 会整条丢弃。统一仓库与类型校验，降低后续页面复制成本 |
+| 2026-10-23 | 第二轮 M5 完成并记录（commit `6e79281`，M6.10）：移除 Index 刷新 tick 与匿名数据订阅（消除双通道与监听累积）；Favorites 直接订阅 FavoriteService（成对注册/注销），标签保存期间合并刷新；KnowledgeGraph 删除 tick、保留 Favorite/Theme 订阅，归类操作只重建弹层候选；单通道刷新待 O27 | Index tick 与 KG 服务订阅同时生效导致一次收藏变化刷新两次；Favorites 只靠 tick；Index 匿名监听未注销且重建会累积。统一为各 Tab 直接订阅服务 |

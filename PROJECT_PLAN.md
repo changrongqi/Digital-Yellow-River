@@ -20,11 +20,11 @@
 | 文件 | 内容 | 何时读 |
 |---|---|---|
 | **PROJECT_PLAN.md**（本文件） | 产品定位、技术约束、架构目录、数据模型、里程碑 M1~M6、验收标准、开发工作流 | 每次开工前通读 |
-| [PITFALLS.md](PITFALLS.md) | 32 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式/Canvas/权限/同步目标/墓碑/返回拦截/API 口径/设备标识/编辑暂存/订阅注销/数据仓库 等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
-| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O26（环境限制、构建告警基线 O3、同步/图谱/编辑保护/API 口径/设备标识/标签编辑/页面订阅/数据仓库验证） | 排障、构建告警比对、评估环境限制时 |
+| [PITFALLS.md](PITFALLS.md) | 33 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式/Canvas/权限/同步目标/墓碑/返回拦截/API 口径/设备标识/编辑暂存/订阅注销/数据仓库/刷新单通道 等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
+| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O27（环境限制、构建告警基线 O3、同步/图谱/编辑保护/API 口径/设备标识/标签编辑/页面订阅/数据仓库/刷新单通道验证） | 排障、构建告警比对、评估环境限制时 |
 | [OPTIMIZATION_PLAN_V1.md](OPTIMIZATION_PLAN_V1.md) | 全项目优化总表（26 项、分级、依赖、第一轮 B1/H1~H4、状态与验收） | 开始/推进优化轮次时，与 §5 M6 配合使用 |
 | [CONTENT_METHODOLOGY.md](CONTENT_METHODOLOGY.md) | 联网搜证 + 内容深写方法论（来源优先级 / 核证纪律 / 事件与文旅结构 / 双份同步 R3 / 图片） | 每批遗址内容深写、事件/文旅/图集开工前 |
-| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（当前 73 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
+| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（当前 74 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
 
 **接手速记（最高优先级硬约束，细节见对应分册）**
 
@@ -270,7 +270,8 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M6.7 | 第二轮 M2 标签删除提交时机 | 标签编辑器新增 `editorRemovedTags` 暂存，删除自定义标签只改本地候选/勾选；保存时先全局提交删除再提交当前收藏勾选；取消不产生持久化/同步副作用；同名重新新增视为撤销删除。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。取消/保存交互待设备验证（O24） | ✅ 已完成（`01bdb1e`；代码/构建，设备验证待 O24） |
 | M6.8 | 第二轮 M3 MyNotes 数据订阅 | 新增稳定 `dataChangedHandler`，`aboutToAppear` 订阅 `FavoriteService.onDataChanged`，`aboutToDisappear` 用同一引用注销；页面停留时远端合并/其它页面增删笔记立即重算聚合列表；保留 onPageShow 兜底。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。页面停留刷新待设备验证（O25） | ✅ 已完成（`b1786b0`；代码/构建，设备验证待 O25） |
 | M6.9 | 第二轮 M4 数据仓库与 JSON 助手 | 新增 `HeritageRepository`（rawfile 优先、失败统一 mock、`{list,byId,isMock}` + 映射缓存）；7 页迁移，删除各自 try/catch/MOCK/Map；新增 `utils/JsonField` 替换 4 份字段助手；`detail` 缺失/null/非法对象降级为空 detail，不再丢整条。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。7 页 UI 回归待验证（O26） | ✅ 已完成（`4c39ff1`；代码/构建，设备验证待 O26） |
-| M6.x | 第二轮 M5~M11 | 见 OPTIMIZATION_PLAN_V1.md 3.3；M1~M4 已并入 M6.6~M6.9 完成 | ⬜ 未开始 |
+| M6.10 | 第二轮 M5 状态刷新单通道 | 移除 Index 的 `favoriteRefreshTick`、`onPageShow` 与匿名数据订阅，只保留服务初始化；Favorites 新增稳定 `dataChangedHandler`（aboutToAppear 订阅 / aboutToDisappear 注销），标签保存期间合并刷新；KnowledgeGraph 删除 tick、保留 Favorite/Theme 订阅，归类操作只重建弹层候选。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。单通道刷新行为待验证（O27） | ✅ 已完成（`6e79281`；代码/构建，设备验证待 O27） |
+| M6.x | 第二轮 M6~M11 | 见 OPTIMIZATION_PLAN_V1.md 3.3；M1~M5 已并入 M6.6~M6.10 完成 | ⬜ 未开始 |
 | M6.y | 第三轮 L1~L10 | 见 OPTIMIZATION_PLAN_V1.md 3.4 | ⬜ 未开始 |
 
 > **完成标注规则**：已完成项必须写 `✅ 已完成` + 完成范围 + commit；只做代码/构建不等于设备验证通过，未验证范围写入对应 O 项。该规则同时写入 OPTIMIZATION_PLAN_V1.md §0 第 7 条。
@@ -279,13 +280,13 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 ## 6. 踩坑清单（全文见 PITFALLS.md，开工前必读）
 
-> 本节已拆分为独立分册 [PITFALLS.md](PITFALLS.md)**：原 21 条踩坑（含使用纪律与历史教训）原样迁移、无删改，C1.4 新增第 22 条（Canvas 重绘/字段名冲突/滚动容器手势），C1.5 新增第 23 条（字符串枚举不得与空串比较），M6.1 新增第 24 条（user_grant 权限申请/拒绝后设置页授权/初始化门禁），M6.2 新增第 25 条（sync 目标必须用 networkId、autoSync 不等于初次拉取、初始化失败可重试）。
+> 本节已拆分为独立分册 [PITFALLS.md](PITFALLS.md)**：原 21 条踩坑（含使用纪律与历史教训）原样迁移、无删改，C1.4 新增第 22 条（Canvas 重绘/字段名冲突/滚动容器手势），C1.5 新增第 23 条（字符串枚举不得与空串比较），M6.1 新增第 24 条（user_grant 权限申请/拒绝后设置页授权/初始化门禁），M6.2 新增第 25 条（sync 目标必须用 networkId、autoSync 不等于初次拉取、初始化失败可重试），M6.3~M6.9 新增第 26~32 条（墓碑 LWW、返回保护、API 口径、设备标识、编辑暂存、订阅注销、数据仓库/detail 降级），M6.10 新增第 33 条（状态刷新单通道、父容器不中转通知、批量操作合并刷新）。
 > 纪律不变：每个子任务开工前**通读全文** → 编码中逐条自查（尤其第 1~5、13、15、16 条属 ArkUI/ArkTS 声明式约束，最易反复踩）→ 提交前再对照 → 踩到新坑立即补进 PITFALLS.md、同步 REVISION_LOG.md，**禁止只改代码不改清单**。
 
 ### 6.1 当前阶段遗留问题 / 风险（已拆分至 ISSUES_RISKS.md）
 
 > 完整表格与观察项见独立分册 **[ISSUES_RISKS.md](ISSUES_RISKS.md)**（内容原样迁移、无删改）。
-> 当前状态速览：R1~R4 全部 ✅（M2 前置已清零，解决方式见分册）；观察项 O1~O26 持续跟踪——O3 为构建告警基线（比对按「文件 + 告警类型」，行号漂移不算新增），O7 为「普通本地模拟器无法真实分布式组网」的实证结论，O18/O19/O20 为 M6.1/M6.2/M6.3 已修但待真机验证的同步项，O21 为 M6.4 已修但待设备验证的笔记未保存保护，O22 为 M6.5 文档口径已统一但待目标设备安装验证，O23 为 M6.6 设备标识已共享且备份复制风险已规避但双端平局待验证，O24 为 M6.7 标签编辑暂存待设备验证，O25 为 M6.8 MyNotes 页面停留刷新待设备验证，O26 为 M6.9 数据仓库迁移后的 7 页 UI 回归待验证，双向同步与 LWW 冲突以真机联调为准。
+> 当前状态速览：R1~R4 全部 ✅（M2 前置已清零，解决方式见分册）；观察项 O1~O27 持续跟踪——O3 为构建告警基线（比对按「文件 + 告警类型」，行号漂移不算新增），O7 为「普通本地模拟器无法真实分布式组网」的实证结论，O18/O19/O20 为 M6.1/M6.2/M6.3 已修但待真机验证的同步项，O21 为 M6.4 已修但待设备验证的笔记未保存保护，O22 为 M6.5 文档口径已统一但待目标设备安装验证，O23 为 M6.6 设备标识已共享且备份复制风险已规避但双端平局待验证，O24 为 M6.7 标签编辑暂存待设备验证，O25 为 M6.8 MyNotes 页面停留刷新待设备验证，O26 为 M6.9 数据仓库迁移后的 7 页 UI 回归待验证，O27 为 M6.10 刷新单通道的一次变化仅刷新一次待验证，双向同步与 LWW 冲突以真机联调为准。
 > 新增问题随时追加到 ISSUES_RISKS.md，不允许「知道有问题但不登记」。
 
 ## 7. 验收标准（M1 阶段）
@@ -319,5 +320,5 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 ## 9. 修订记录（已拆分至 REVISION_LOG.md）
 
-> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 73 条，以分册为准）。
+> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 74 条，以分册为准）。
 > 维护规则：新增/调整子任务、范围、顺序、数据结构或踩坑条目时，先在 REVISION_LOG.md 表格顶部插入一行（`| 日期 | 修订内容 |`）写明理由，再同步更新本计划书状态、PITFALLS.md / ISSUES_RISKS.md / CONTENT_METHODOLOGY.md 等受影响分册。
