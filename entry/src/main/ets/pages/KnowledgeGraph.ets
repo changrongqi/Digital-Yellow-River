@@ -20,11 +20,12 @@ import { Theme, getThemeColor } from '../model/Theme';
 import { HeritageDataLoader } from '../data/HeritageDataLoader';
 import { FavoriteService } from '../service/FavoriteService';
 import { ThemeService } from '../service/ThemeService';
-import { recommendHeritages } from '../utils/Recommendation';
+import { buildThemeRecommendations } from '../utils/ThemeRecommendation';
 import { getEraTheme } from '../utils/EraTheme';
 import { MOCK_HERITAGES } from '../data/MockHeritages';
 import { GraphNodeKind } from '../components/graph/GraphNode';
 import { GraphCanvas } from '../components/graph/GraphCanvas';
+import { NodeInfoPanel } from '../components/graph/NodeInfoPanel';
 import { findBestAnchor, buildRecommendReason } from '../components/graph/GraphLayout';
 import { HeritageCard } from '../components/graph/HeritageCard';
 import { ThemeEditorSheet } from '../components/graph/ThemeEditorSheet';
@@ -63,7 +64,7 @@ export struct KnowledgeGraph {
   @State selectedNodeId: string = '';
   /** 当前选中的节点种类 */
   @State selectedNodeKind: GraphNodeKind = GraphNodeKind.NONE;
-  /** 图数据版本：主题重命名等「同对象改字段」场景也强制 Canvas 重建布局 */
+  /** 图数据版本：触发 Canvas 重新读取数据；是否重建布局由内容签名决定 */
   @State graphVersion: number = 0;
   /** 画布高度（按屏幕宽度自适应：手机 360vp、平板最高 520vp） */
   @State graphHeight: number = 360;
@@ -204,47 +205,10 @@ export struct KnowledgeGraph {
     this.refreshSelected();
   }
 
-  /**
-   * 拓展推荐（C1.4 逻辑优化）：
-   * - 以主题下每条已归类遗址为锚点分别取相似条目，合并去重（避免只看第一条）；
-   * - 排除全部已收藏条目（计划书 C1.2「排除已收藏」），让「拓展」真正指向未发现遗址；
-   * - 排除主题内条目，最多 MAX_RECOMMEND 条。
-   */
+  /** 拓展推荐：规则与去重逻辑在 utils/ThemeRecommendation（纯函数），页面只同步结果 */
   private refreshRecommendations(): void {
-    if (this.themedHeritages.length === 0 || this.allHeritage.length === 0) {
-      this.recommendations = [];
-      return;
-    }
-    const favIds: string[] = [];
-    const favMap: Map<string, boolean> = new Map();
-    for (let i = 0; i < this.favorites.length; i++) {
-      favIds.push(this.favorites[i].itemId);
-      favMap.set(this.favorites[i].itemId, true);
-    }
-    const used: Map<string, boolean> = new Map();
-    const result: Heritage[] = [];
-    for (let anchorIndex = 0; anchorIndex < this.themedHeritages.length; anchorIndex++) {
-      if (result.length >= MAX_RECOMMEND) {
-        break;
-      }
-      const recs: Heritage[] = recommendHeritages(this.allHeritage,
-        this.themedHeritages[anchorIndex].id, favIds, 12);
-      for (let i = 0; i < recs.length && result.length < MAX_RECOMMEND; i++) {
-        const candidate: Heritage = recs[i];
-        if (favMap.get(candidate.id) === true) {
-          continue;
-        }
-        if (used.get(candidate.id) === true) {
-          continue;
-        }
-        if (this.containsHeritage(this.themedHeritages, candidate.id)) {
-          continue;
-        }
-        used.set(candidate.id, true);
-        result.push(candidate);
-      }
-    }
-    this.recommendations = result;
+    this.recommendations = buildThemeRecommendations(this.allHeritage, this.themedHeritages,
+      this.favorites, MAX_RECOMMEND);
   }
 
   private containsHeritage(list: Heritage[], id: string): boolean {
@@ -586,124 +550,6 @@ export struct KnowledgeGraph {
     .margin({ top: 12 })
   }
 
-  /** 选中节点信息卡（点按画布节点后出现，作为「选中 → 查看详情」的中转） */
-  @Builder
-  nodeInfoPanel() {
-    if (this.selectedNodeKind !== GraphNodeKind.NONE) {
-      Column() {
-        Row() {
-          Text('')
-            .width(10)
-            .height(10)
-            .borderRadius(5)
-            .backgroundColor(this.selectedNodeColor())
-          Text(this.selectedNodeTitle())
-            .fontSize(15)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#3E2723')
-            .margin({ left: 8 })
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(this.selectedNodeKindLabel())
-            .fontSize(10)
-            .fontColor('#8D6E63')
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor('#F5EFE9')
-            .borderRadius(6)
-            .margin({ left: 6 })
-          Text('✕')
-            .fontSize(16)
-            .fontColor('#8D6E63')
-            .padding(4)
-            .onClick(() => {
-              this.clearSelection();
-            })
-        }
-        .width('100%')
-
-        if (this.selectedNodeKind === GraphNodeKind.THEME) {
-          Text(this.themeCoverageText())
-            .fontSize(12)
-            .fontColor('#8D6E63')
-            .margin({ top: 6 })
-          Button('归类管理')
-            .fontSize(13)
-            .fontColor('#FFFFFF')
-            .backgroundColor('#6D4C41')
-            .width('100%')
-            .margin({ top: 12 })
-            .onClick(() => {
-              this.openManage();
-            })
-        } else {
-          Text(this.selectedHeritageMeta())
-            .fontSize(11)
-            .fontColor('#8D6E63')
-            .margin({ top: 6 })
-          if (this.selectedNodeKind === GraphNodeKind.RECOMMEND) {
-            Text(this.selectedRecommendationReason())
-              .fontSize(11)
-              .fontColor('#8D6E63')
-              .lineHeight(17)
-              .maxLines(3)
-              .width('100%')
-              .padding({ left: 8, right: 8, top: 6, bottom: 6 })
-              .backgroundColor('#FBF7F2')
-              .borderRadius(6)
-              .margin({ top: 8 })
-          }
-          Text(this.selectedHeritageSummary())
-            .fontSize(12)
-            .fontColor('#6D4C41')
-            .lineHeight(18)
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .width('100%')
-            .margin({ top: 6 })
-          if (this.selectedHeritageHighlights() !== '') {
-            Text(`看点：${this.selectedHeritageHighlights()}`)
-              .fontSize(11)
-              .fontColor('#8D6E63')
-              .lineHeight(17)
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .width('100%')
-              .margin({ top: 6 })
-          }
-          Row({ space: 10 }) {
-            Button('查看详情')
-              .fontSize(13)
-              .fontColor('#FFFFFF')
-              .backgroundColor('#6D4C41')
-              .layoutWeight(1)
-              .onClick(() => {
-                this.openDetail(this.selectedNodeId);
-              })
-            if (this.selectedNodeKind === GraphNodeKind.HERITAGE) {
-              Button('移出主题')
-                .fontSize(13)
-                .fontColor('#6D4C41')
-                .backgroundColor('#EFEBE9')
-                .layoutWeight(1)
-                .onClick(() => {
-                  this.removeSelectedFromTheme();
-                })
-            }
-          }
-          .width('100%')
-          .margin({ top: 12 })
-        }
-      }
-      .width('100%')
-      .padding(14)
-      .backgroundColor('#FFFFFF')
-      .borderRadius(14)
-      .margin({ top: 10 })
-      .shadow({ radius: 6, color: 'rgba(0,0,0,0.05)', offsetX: 0, offsetY: 2 })
-    }
-  }
-
   build() {
     Stack() {
       Column() {
@@ -897,8 +743,32 @@ export struct KnowledgeGraph {
                   .fontColor('#8D6E63')
                   .margin({ top: 24 })
               } else {
-                // 选中节点信息卡
-                this.nodeInfoPanel()
+                // 选中节点信息卡（展示值与回调传入独立组件，页面不承载信息卡 UI）
+                if (this.selectedNodeKind !== GraphNodeKind.NONE) {
+                  NodeInfoPanel({
+                    kind: this.selectedNodeKind,
+                    title: this.selectedNodeTitle(),
+                    nodeColor: this.selectedNodeColor(),
+                    kindLabel: this.selectedNodeKindLabel(),
+                    coverage: this.themeCoverageText(),
+                    meta: this.selectedHeritageMeta(),
+                    summary: this.selectedHeritageSummary(),
+                    highlights: this.selectedHeritageHighlights(),
+                    reason: this.selectedRecommendationReason(),
+                    onClose: () => {
+                      this.clearSelection();
+                    },
+                    onOpenManage: () => {
+                      this.openManage();
+                    },
+                    onOpenDetail: () => {
+                      this.openDetail(this.selectedNodeId);
+                    },
+                    onRemove: () => {
+                      this.removeSelectedFromTheme();
+                    }
+                  })
+                }
 
                 // 主题操作行：空主题也可重命名/删除
                 this.themeActionRow()

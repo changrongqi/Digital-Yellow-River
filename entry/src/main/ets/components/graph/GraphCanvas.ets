@@ -1,5 +1,8 @@
 ﻿/**
- * 知识图谱 Canvas 渲染与交互组件（C1.4 重构）
+ * 知识图谱 Canvas 交互与视图控制组件（C1.4 重构，C1.6 渲染层拆分）
+ *
+ * 职责：数据刷新调度、视口变换、手势识别、命中测试与右上角控件；
+ * 具体绘制（边/节点/标签/空态）在 GraphRenderer，纯绘制且不持有 ArkUI 状态。
  *
  * 设计参考：
  * - relation-graph：核心图数据 / 布局 / 渲染分离，渲染层只做「世界坐标 → 屏幕坐标」变换，
@@ -18,39 +21,27 @@
 
 import { Theme } from '../../model/Theme';
 import { Heritage } from '../../model/Heritage';
-import { GraphNode, GraphEdge, GraphModel, GraphNodeKind, GraphEdgeKind } from './GraphNode';
+import { GraphNode, GraphModel, GraphNodeKind } from './GraphNode';
 import {
   GraphBounds,
   GraphTransform,
   buildGraphModel,
   layoutGraph,
   computeBounds,
-  computeFitTransform,
-  findNodeByKey
+  computeFitTransform
 } from './GraphLayout';
+import { GraphRenderer } from './GraphRenderer';
 
 /** 用户缩放范围（视口初始适配范围更窄，见 GraphLayout） */
 const MIN_USER_SCALE: number = 0.45;
 const MAX_USER_SCALE: number = 2.6;
-/** 标签字号（屏幕坐标 vp，不随缩放变小） */
-const LABEL_FONT_SIZE: number = 11;
-/** 画布底色（比页面米白更亮一档，衬出节点） */
-const CANVAS_BACKGROUND: string = '#FDFBF8';
-
-/** 标签绘制候选（排序后逐个尝试放置） */
-interface LabelCandidate {
-  node: GraphNode;
-  priority: number; // 0=选中 1=邻接 2=其余
-  alpha: number;
-}
-
-/** 屏幕坐标占位矩形（节点圆或已放置标签） */
-interface LabelBox {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
+/** 平移边界：内容至少保留多少 vp 在画布内 */
+const VIEWPORT_MARGIN: number = 40;
+/** 命中测试：节点半径外扩容差（vp；小缩放时再按屏幕最小触控区补偿） */
+const HIT_TOLERANCE_EXTRA: number = 8;
+const HIT_TOLERANCE_SCREEN: number = 22;
+/** 画布宽高变化判定阈值（vp），避免 onAreaChange 抖动触发重置视口 */
+const SIZE_CHANGE_EPSILON: number = 0.5;
 
 @Component
 export struct GraphCanvas {
@@ -69,6 +60,8 @@ export struct GraphCanvas {
   // ==================== 渲染状态 ====================
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
+  /** 绘制层：只接收快照参数，不持有 ArkUI 状态 */
+  private renderer: GraphRenderer = new GraphRenderer();
   private model: GraphModel = { nodes: [], edges: [] };
   private bounds: GraphBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
   /** 视图缩放（避开 CustomComponent 内置 scale 属性名） */
@@ -149,8 +142,8 @@ export struct GraphCanvas {
     if (width <= 0 || height <= 0) {
       return;
     }
-    const changed: boolean = Math.abs(width - this.canvasWidth) >= 0.5 ||
-      Math.abs(height - this.canvasHeight) >= 0.5;
+    const changed: boolean = Math.abs(width - this.canvasWidth) >= SIZE_CHANGE_EPSILON ||
+      Math.abs(height - this.canvasHeight) >= SIZE_CHANGE_EPSILON;
     this.canvasWidth = width;
     this.canvasHeight = height;
     if (!changed) {
@@ -191,16 +184,15 @@ export struct GraphCanvas {
     if (this.model.nodes.length === 0) {
       return;
     }
-    const margin: number = 40;
-    const minOffsetX: number = margin - this.bounds.maxX * this.viewScale;
-    const maxOffsetX: number = this.canvasWidth - margin - this.bounds.minX * this.viewScale;
+    const minOffsetX: number = VIEWPORT_MARGIN - this.bounds.maxX * this.viewScale;
+    const maxOffsetX: number = this.canvasWidth - VIEWPORT_MARGIN - this.bounds.minX * this.viewScale;
     if (minOffsetX > maxOffsetX) {
       this.offsetX = this.canvasWidth / 2 - (this.bounds.minX + this.bounds.maxX) / 2 * this.viewScale;
     } else {
       this.offsetX = this.clamp(this.offsetX, minOffsetX, maxOffsetX);
     }
-    const minOffsetY: number = margin - this.bounds.maxY * this.viewScale;
-    const maxOffsetY: number = this.canvasHeight - margin - this.bounds.minY * this.viewScale;
+    const minOffsetY: number = VIEWPORT_MARGIN - this.bounds.maxY * this.viewScale;
+    const maxOffsetY: number = this.canvasHeight - VIEWPORT_MARGIN - this.bounds.minY * this.viewScale;
     if (minOffsetY > maxOffsetY) {
       this.offsetY = this.canvasHeight / 2 - (this.bounds.minY + this.bounds.maxY) / 2 * this.viewScale;
     } else {
@@ -323,7 +315,8 @@ export struct GraphCanvas {
       const node: GraphNode = this.model.nodes[i];
       const dx: number = worldX - node.x;
       const dy: number = worldY - node.y;
-      const tolerance: number = Math.max(node.radius + 8, 22 / this.viewScale);
+      const tolerance: number = Math.max(node.radius + HIT_TOLERANCE_EXTRA,
+        HIT_TOLERANCE_SCREEN / this.viewScale);
       if (Math.sqrt(dx * dx + dy * dy) <= tolerance) {
         return node;
       }
@@ -331,412 +324,16 @@ export struct GraphCanvas {
     return null;
   }
 
-  // ==================== 绘制 ====================
+  // ==================== 绘制调度 ====================
 
   private drawGraph(): void {
-    const width: number = this.canvasWidth;
-    const height: number = this.canvasHeight;
-    if (width <= 0 || height <= 0) {
-      return;
-    }
-    const ctx: CanvasRenderingContext2D = this.context;
-    // 不填充背景：保留父容器的圆角与底色（Canvas 填充会盖住卡片圆角）
-    ctx.clearRect(0, 0, width, height);
-    if (this.model.nodes.length === 0) {
-      return;
-    }
-
-    const selected: GraphNode | null = this.findSelectedNode();
-    const neighbors: Map<string, boolean> = this.collectNeighborKeys(selected);
-
-    ctx.save();
-    ctx.translate(this.offsetX, this.offsetY);
-    ctx.scale(this.viewScale, this.viewScale);
-
-    // 先画边（亲和线在下、主干关系在上）
-    for (let i = 0; i < this.model.edges.length; i++) {
-      if (this.model.edges[i].kind === GraphEdgeKind.AFFINITY) {
-        this.drawEdge(ctx, this.model.edges[i], selected);
-      }
-    }
-    for (let i = 0; i < this.model.edges.length; i++) {
-      if (this.model.edges[i].kind !== GraphEdgeKind.AFFINITY) {
-        this.drawEdge(ctx, this.model.edges[i], selected);
-      }
-    }
-
-    // 再画节点
-    for (let i = 0; i < this.model.nodes.length; i++) {
-      this.drawNode(ctx, this.model.nodes[i], selected, neighbors);
-    }
-    ctx.restore();
-
-    // 文字统一画在屏幕坐标系：字号不随缩放变小，并做碰撞避让
-    this.drawThemeLabel(ctx, selected, neighbors);
-    this.drawNodeLabels(ctx, selected, neighbors);
-    this.drawEmptyHint(ctx);
-  }
-
-  private findSelectedNode(): GraphNode | null {
-    if (this.selectedId === '') {
-      return null;
-    }
-    for (let i = 0; i < this.model.nodes.length; i++) {
-      if (this.model.nodes[i].itemId === this.selectedId) {
-        return this.model.nodes[i];
-      }
-    }
-    return null;
-  }
-
-  private collectNeighborKeys(selected: GraphNode | null): Map<string, boolean> {
-    const neighbors: Map<string, boolean> = new Map();
-    if (selected === null) {
-      return neighbors;
-    }
-    for (let i = 0; i < this.model.edges.length; i++) {
-      const edge = this.model.edges[i];
-      if (edge.sourceKey === selected.key) {
-        neighbors.set(edge.targetKey, true);
-      } else if (edge.targetKey === selected.key) {
-        neighbors.set(edge.sourceKey, true);
-      }
-    }
-    return neighbors;
-  }
-
-  private drawEdge(ctx: CanvasRenderingContext2D, edge: GraphEdge, selected: GraphNode | null): void {
-    const source: GraphNode | null = findNodeByKey(this.model.nodes, edge.sourceKey);
-    const target: GraphNode | null = findNodeByKey(this.model.nodes, edge.targetKey);
-    if (source === null || target === null) {
-      return;
-    }
-    const incident: boolean = selected !== null &&
-      (edge.sourceKey === selected.key || edge.targetKey === selected.key);
-
-    // 透明度：选中时非邻接边退后，未选中时按边类型分级
-    let alpha: number = 1;
-    if (selected !== null) {
-      alpha = incident ? 0.95 : 0.10;
-    } else if (edge.kind === GraphEdgeKind.AFFINITY) {
-      alpha = 0.16 + 0.22 * edge.weight;
-    } else if (edge.kind === GraphEdgeKind.RECOMMEND) {
-      alpha = 0.50;
-    } else {
-      alpha = 0.34;
-    }
-    ctx.globalAlpha = alpha;
-
-    if (edge.kind === GraphEdgeKind.AFFINITY) {
-      // 同类关联：二次曲线，避免与归入边重叠成毛球
-      const midX: number = (source.x + target.x) / 2;
-      const midY: number = (source.y + target.y) / 2;
-      const dx: number = target.x - source.x;
-      const dy: number = target.y - source.y;
-      const length: number = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-      const normalX: number = -dy / length;
-      const normalY: number = dx / length;
-      const bend: number = Math.min(18, length * 0.12) * (edge.weight >= 0.6 ? 1 : 0.7);
-      ctx.beginPath();
-      ctx.moveTo(source.x, source.y);
-      ctx.quadraticCurveTo(midX + normalX * bend, midY + normalY * bend, target.x, target.y);
-      ctx.strokeStyle = '#A1887F';
-      ctx.lineWidth = 0.8 + 0.8 * edge.weight;
-      ctx.stroke();
-    } else {
-      // 归入 / 拓展：直线，端点裁到圆边
-      const dx: number = target.x - source.x;
-      const dy: number = target.y - source.y;
-      const length: number = Math.sqrt(dx * dx + dy * dy);
-      if (length < 1) {
-        return;
-      }
-      const unitX: number = dx / length;
-      const unitY: number = dy / length;
-      const startX: number = source.x + unitX * (source.radius + 2);
-      const startY: number = source.y + unitY * (source.radius + 2);
-      const endX: number = target.x - unitX * (target.radius + 2);
-      const endY: number = target.y - unitY * (target.radius + 2);
-      if (edge.kind === GraphEdgeKind.RECOMMEND) {
-        ctx.setLineDash([5, 4]);
-        ctx.strokeStyle = '#B08D7A';
-        ctx.lineWidth = 1.2;
-      } else {
-        ctx.strokeStyle = source.fill;
-        ctx.lineWidth = 1.6;
-      }
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, endY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  private drawNode(ctx: CanvasRenderingContext2D, node: GraphNode,
-    selected: GraphNode | null, neighbors: Map<string, boolean>): void {
-    let alpha: number = 1;
-    if (selected !== null) {
-      const isSelf: boolean = node.key === selected.key;
-      const isNeighbor: boolean = neighbors.get(node.key) === true;
-      alpha = isSelf || isNeighbor ? 1 : 0.28;
-    }
-    ctx.globalAlpha = alpha;
-
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-    if (node.kind === GraphNodeKind.THEME) {
-      ctx.fillStyle = node.fill;
-      ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-    } else if (node.kind === GraphNodeKind.RECOMMEND) {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fill();
-      ctx.setLineDash([4, 3]);
-      ctx.strokeStyle = node.stroke;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // 中心小点：强调「候选 / 未归入」
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, 2.4, 0, Math.PI * 2);
-      ctx.fillStyle = node.stroke;
-      ctx.fill();
-    } else {
-      ctx.fillStyle = node.fill;
-      ctx.fill();
-      ctx.strokeStyle = node.stroke;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    // 选中描边环
-    if (selected !== null && node.key === selected.key) {
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.radius + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = node.stroke;
-      ctx.lineWidth = 1.6;
-      ctx.globalAlpha = alpha * 0.9;
-      ctx.stroke();
-      ctx.globalAlpha = alpha;
-    }
-
-    ctx.globalAlpha = 1;
-  }
-
-  /** 中心主题文字：屏幕坐标固定字号（缩放只改变圆的大小，不影响可读性） */
-  private drawThemeLabel(ctx: CanvasRenderingContext2D, selected: GraphNode | null,
-    neighbors: Map<string, boolean>): void {
-    const themeNode: GraphNode | null = this.findThemeNode();
-    if (themeNode === null) {
-      return;
-    }
-    const screenX: number = themeNode.x * this.viewScale + this.offsetX;
-    const screenY: number = themeNode.y * this.viewScale + this.offsetY;
-    const screenRadius: number = themeNode.radius * this.viewScale;
-    if (screenRadius < 8) {
-      return;
-    }
-    let alpha: number = 1;
-    if (selected !== null) {
-      const isSelf: boolean = themeNode.key === selected.key;
-      const isNeighbor: boolean = neighbors.get(themeNode.key) === true;
-      alpha = isSelf || isNeighbor ? 1 : 0.28;
-    }
-    ctx.globalAlpha = alpha;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#FFFFFF';
-    const count: number = this.countHeritageNodes();
-    const hasCount: boolean = count > 0;
-    const titleSize: number = this.clamp(screenRadius * 0.36, 9, 16);
-    ctx.font = `${titleSize}vp sans-serif`;
-    const name: string = this.fitLabelByWidth(ctx, themeNode.label,
-      Math.max(18, screenRadius * 1.55));
-    ctx.fillText(name, screenX, screenY + (hasCount ? -screenRadius * 0.16 : 0));
-    if (hasCount) {
-      ctx.font = `${this.clamp(screenRadius * 0.23, 7, 11)}vp sans-serif`;
-      ctx.globalAlpha = alpha * 0.82;
-      ctx.fillText(`${count} 处`, screenX, screenY + screenRadius * 0.48);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  /**
-   * 遗址/推荐标签：屏幕坐标固定字号 + 碰撞避让。
-   * 先按「选中 > 邻接 > 连接度」排序，再逐条放入空位；放不下就跳过该条，
-   * 而不是在低缩放时把所有标签整体隐藏（C1.5）。
-   */
-  private drawNodeLabels(ctx: CanvasRenderingContext2D, selected: GraphNode | null,
-    neighbors: Map<string, boolean>): void {
-    // 节点圆先占位：普通标签不得压住任何节点
-    const circles: LabelBox[] = [];
-    for (let i = 0; i < this.model.nodes.length; i++) {
-      const node: GraphNode = this.model.nodes[i];
-      const screenX: number = node.x * this.viewScale + this.offsetX;
-      const screenY: number = node.y * this.viewScale + this.offsetY;
-      const screenRadius: number = node.radius * this.viewScale;
-      const circle: LabelBox = {
-        left: screenX - screenRadius - 2,
-        top: screenY - screenRadius - 2,
-        right: screenX + screenRadius + 2,
-        bottom: screenY + screenRadius + 2
-      };
-      circles.push(circle);
-    }
-
-    const candidates: LabelCandidate[] = [];
-    for (let i = 0; i < this.model.nodes.length; i++) {
-      const node: GraphNode = this.model.nodes[i];
-      if (node.kind === GraphNodeKind.THEME) {
-        continue;
-      }
-      let priority: number = 2;
-      let alpha: number = 1;
-      if (selected !== null) {
-        const isSelf: boolean = node.key === selected.key;
-        const isNeighbor: boolean = neighbors.get(node.key) === true;
-        alpha = isSelf || isNeighbor ? 1 : 0.28;
-        priority = isSelf ? 0 : (isNeighbor ? 1 : 2);
-      }
-      const candidate: LabelCandidate = { node: node, priority: priority, alpha: alpha };
-      candidates.push(candidate);
-    }
-    candidates.sort((a: LabelCandidate, b: LabelCandidate): number => {
-      if (a.priority !== b.priority) {
-        return a.priority - b.priority;
-      }
-      if (a.node.degree !== b.node.degree) {
-        return b.node.degree - a.node.degree;
-      }
-      return a.node.key < b.node.key ? -1 : (a.node.key > b.node.key ? 1 : 0);
-    });
-
-    const placed: LabelBox[] = [];
-    for (let i = 0; i < candidates.length; i++) {
-      const candidate: LabelCandidate = candidates[i];
-      const node: GraphNode = candidate.node;
-      const screenX: number = node.x * this.viewScale + this.offsetX;
-      const screenY: number = node.y * this.viewScale + this.offsetY;
-      const screenRadius: number = node.radius * this.viewScale;
-      if (screenRadius < 5) {
-        continue;
-      }
-      ctx.font = `${LABEL_FONT_SIZE}vp sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      const maxWidth: number = Math.max(44, screenRadius * 3.4);
-      const label: string = this.fitLabelByWidth(ctx, node.label, maxWidth);
-      const labelWidth: number = ctx.measureText(label).width;
-      // 贴边节点标签内收，避免被画布裁掉（文字仍尽量居中对齐节点）
-      let drawX: number = screenX;
-      if (labelWidth + 8 <= this.canvasWidth) {
-        drawX = this.clamp(screenX, labelWidth / 2 + 4, this.canvasWidth - labelWidth / 2 - 4);
-      } else {
-        drawX = this.canvasWidth / 2;
-      }
-      const labelY: number = screenY + screenRadius + 4;
-      const textBox: LabelBox = {
-        left: drawX - labelWidth / 2 - 3,
-        top: labelY - 2,
-        right: drawX + labelWidth / 2 + 3,
-        bottom: labelY + LABEL_FONT_SIZE + 3
-      };
-      if (textBox.right < 0 || textBox.left > this.canvasWidth ||
-        textBox.bottom < 0 || textBox.top > this.canvasHeight) {
-        continue;
-      }
-      // 选中节点的标签优先保证（允许压住其他节点圆，但不覆盖已放置标签）
-      if (candidate.priority !== 0 && this.intersectsBox(textBox, circles)) {
-        continue;
-      }
-      if (this.intersectsBox(textBox, placed)) {
-        continue;
-      }
-      placed.push(textBox);
-      ctx.globalAlpha = candidate.priority === 0 ? 1 : candidate.alpha * 0.95;
-      // 浅色描边文字：压在连线/节点上仍可读
-      ctx.strokeStyle = CANVAS_BACKGROUND;
-      ctx.lineWidth = 3;
-      ctx.strokeText(label, drawX, labelY);
-      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? '#8D6E63' : '#5D4037';
-      ctx.fillText(label, drawX, labelY);
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  /** 空主题画布内引导（页面下方已有空态卡，这里补画布内的下一步动作） */
-  private drawEmptyHint(ctx: CanvasRenderingContext2D): void {
-    if (this.model.nodes.length === 0 || this.countHeritageNodes() > 0) {
-      return;
-    }
-    const themeNode: GraphNode | null = this.findThemeNode();
-    if (themeNode === null) {
-      return;
-    }
-    const screenX: number = themeNode.x * this.viewScale + this.offsetX;
-    const screenY: number = themeNode.y * this.viewScale + this.offsetY;
-    const screenRadius: number = themeNode.radius * this.viewScale;
-    const hintY: number = screenY + screenRadius + 14;
-    if (hintY + 30 > this.canvasHeight) {
-      return;
-    }
-    ctx.globalAlpha = 1;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.font = '11vp sans-serif';
-    ctx.fillStyle = '#8D6E63';
-    ctx.fillText('尚未归入遗址', screenX, hintY);
-    ctx.font = '10vp sans-serif';
-    ctx.fillStyle = '#A1887F';
-    ctx.fillText('点击下方「归类管理」开始构建知识网络', screenX, hintY + 16);
-  }
-
-  private intersectsBox(box: LabelBox, boxes: LabelBox[]): boolean {
-    for (let i = 0; i < boxes.length; i++) {
-      if (box.left < boxes[i].right && box.right > boxes[i].left &&
-        box.top < boxes[i].bottom && box.bottom > boxes[i].top) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private findThemeNode(): GraphNode | null {
-    for (let i = 0; i < this.model.nodes.length; i++) {
-      if (this.model.nodes[i].kind === GraphNodeKind.THEME) {
-        return this.model.nodes[i];
-      }
-    }
-    return null;
-  }
-
-  /** 按真实测量宽度截断（英文名同样适用） */
-  private fitLabelByWidth(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
-    if (text === '') {
-      return text;
-    }
-    if (ctx.measureText(text).width <= maxWidth) {
-      return text;
-    }
-    let value: string = text;
-    while (value.length > 1 && ctx.measureText(`${value}…`).width > maxWidth) {
-      value = value.substring(0, value.length - 1);
-    }
-    return `${value}…`;
-  }
-
-  private countHeritageNodes(): number {
-    let count: number = 0;
-    for (let i = 0; i < this.model.nodes.length; i++) {
-      if (this.model.nodes[i].kind === GraphNodeKind.HERITAGE) {
-        count += 1;
-      }
-    }
-    return count;
+    const transform: GraphTransform = {
+      scale: this.viewScale,
+      offsetX: this.offsetX,
+      offsetY: this.offsetY
+    };
+    this.renderer.draw(this.context, this.model, this.selectedId, transform,
+      this.canvasWidth, this.canvasHeight);
   }
 
   private clamp(value: number, min: number, max: number): number {

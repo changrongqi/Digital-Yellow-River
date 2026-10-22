@@ -36,7 +36,7 @@
   `pages/MyNotes.ets:133 'back' has been deprecated`（M2.5 新增，goBack 收敛唯一调用点）、
   `pages/EventDetail.ets:42 'getParams' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
   `pages/EventDetail.ets:171 'back' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
-  `pages/KnowledgeGraph.ets:548 'pushUrl' has been deprecated`（C1.2 新增，openDetail 图谱节点/卡片跳详情，router deprecate 同类型且包 try/catch；行号随 C1.5 改动由 315 漂移至 548），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  `pages/KnowledgeGraph.ets:512 'pushUrl' has been deprecated`（C1.2 新增，openDetail 图谱节点/卡片跳详情，router deprecate 同类型且包 try/catch；行号随 C1.6 拆分由 548 漂移至 512），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
   行号随代码增删会漂移，比对以「文件 + 告警类型」为准。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
@@ -51,3 +51,5 @@
 - O12 **诗词板块已删除（用户决定，非缺陷）**：`poems` 数据 0 条、详情页无诗词页签均为预期；模型/解析中的空字段保留不影响业务，**勿补内容或页签**；README/计划书残留「诗词」表述仅口径问题。
 - O13 **C1.4 图谱手势待实机验证（2026-10-22 发现，待验证）**：Canvas 绑定了 `GestureGroup(Exclusive(TapGesture, Parallel(PanGesture, PinchGesture)))`，静态构建已通过，但「滚动页内单指平移是否会被外层 Scroll 抢占、Tap 与 Pan 的识别阈值（5vp）在手势轻微抖动时是否误判、双指缩放中心是否跟手」需在模拟器/真机上实测；若出现外层滚动抢占，优先给 Canvas 加 `priorityGesture` 或把画布移出 Scroll 的滚动链。另：模拟器若未启动，用 `Emulator.exe -start "Pura 90 Pro" -noWindow` 启动后按 O7 的 hdc 覆盖安装流程验证。
 - O14 **C1.5 图谱可读性改造待实机验证（2026-10-22 发现，待验证）**：标签碰撞避让、主题文字屏幕坐标、画布高度自适应（360~520vp）、主题改色同步均只完成静态构建验证（BUILD SUCCESSFUL，16 条 WARN 与 O3 一致），需在手机/平板模拟器确认：① 开启拓展推荐（fit≈0.58）时标签是否按「选中 > 邻接 > 连接度」保留且不压节点；② 平板 520vp 画布与 32vp 控制按钮的实际观感；③ 重命名改色后 Canvas 是否即时重绘（graphVersion + 数据签名已覆盖），远端改色合并需真机联调。无设备时以构建成功为基线。
+- O15 **C1.6 图谱结构重构待实机回归（2026-10-22 发现，待验证）**：GraphCanvas/GraphRenderer 拆分、NodeInfoPanel 组件化、ThemeRecommendation 纯函数化后，命令行 BUILD SUCCESSFUL（16 条 WARN 与 O3 一致），但需在模拟器/真机确认：① 边/节点/标签/空态与 C1.5 视觉一致；② 点选节点后信息卡三态（主题/已归类/拓展推荐）与按钮回调正常，@Prop 变化能随页面状态刷新（踩坑 15 的组件化验证）；③ 主题推荐条目、顺序、排除已收藏行为与重构前一致；④ 手势、视口重置与拖拽无回归。无设备时以构建成功为基线。
+- O16 **图谱剩余结构权衡（2026-10-22 审计结论，非缺陷，暂不处理）**：① GraphLayout 构建节点时写入 fill/stroke（引入 EraTheme/Theme 配色），模型与展示仍有轻耦合；若未来支持多皮肤/多渲染器，应把样式解析移到 GraphRenderer（需给主题节点加 colorIndex、归入边色改由渲染层推导），当前只有一套配色，拆分收益低于回归风险；② 视口数学（平移/缩放/夹取/世界↔屏幕）仍在 GraphCanvas，与手势强相关且规模可控，暂不单独抽 Viewport 类；③ KnowledgeGraph 仍约 924 行，主体是声明式 UI 与页面状态，继续拆分收益低，除非引入新的图谱子视图。

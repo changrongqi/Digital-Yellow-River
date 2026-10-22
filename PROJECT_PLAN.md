@@ -83,15 +83,18 @@ entry/src/main/
 │   │   ├── Detail.ets         # 详情页：五层级内容 + 收藏 + 笔记 + 推荐
 │   │   ├── NoteEdit.ets       # 笔记编辑页
 │   │   ├── Favorites.ets      # 收藏页（按标签分组）
-│   │   └── SyncPanel.ets      # 同步状态面板
+│   │   ├── SyncPanel.ets      # 同步状态面板
+│   │   └── KnowledgeGraph.ets # 知识图谱页：主题状态 + 归类 + 图层开关 + 弹层编排
 │   ├── components/            # 可复用 UI 组件（M1.10 起）
 │   │   ├── ImageGallery.ets   # 图集组件：缩略图网格 + 点击 Lightbox 放大（动态布局）
-│   │   └── graph/             # 知识图谱组件集（C1.2 拆分，C1.4 布局/渲染分层）
-│   │       ├── GraphCanvas.ets    # Canvas 渲染层：视口变换 + 平移/缩放/拖拽/点选 + 邻接高亮
-│   │       ├── GraphLayout.ets    # 图模型构建 + 确定性力导向布局 + 视口适配（纯函数）
+│   │   └── graph/             # 知识图谱组件集（C1.2 拆分，C1.4 分层，C1.6 渲染/信息卡拆分）
+│   │       ├── GraphCanvas.ets    # 交互与视图控制：数据刷新 + 视口 + 手势 + 控件
+│   │       ├── GraphRenderer.ets  # 纯绘制层：边/节点/标签/空态（不持有 ArkUI 状态）
+│   │       ├── GraphLayout.ets    # 图模型构建 + 确定性力导向布局 + 视口适配（无 UI 依赖）
 │   │       ├── GraphNode.ets      # 图谱节点/边/图模型定义（含节点种类与边语义）
+│   │       ├── NodeInfoPanel.ets   # 节点信息卡（主题/已归类/拓展推荐三态展示）
 │   │       ├── HeritageCard.ets   # 遗址卡片（已归类/拓展推荐共用）
-│   │       ├── ThemeEditorSheet.ets  # 主题编辑器弹层（新建/重命名）
+│   │       ├── ThemeEditorSheet.ets  # 主题编辑器弹层（新建/编辑）
 │   │       ├── ManageSheet.ets    # 归类管理弹层（已归类/未归类）
 │   │       └── ConfirmDeleteSheet.ets # 删除主题确认弹层
 │   ├── model/                 # 数据模型层（类型定义，无逻辑）
@@ -104,7 +107,7 @@ entry/src/main/
 │   ├── service/               # 业务服务层
 │   │   ├── FavoriteService.ets   # 收藏/笔记/标签 CRUD + 本地持久化
 │   │   └── SyncService.ets       # distributedKVStore / autoSync / LWW 冲突
-│   └── utils/                 # 工具函数（推荐算法：余弦相似度等）
+│   └── utils/                 # 工具函数（推荐算法/主题推荐聚合/年代配色/时间格式）
 └── resources/rawfile/         # 预置数据集：heritage JSON + 封面图片（离线基线）
 ```
 
@@ -227,6 +230,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | C1.3 | 分布式同步扩展 | SyncService 增 theme_ 前缀通道：syncTheme/removeThemeSync、RemoteChanges 增 upsertThemes/deletedThemeIds、远端解析 parseThemeFromWire；FavoriteService 增 updateFavoriteThemes（双写 syncFavorite，themeIds 随收藏走 LWW）；主题同步经 autoSync + 面板「立即同步」一并覆盖；真机联调并入 O7 清单 | ✅ |
 | C1.4 | 知识图谱交互与呈现重构（2026-10-22，用户要求参考 relation-graph / Trilium Notes / Obsidian） | ① 分层：新增 GraphLayout.ets（图模型 + 确定性力导向布局 + 视口适配，纯函数），GraphNode.ets 扩展节点/边/图模型，GraphCanvas.ets 只做渲染与手势；② 视觉：中心主题 + 环形种子力导向布局，节点大小按连接度编码，同类关联（同年代/同城市）二次曲线 + top-3 防毛球，拓展推荐空心节点挂在最相似遗址旁（虚线关系），标签屏幕坐标固定字号 + 缩小时淡出；③ 交互：Tap 选中并出信息卡、Pan 平移/拖拽节点、Pinch 缩放、右上角 ＋/－/⟲，邻接高亮其余淡出，点击空白取消；④ 逻辑：推荐改为多锚点聚合、排除全部已收藏；选中信息卡可直达详情/移出主题/归类管理；空主题补重命名/删除入口（修 O10）；@Watch + 数据签名修复 Canvas 不随数据重绘（修 O9），内容未变时保留用户视口 | ✅ |
 | C1.5 | 图谱可读性与语义打磨（2026-10-22，C1.4 后续） | ① 标签渲染重构：主题名/计数改屏幕坐标固定字号，遗址标签由「scale<0.72 全部隐藏」改为「优先级（选中 > 邻接 > 连接度）+ 碰撞避让」，低缩放下按空间逐条放置而不是整体消失；② 推荐语义：信息卡显示「推荐依据」（与哪条已归类遗址同年代/同城市/同类型），纯函数与布局锚点同源，保证虚线边与解释一致；③ 信息卡增强：节点类型徽标、遗址核心看点、主题覆盖（年代/城市）统计、空主题画布内引导；④ 一致性：关闭推荐图层时清除已选推荐节点，拖动节点后重算包围盒并收敛视口；⑤ 适配：画布高度按屏幕宽度自适应（360~520vp），平板不再固定 360vp；⑥ 主题外观：重命名时可改主题色（ThemeService 扩展 colorIndex，走既有 LWW 同步） | ✅ |
+| C1.6 | 图谱结构规范化（2026-10-22，C1.5 后续） | 审计结论：三层分层成立，无推倒重来必要；针对「上帝组件 + 页面混编 + 重复计算」做不改接口的拆分：① 从 GraphCanvas 抽出 GraphRenderer 纯绘制层（边/节点/标签/空态），GraphCanvas 只保留数据刷新、视口、手势与控件；② 从 KnowledgeGraph 抽出 NodeInfoPanel 子组件（主题/已归类/拓展推荐三态信息卡），页面只传展示值与回调；③ 把主题推荐聚合抽为 ThemeRecommendation 纯函数（多锚点聚合/去重/排除已收藏，行为与 C1.4 完全一致）；④ 绘制层内去重节点透明度与屏幕坐标计算；⑤ 修正主题节点 degree 预置语义与「纯函数」失准注释；外部 props/回调、页面路由、服务层与业务规则保持不变 | ✅ |
 
 > C1 设计要点：
 > - 主题与 M2 收藏标签是**两个维度**：标签是收藏卡片的管理分类（待实地探访/已去过/研究资料 + 自定义），

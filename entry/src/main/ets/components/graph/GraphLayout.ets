@@ -8,8 +8,9 @@
  * - Obsidian Graph View：力导向布局（斥力 + 弹簧 + 向心 + 碰撞消解），
  *   节点大小按连接度编码，同类关联只保留每个节点最强的若干条，避免毛球化。
  *
- * 本文件不依赖任何 UI / Canvas API：输入主题与遗址，输出 GraphModel 与视口变换，
- * 便于单独校验布局结果（确定性：同一输入必得同一坐标）。
+ * 本文件不依赖任何 UI / Canvas API：输入主题与遗址，输出 GraphModel 与视口变换。
+ * 其中 buildGraphModel / computeBounds / computeFitTransform 为纯函数；
+ * layoutGraph 是确定性原地布局（直接把坐标写回 GraphModel，同一输入必得同一坐标）。
  */
 
 import { Heritage } from '../../model/Heritage';
@@ -157,8 +158,8 @@ export function buildRecommendReason(item: Heritage, anchor: Heritage): string {
   return `与「${anchor.name}」${traits.join('、')}，故作为拓展推荐`;
 }
 
-/** 创建主题节点 */
-function makeThemeNode(theme: Theme, heritageCount: number): GraphNode {
+/** 创建主题节点（连接度由后续边统计写入，不在创建时预置） */
+function makeThemeNode(theme: Theme): GraphNode {
   const color: string = getThemeColor(theme.colorIndex);
   const node: GraphNode = {
     key: `theme:${theme.id}`,
@@ -172,7 +173,7 @@ function makeThemeNode(theme: Theme, heritageCount: number): GraphNode {
     fill: color,
     stroke: color,
     radius: THEME_RADIUS,
-    degree: heritageCount,
+    degree: 0,
     x: 0,
     y: 0,
     pinned: true
@@ -245,7 +246,7 @@ export function buildGraphModel(theme: Theme | null, heritages: Heritage[],
     return empty;
   }
 
-  const themeNode: GraphNode = makeThemeNode(theme, heritages.length);
+  const themeNode: GraphNode = makeThemeNode(theme);
   nodes.push(themeNode);
 
   // 已归类遗址 + 归入边
