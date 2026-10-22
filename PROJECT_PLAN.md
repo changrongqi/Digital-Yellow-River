@@ -264,7 +264,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 | M6.1 | B1 分布式同步运行时权限 | 新增 PermissionService（查询/首次申请/拒绝后 requestPermissionOnSetting）；SyncService.init 权限门禁（未授权不置 initialized、KV ready 通知面板）；EntryAbility 启动申请 + 回前台重试初始化；SyncPanel 三态文案 + 授权按钮。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。权限弹窗/拒绝/重试待设备验证（并入 O7） | ✅ 已完成（`de6b8c1`；代码/构建，设备验证待 O7） |
 | M6.2 | H1 同步追赶与失败恢复 | 见 OPTIMIZATION_PLAN_V1.md H1；含 sync 目标 networkId 修正、初次 PULL 监听时序补强 | ✅ 已完成（`40f990f` + 复核补强；代码/构建，双端验证待 O7） |
 | M6.3 | H2 删除墓碑 | 新增 Tombstone 模型；收藏/笔记/主题删除改为墓碑覆盖同一 KV 键并参与 LWW（实体 vs 墓碑 vs 墓碑）；重新收藏版本推进；themeIds 按墓碑校验；KV 未就绪待写队列 + 墓碑重放。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端删除/复活/并发编辑待设备验证（并入 O20/O7） | ✅ 已完成（`bdb18ee`；代码/构建，设备验证待 O7） |
-| M6.4 | H3 笔记未保存退出保护 | 新增原稿基准与脏标记；顶部返回与系统返回统一拦截；有未保存内容弹「放弃修改」确认，取消留下、确认才离开；保存/删除成功直接返回。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。返回确认交互待设备验证（O21） | ✅ 已完成（`27378bc`；代码/构建，设备验证待 O21） |
+| M6.4 | H3 笔记未保存退出保护 | 新增原稿基准与脏标记；顶部返回与系统返回统一拦截；有未保存内容弹「放弃修改」确认，取消留下、确认才离开；保存/删除成功直接返回；复核补强：载入原稿不覆盖已输入内容。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。返回确认交互待设备验证（O21） | ✅ 已完成（`27378bc` + 复核补强；代码/构建，设备验证待 O21） |
 | M6.5 | H4 API 兼容口径 | 见 OPTIMIZATION_PLAN_V1.md H4 | ⬜ 未开始 |
 | M6.x | 第二轮 M1~M11 | 见 OPTIMIZATION_PLAN_V1.md 3.3 | ⬜ 未开始 |
 | M6.y | 第三轮 L1~L10 | 见 OPTIMIZATION_PLAN_V1.md 3.4 | ⬜ 未开始 |
