@@ -3,34 +3,29 @@
  *
  * 设计说明：
  * 1. 优先使用系统 ODID（@ohos.deviceInfo，API 12+，无需额外权限）：
- *    ODID 按设备生成，备份恢复到新设备后读到的是新设备的 ODID，
- *    天然避免「备份复制 deviceId 导致双端平局判定指向同一设备」；
- * 2. ODID 为空/读取失败（部分模拟器、未签名调试包等）时，回退到本地持久化 UUID：
- *    独立 Preferences store 'yellow_river_device'，首次从旧 store
- *    （yellow_river_user_data / yellow_river_themes 的 device_id）迁移，避免标识突变；
- * 3. deviceId 语义 = 「最后写入该记录的设备」：业务层每次写入都必须重新取 get() 并写入记录，
- *    不能只在新增时赋值（M1 审计问题）。
+ *    ODID 按设备生成，备份恢复到新设备后读到的是新设备的 ODID；
+ * 2. ODID 为空/读取失败（部分模拟器、未签名调试包等）时，回退到 cacheDir 的随机 UUID：
+ *    官方备份配置的默认 includes 仅覆盖 files/preferences/database/distributedfiles 等，
+ *    **不包含 cache**，因此备份恢复到新设备不会复制该 UUID；
+ *    cache 被系统/用户清理时会重新生成 ID——只影响 LWW 平局归因（冲突日志显示新 ID），
+ *    不影响任何用户数据，也不影响同步收敛；
+ * 3. deviceId 语义 = 「最后写入该记录的设备」：业务层每次写入都必须重新取 get() 并写入记录。
  */
 
 import { common } from '@kit.AbilityKit';
-import { preferences } from '@kit.ArkData';
+import { fileIo } from '@kit.CoreFileKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { util } from '@kit.ArkTS';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN = 0x0000;
 const TAG = 'DeviceIdentity';
-/** 回退标识的独立 store（不与收藏/主题数据 store 共享实例） */
-const STORE_NAME = 'yellow_river_device';
-const KEY_DEVICE_ID = 'device_id';
-/** 旧版本设备标识所在 store（迁移源，按优先级排列） */
-const LEGACY_STORES: string[] = ['yellow_river_user_data', 'yellow_river_themes'];
+/** 回退标识文件（位于 cacheDir；不参与系统备份） */
+const IDENTITY_FILE = 'lww_device_id.txt';
 
 export class DeviceIdentity {
-  /** 已确定的设备标识（ODID 或持久化 UUID） */
+  /** 已确定的设备标识（ODID 或 cache UUID） */
   private static deviceId: string = '';
-  /** 回退 store 实例 */
-  private static fallbackPref: preferences.Preferences | null = null;
   /** 未 init 时的进程内兜底标识（不持久化，仅避免写入空 deviceId） */
   private static processId: string = '';
 
@@ -48,13 +43,13 @@ export class DeviceIdentity {
       hilog.info(DOMAIN, TAG, 'lww device id: system ODID');
       return;
     }
-    let stored: string = DeviceIdentity.readFallback(context);
+    let stored: string = DeviceIdentity.readCachedId(context);
     if (stored === '') {
       stored = util.generateRandomUUID(false);
-      DeviceIdentity.persistFallback(stored);
+      DeviceIdentity.writeCachedId(context, stored);
     }
     DeviceIdentity.deviceId = stored;
-    hilog.info(DOMAIN, TAG, 'lww device id: persisted uuid');
+    hilog.info(DOMAIN, TAG, 'lww device id: cache uuid');
   }
 
   /** 取当前设备标识（业务每次写入都调用，确保记录指向真实最后写入设备） */
@@ -70,7 +65,7 @@ export class DeviceIdentity {
     return DeviceIdentity.processId;
   }
 
-  /** 读取系统 ODID（失败/为空返回空串，走持久化回退） */
+  /** 读取系统 ODID（失败/为空返回空串，走 cache 回退） */
   private static readOdid(): string {
     try {
       const raw: string = deviceInfo.ODID;
@@ -85,48 +80,42 @@ export class DeviceIdentity {
     }
   }
 
-  /** 读取回退标识：独立 store 优先，其次迁移旧 store 的历史 device_id */
-  private static readFallback(context: common.Context): string {
-    try {
-      const options: preferences.Options = { name: STORE_NAME };
-      DeviceIdentity.fallbackPref = preferences.getPreferencesSync(context, options);
-      const value = DeviceIdentity.fallbackPref.getSync(KEY_DEVICE_ID, '');
-      const stored: string = String(value).trim();
-      if (stored !== '') {
-        return stored;
-      }
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'read fallback store failed: %{public}s', JSON.stringify(err));
-      DeviceIdentity.fallbackPref = null;
-    }
-    for (let i = 0; i < LEGACY_STORES.length; i++) {
-      try {
-        const options: preferences.Options = { name: LEGACY_STORES[i] };
-        const legacy = preferences.getPreferencesSync(context, options);
-        const value = legacy.getSync(KEY_DEVICE_ID, '');
-        const stored: string = String(value).trim();
-        if (stored !== '') {
-          DeviceIdentity.persistFallback(stored);
-          return stored;
-        }
-      } catch (err) {
-        hilog.error(DOMAIN, TAG, 'read legacy device id failed: %{public}s', JSON.stringify(err));
-      }
-    }
-    return '';
+  private static identityPath(context: common.Context): string {
+    return `${context.cacheDir}/${IDENTITY_FILE}`;
   }
 
-  /** 持久化回退标识（失败仅记日志，本次进程仍使用内存值） */
-  private static persistFallback(id: string): void {
-    const pref = DeviceIdentity.fallbackPref;
-    if (pref === null) {
-      return;
-    }
+  /** 读取 cache 中的回退标识（不存在/异常返回空串） */
+  private static readCachedId(context: common.Context): string {
     try {
-      pref.putSync(KEY_DEVICE_ID, id);
-      pref.flushSync();
+      const path: string = DeviceIdentity.identityPath(context);
+      if (!fileIo.accessSync(path)) {
+        return '';
+      }
+      return fileIo.readTextSync(path).trim();
     } catch (err) {
-      hilog.error(DOMAIN, TAG, 'persist device id failed: %{public}s', JSON.stringify(err));
+      hilog.error(DOMAIN, TAG, 'read cached device id failed: %{public}s', JSON.stringify(err));
+      return '';
+    }
+  }
+
+  /** 写入 cache 回退标识（失败仅记日志，本次进程仍使用内存值） */
+  private static writeCachedId(context: common.Context, id: string): void {
+    let file: fileIo.File | null = null;
+    try {
+      const path: string = DeviceIdentity.identityPath(context);
+      file = fileIo.openSync(path,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+      fileIo.writeSync(file.fd, id);
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'write cached device id failed: %{public}s', JSON.stringify(err));
+    } finally {
+      if (file !== null) {
+        try {
+          fileIo.closeSync(file);
+        } catch (err) {
+          hilog.error(DOMAIN, TAG, 'close device id file failed: %{public}s', JSON.stringify(err));
+        }
+      }
     }
   }
 }
