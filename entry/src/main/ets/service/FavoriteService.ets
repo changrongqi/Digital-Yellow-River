@@ -66,15 +66,16 @@ export class FavoriteService {
     if (FavoriteService.pref !== null) {
       return;
     }
-    // M3.1：激活分布式同步骨架（幂等；降级不影响下方本地逻辑）。
-    SyncService.init(context);
-    // M3.2：注册远端变更合并处理器（init 可能因 Preferences 失败重入，只注册一次）
+    // M3.2：先注册远端变更合并处理器，再激活同步骨架（只注册一次）。
+    // M6.2：顺序不能反——KV 就绪后可能立刻初次 PULL，监听未注册会丢远端变更。
     if (!FavoriteService.mergeRegistered) {
       FavoriteService.mergeRegistered = true;
       SyncService.onRemoteChange((changes: RemoteChanges) => {
         FavoriteService.mergeRemoteChanges(changes);
       });
     }
+    // M3.1：激活分布式同步骨架（幂等；降级不影响下方本地逻辑）。
+    SyncService.init(context);
     try {
       const options: preferences.Options = { name: FavoriteService.STORE_NAME };
       FavoriteService.pref = preferences.getPreferencesSync(context, options);

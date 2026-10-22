@@ -44,7 +44,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 项 | 子任务 | 完成日期 | commit | 验收范围 | 状态 |
 |---|---|---|---|---|---|
 | B1 | M6.1 分布式同步运行时权限 | 2026-10-22 | `de6b8c1` | 代码 + 构建；权限弹窗/拒绝/重试待 O7 设备验证 | 已完成（代码/构建） |
-| H1 | M6.2 同步追赶 / 初始化重试 / sync 目标 networkId | 2026-10-22 | `[M6.2]` 本次提交 | 代码 + 构建；双端首次拉取与设备上线收敛待 O7 设备验证 | 已完成（代码/构建） |
+| H1 | M6.2 同步追赶 / 初始化重试 / sync 目标 networkId | 2026-10-22 | `40f990f` + 复核补强 | 代码 + 构建；双端首次拉取与设备上线收敛待 O7 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -86,7 +86,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 问题：KV ready 后无 `PUSH_PULL` 追赶；`deviceStateChange` 只刷 UI；`initialized=true` 在成功前设置，失败后本进程不再重试。另外 `manualSync` 把 `DeviceBasicInfo.deviceId` 当作 sync 目标，而官方 d.ts 明确 `sync(deviceIds)` 传的是 **networkId**（deviceId 是 UDID 混淆值），真机会同步失败。
   - 建议：KV ready/设备上线/回前台时主动 PUSH_PULL（auto 节流、manual 强制）；sync 目标改用 `DeviceBasicInfo.networkId`（缺失跳过）；初始化失败保留可重试状态并给面板重试入口。
   - 验收：第二台设备首次打开能拉到已有数据；离线写入在设备上线后收敛；初始化失败后可在面板重试后恢复；sync 目标确认使用 networkId。
-  - 完成记录（2026-10-22，commit `[M6.2]`）：`SyncDeviceInfo` 改为 `networkId` 并跳过缺失项；新增 `requestSync(force)` 统一 PUSH_PULL（auto 2s 节流 + 1s delay，manual 立即）；KV ready/设备上线/回前台触发追赶；`initialized` 改为成功后才置 true，新增 `initializing` 并发保护与 3s 重试节流，`retryInit` 供面板绕过节流；DeviceManager 失败不再永久熔断；SyncPanel 增加「重试初始化」入口与「同步服务未就绪 · 可重试」文案。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端首次拉取/设备上线收敛需真机验证，登记 O19/O7。
+  - 完成记录（2026-10-22，commit `40f990f` + 复核补强）：`SyncDeviceInfo` 改为 `networkId` 并跳过缺失项；新增 `requestSync(force)` 统一 PUSH_PULL（auto 2s 节流 + 1s delay，manual 立即）；KV ready/设备上线/回前台触发追赶；`initialized` 改为成功后才置 true，新增 `initializing` 并发保护与 3s 重试节流，`retryInit` 供面板绕过节流；DeviceManager 失败不再永久熔断；SyncPanel 增加「重试初始化」入口与「同步服务未就绪 · 可重试」文案。**复核补强**：FavoriteService 先注册远端监听再 `SyncService.init`；Index 启动时同时初始化 ThemeService（避免主题初次 PULL 无人合并）；SyncService 在无业务监听时挂起 `initialSyncPending`，由 Index 在两监听注册后补发追赶。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。双端首次拉取/设备上线收敛需真机验证，登记 O19/O7。
   - 依赖：B1（已完成）。
   - 风险：双端长期不收敛；验收误判同步失效；networkId 用错会让 M3 全部同步调用无效。
 
@@ -212,7 +212,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 - [ ] **L4 文档口径漂移**
   - 位置：[README.md](README.md#L9-L13)、[README.md](README.md#L32-L56)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L228)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L263)
-  - 问题：五层级含诗词、目录树缺 graph、C1.1 store 键名、O1~O7 索引、龙山/仰韶计数与实际不符。
+  - 问题：五层级含诗词、目录树缺 graph、C1.1 store 键名、龙山/仰韶计数与实际不符（O 索引已在 M6.2 修正）。
   - 建议：按代码现状统一 README/计划/遗留项。
 
 - [ ] **L5 微性能**

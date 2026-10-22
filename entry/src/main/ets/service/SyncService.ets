@@ -90,6 +90,8 @@ export class SyncService {
   private static lastInitAttempt: number = 0;
   /** 上次自动同步请求时间（设备上下线/回前台节流） */
   private static lastAutoSyncRequest: number = 0;
+  /** 业务监听尚未注册时挂起的初次追赶（注册后补发，避免远端变更无人消费） */
+  private static initialSyncPending: boolean = false;
   /** 权限未授予的日志只打一次，避免多个页面 init 重复刷屏 */
   private static permissionWarned: boolean = false;
   /** 远端变更监听者（M3.2 起 FavoriteService 注册消费） */
@@ -446,6 +448,11 @@ export class SyncService {
     if (store === null) {
       return false;
     }
+    if (!force && SyncService.listeners.length === 0) {
+      // 业务监听未注册时先挂起：否则初次 PULL 的远端变更无人消费会丢失。
+      SyncService.initialSyncPending = true;
+      return false;
+    }
     const now: number = Date.now();
     if (!force && now - SyncService.lastAutoSyncRequest < AUTO_SYNC_MIN_INTERVAL) {
       return false;
@@ -461,6 +468,7 @@ export class SyncService {
     if (ids.length === 0) {
       return false;
     }
+    SyncService.initialSyncPending = false;
     SyncService.lastAutoSyncRequest = now;
     try {
       SyncService.progress = 10;

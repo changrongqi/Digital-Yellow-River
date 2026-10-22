@@ -24,7 +24,7 @@
 | [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O19（环境限制、构建告警基线 O3、同步/图谱验证） | 排障、构建告警比对、评估环境限制时 |
 | [OPTIMIZATION_PLAN_V1.md](OPTIMIZATION_PLAN_V1.md) | 全项目优化总表（26 项、分级、依赖、第一轮 B1/H1~H4、状态与验收） | 开始/推进优化轮次时，与 §5 M6 配合使用 |
 | [CONTENT_METHODOLOGY.md](CONTENT_METHODOLOGY.md) | 联网搜证 + 内容深写方法论（来源优先级 / 核证纪律 / 事件与文旅结构 / 双份同步 R3 / 图片） | 每批遗址内容深写、事件/文旅/图集开工前 |
-| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（58 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
+| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（当前 66 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
 
 **接手速记（最高优先级硬约束，细节见对应分册）**
 
@@ -262,7 +262,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 |---|---|---|---|
 | M6.0 | 优化总表 | 新建 OPTIMIZATION_PLAN_V1.md：26 项、分级、依赖、第一轮 B1/H1/H2/H3/H4、验收标准；文件名带 V1 | ✅ 已完成 |
 | M6.1 | B1 分布式同步运行时权限 | 新增 PermissionService（查询/首次申请/拒绝后 requestPermissionOnSetting）；SyncService.init 权限门禁（未授权不置 initialized、KV ready 通知面板）；EntryAbility 启动申请 + 回前台重试初始化；SyncPanel 三态文案 + 授权按钮。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。权限弹窗/拒绝/重试待设备验证（并入 O7） | ✅ 已完成（`de6b8c1`；代码/构建，设备验证待 O7） |
-| M6.2 | H1 同步追赶与失败恢复 | 见 OPTIMIZATION_PLAN_V1.md H1；含 sync 目标 networkId 修正 | ✅ 已完成（`[M6.2]`；代码/构建，双端验证待 O7） |
+| M6.2 | H1 同步追赶与失败恢复 | 见 OPTIMIZATION_PLAN_V1.md H1；含 sync 目标 networkId 修正、初次 PULL 监听时序补强 | ✅ 已完成（`40f990f` + 复核补强；代码/构建，双端验证待 O7） |
 | M6.3 | H2 删除墓碑 | 见 OPTIMIZATION_PLAN_V1.md H2 | ⬜ 未开始 |
 | M6.4 | H3 笔记未保存退出保护 | 见 OPTIMIZATION_PLAN_V1.md H3 | ⬜ 未开始 |
 | M6.5 | H4 API 兼容口径 | 见 OPTIMIZATION_PLAN_V1.md H4 | ⬜ 未开始 |
@@ -281,7 +281,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 ### 6.1 当前阶段遗留问题 / 风险（已拆分至 ISSUES_RISKS.md）
 
 > 完整表格与观察项见独立分册 **[ISSUES_RISKS.md](ISSUES_RISKS.md)**（内容原样迁移、无删改）。
-> 当前状态速览：R1~R4 全部 ✅（M2 前置已清零，解决方式见分册）；观察项 O1~O7 持续跟踪——O3 为构建告警基线（比对按「文件 + 告警类型」，行号漂移不算新增），O7 为「普通本地模拟器无法真实分布式组网」的实证结论，双向同步与 LWW 冲突以真机联调为准。
+> 当前状态速览：R1~R4 全部 ✅（M2 前置已清零，解决方式见分册）；观察项 O1~O19 持续跟踪——O3 为构建告警基线（比对按「文件 + 告警类型」，行号漂移不算新增），O7 为「普通本地模拟器无法真实分布式组网」的实证结论，O18/O19 为 M6.1/M6.2 已修但待真机验证的同步项，双向同步与 LWW 冲突以真机联调为准。
 > 新增问题随时追加到 ISSUES_RISKS.md，不允许「知道有问题但不登记」。
 
 ## 7. 验收标准（M1 阶段）
@@ -315,5 +315,5 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 ## 9. 修订记录（已拆分至 REVISION_LOG.md）
 
-> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（57 条）。
+> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 66 条，以分册为准）。
 > 维护规则：新增/调整子任务、范围、顺序、数据结构或踩坑条目时，先在 REVISION_LOG.md 表格顶部插入一行（`| 日期 | 修订内容 |`）写明理由，再同步更新本计划书状态、PITFALLS.md / ISSUES_RISKS.md / CONTENT_METHODOLOGY.md 等受影响分册。

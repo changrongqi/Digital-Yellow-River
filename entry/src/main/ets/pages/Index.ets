@@ -11,6 +11,8 @@ import { Favorites } from './Favorites';
 import { SyncPanel } from './SyncPanel';
 import { KnowledgeGraph } from './KnowledgeGraph';
 import { FavoriteService } from '../service/FavoriteService';
+import { ThemeService } from '../service/ThemeService';
+import { SyncService } from '../service/SyncService';
 
 @Entry
 @Component
@@ -25,6 +27,12 @@ struct Index {
     const context = this.getUIContext().getHostContext();
     if (context !== undefined) {
       FavoriteService.init(context);
+      // M6.2：主题也提前初始化，保证 KV ready 后的初次 PULL 有 Theme 合并监听，
+      // 避免用户未打开图谱 Tab 时远端主题变更被丢弃。
+      ThemeService.init(context);
+      // M6.2：两个业务监听都注册后再补一次追赶。KV 可能早于页面就绪，
+      // 此时 SyncService 会挂起 initialSyncPending，这里负责真正发起。
+      SyncService.syncWhenOnline();
     }
     // 用户数据变化（本地 CRUD 与远端 LWW 合并后均会触发）→ 刷新收藏页（M3.2 列表联动）
     FavoriteService.onDataChanged(() => {
