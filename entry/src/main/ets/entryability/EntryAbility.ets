@@ -1,6 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { SyncService } from '../service/SyncService';
 
 const DOMAIN = 0x0000;
 
@@ -23,6 +24,8 @@ export default class EntryAbility extends UIAbility {
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      // M6.1：页面加载完成后申请分布式数据同步权限（user_grant，需 UIAbilityContext）。
+      this.ensureSyncPermission();
     });
 
     try {
@@ -40,6 +43,18 @@ export default class EntryAbility extends UIAbility {
   onForeground(): void {
     // Ability has brought to foreground
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
+    // 用户可能刚从系统设置授予权限：回到前台时重试初始化（已初始化则直接返回）。
+    SyncService.init(this.context);
+  }
+
+  /** 申请分布式数据同步权限；授予后 SyncService 会立即重试初始化（M6.1） */
+  private async ensureSyncPermission(): Promise<void> {
+    try {
+      const granted: boolean = await SyncService.requestPermission(this.context);
+      hilog.info(DOMAIN, 'testTag', 'sync permission: %{public}s', granted ? 'granted' : 'denied');
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', 'request sync permission failed: %{public}s', JSON.stringify(err));
+    }
   }
 
   onBackground(): void {

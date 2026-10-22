@@ -18,6 +18,7 @@
  * 真实同步状态需两台真机（同华为账号 + 同 WLAN + 蓝牙）联调验证。
  */
 
+import { common } from '@kit.AbilityKit';
 import { SyncService, SyncDeviceInfo } from '../service/SyncService';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
 import { formatDateTime } from '../utils/TimeFormat';
@@ -35,6 +36,8 @@ export struct SyncPanel {
   @State devices: SyncDeviceInfo[] = [];
   /** 分布式 KV 是否就绪（false = 单机降级） */
   @State syncAvailable: boolean = false;
+  /** 是否已授予分布式数据同步权限（false = 显示授权入口） */
+  @State permissionGranted: boolean = false;
   /** 手动同步结果提示（空串不显示） */
   @State syncTip: string = '';
   /** 状态变化监听句柄（aboutToDisappear 注销用） */
@@ -57,6 +60,7 @@ export struct SyncPanel {
     this.status = SyncService.getStatus();
     this.devices = SyncService.getOnlineDevices();
     this.syncAvailable = SyncService.isAvailable();
+    this.permissionGranted = SyncService.isPermissionGranted();
   }
 
   /** 手动同步：成功受理 → 等待 syncComplete 回调刷新；失败给出降级文案 */
@@ -67,6 +71,41 @@ export struct SyncPanel {
     } else {
       this.syncTip = this.syncAvailable
         ? '暂无在线设备，等待设备上线' : '同步服务未就绪（单机模式），收藏与笔记仍在本地保存';
+    }
+    this.refresh();
+  }
+
+  /** 服务状态文案：区分「未授权」「已授权但无组网」「已就绪」三种情况 */
+  private serviceStateText(): string {
+    if (this.syncAvailable) {
+      return '分布式同步已就绪';
+    }
+    if (!this.permissionGranted) {
+      return '未授权分布式同步';
+    }
+    return '单机模式 · 等待设备上线';
+  }
+
+  /**
+   * 授权入口（M6.1）：首次走系统权限弹窗；若用户之前拒绝过，
+   * requestPermissionsFromUser 不会再次弹窗，改走 requestPermissionOnSetting。
+   */
+  private async doAuthorize(): Promise<void> {
+    const host = this.getUIContext().getHostContext();
+    if (host === undefined) {
+      this.syncTip = '无法获取应用上下文，请稍后重试';
+      return;
+    }
+    const context = host as common.UIAbilityContext;
+    try {
+      let granted: boolean = await SyncService.requestPermission(context);
+      if (!granted) {
+        granted = await SyncService.requestPermissionOnSetting(context);
+      }
+      this.syncTip = granted
+        ? '已授权分布式同步，等待设备上线' : '未获得授权，可在系统设置中开启后重试';
+    } catch (err) {
+      this.syncTip = '授权失败，请稍后重试';
     }
     this.refresh();
   }
@@ -97,10 +136,11 @@ export struct SyncPanel {
               .fontSize(13)
               .fontColor('#8D6E63')
             Blank()
-            Text(this.syncAvailable ? '分布式同步已就绪' : '单机模式 · 等待设备上线')
+            Text(this.serviceStateText())
               .fontSize(13)
               .fontWeight(FontWeight.Medium)
-              .fontColor(this.syncAvailable ? '#6D4C41' : '#BCAAA4')
+              .fontColor(this.syncAvailable ? '#6D4C41'
+                : (this.permissionGranted ? '#BCAAA4' : '#C0392B'))
           }
           .width('100%')
           .margin({ top: 12 })
@@ -207,17 +247,37 @@ export struct SyncPanel {
             .fontSize(12)
             .fontColor('#8D6E63')
             .margin({ top: 10 })
-          Button('立即同步')
-            .fontSize(15)
-            .fontColor('#FFFFFF')
-            .backgroundColor('#6D4C41')
-            .width('100%')
-            .height(44)
-            .borderRadius(22)
-            .margin({ top: 14 })
-            .onClick(() => {
-              this.doManualSync();
-            })
+          if (!this.permissionGranted) {
+            Text('分布式同步需要「多设备数据交换」权限；未授权时收藏与笔记仍只在本地保存。')
+              .fontSize(12)
+              .fontColor('#C0392B')
+              .lineHeight(19)
+              .margin({ top: 8 })
+            Button('授权分布式同步')
+              .fontSize(15)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#6D4C41')
+              .width('100%')
+              .height(44)
+              .borderRadius(22)
+              .margin({ top: 10 })
+              .onClick(() => {
+                this.doAuthorize();
+              })
+          }
+          if (this.permissionGranted) {
+            Button('立即同步')
+              .fontSize(15)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#6D4C41')
+              .width('100%')
+              .height(44)
+              .borderRadius(22)
+              .margin({ top: 14 })
+              .onClick(() => {
+                this.doManualSync();
+              })
+          }
           if (this.syncTip !== '') {
             Text(this.syncTip)
               .fontSize(12)

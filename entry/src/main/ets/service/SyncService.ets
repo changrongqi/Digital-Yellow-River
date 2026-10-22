@@ -33,6 +33,7 @@ import { Favorite } from '../model/Favorite';
 import { Note } from '../model/Note';
 import { Theme } from '../model/Theme';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
+import { PermissionService } from './PermissionService';
 
 const DOMAIN = 0x0000;
 const TAG = 'SyncService';
@@ -75,6 +76,8 @@ export class SyncService {
   private static kvStore: distributedKVStore.SingleKVStore | null = null;
   /** 初始化只跑一次（无论成功或降级） */
   private static initialized: boolean = false;
+  /** 权限未授予的日志只打一次，避免多个页面 init 重复刷屏 */
+  private static permissionWarned: boolean = false;
   /** 远端变更监听者（M3.2 起 FavoriteService 注册消费） */
   private static listeners: Array<(changes: RemoteChanges) => void> = [];
   /** 同步状态监听者（M3.3：进度/最后同步时间/设备上下线变化时通知，面板订阅） */
@@ -96,6 +99,17 @@ export class SyncService {
     if (SyncService.initialized) {
       return;
     }
+    // M6.1：DISTRIBUTED_DATASYNC 是 user_grant，未授权时不能创建/使用分布式 KV。
+    // 这里只做门禁，不在这里弹窗（弹窗需要 UIAbilityContext，由 EntryAbility/SyncPanel 发起）；
+    // 不设置 initialized，保证授权成功后还能再次 init。
+    if (!PermissionService.isSyncPermissionGranted()) {
+      if (!SyncService.permissionWarned) {
+        SyncService.permissionWarned = true;
+        hilog.info(DOMAIN, TAG, 'DISTRIBUTED_DATASYNC not granted, sync init deferred');
+      }
+      return;
+    }
+    SyncService.permissionWarned = false;
     SyncService.initialized = true;
     try {
       const config: distributedKVStore.KVManagerConfig = {
@@ -126,6 +140,8 @@ export class SyncService {
         SyncService.subscribeRemoteChanges();
         SyncService.subscribeSyncComplete();
         hilog.info(DOMAIN, TAG, 'distributed kv store ready');
+        // M6.1：KV 就绪后主动通知面板，避免面板停留在「单机模式」（O11 的同一触发点）。
+        SyncService.notifyStatusListeners();
       })
       .catch((err: BusinessError) => {
         hilog.error(DOMAIN, TAG, 'getKVStore failed, degrade to local only: %{public}s', JSON.stringify(err));
@@ -138,6 +154,34 @@ export class SyncService {
   /** 分布式 KV 是否就绪（false = 已降级，仅本地） */
   static isAvailable(): boolean {
     return SyncService.kvStore !== null;
+  }
+
+  /** 是否已授予分布式数据同步权限（供同步面板展示/决定是否显示授权入口） */
+  static isPermissionGranted(): boolean {
+    return PermissionService.isSyncPermissionGranted();
+  }
+
+  /**
+   * 申请分布式数据同步权限；授予后立即重试初始化。
+   * 只应在 UIAbility 上下文可用时调用（EntryAbility / SyncPanel）。
+   */
+  static async requestPermission(context: common.UIAbilityContext): Promise<boolean> {
+    const granted: boolean = await PermissionService.requestSyncPermission(context);
+    if (granted) {
+      SyncService.permissionWarned = false;
+      SyncService.init(context);
+    }
+    return granted;
+  }
+
+  /** 用户拒绝后的再次授权入口（权限设置弹窗）；授予后重试初始化 */
+  static async requestPermissionOnSetting(context: common.UIAbilityContext): Promise<boolean> {
+    const granted: boolean = await PermissionService.requestSyncPermissionOnSetting(context);
+    if (granted) {
+      SyncService.permissionWarned = false;
+      SyncService.init(context);
+    }
+    return granted;
   }
 
   /** 同步状态快照（拷贝，同步面板 M3.3 读取） */
@@ -307,6 +351,10 @@ export class SyncService {
    * - 降级（DeviceManager 创建失败/查询异常）返回空数组，不影响其余功能。
    */
   static getOnlineDevices(): SyncDeviceInfo[] {
+    // 未授权时 getAvailableDeviceListSync 必抛 201：直接返回空，避免把权限问题伪装成查询异常。
+    if (!PermissionService.isSyncPermissionGranted()) {
+      return [];
+    }
     const dm = SyncService.ensureDeviceManager();
     if (dm === null) {
       return [];

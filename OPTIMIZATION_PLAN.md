@@ -1,0 +1,311 @@
+# 黄河记忆 · 全项目优化计划（第一轮）
+
+> 来源：2026-10-22 全项目优化审计（只读审计，未改代码）。
+> 本文件是优化轮次的**唯一总表**：所有优化项、优先级、依赖、验收标准、执行顺序均以此为准；
+> 完成一项即更新本文件状态，并同步 `PROJECT_PLAN.md`、`ISSUES_RISKS.md`、`REVISION_LOG.md`。
+>
+> 状态图例：`未开始` / `进行中` / `已完成` / `暂缓`
+> 维护规则：新增/调整项必须在本文件「变更记录」写理由；不重复已完成项，不推翻 O16 图谱结构权衡。
+
+---
+
+## 0. 执行纪律（与 START_HERE / PITFALLS 一致）
+
+1. 一次只做一个子任务；同一文件禁止并行修改，改完回读。
+2. 动手前：读 `PITFALLS.md` 全文 + 本任务相关分册；复杂 API 先查官方文档并与本机 SDK d.ts 双重核对。
+3. 每项完成：`BUILD SUCCESSFUL` → O3 告警按「文件 + 类型」比对无新增 → 更新文档 → commit `[M6.x] 摘要`。
+4. 禁 `any`、禁解构；`build()` 根节点前禁任何语句；`@Builder` 参数按值传递；Canvas 必须 `@Watch` 重绘；
+   自定义组件字段避开 `scale` 等内置名；Canvas 手势用 `GestureGroup`；数据双份同构。
+5. 部署只用 `hdc install -r`，禁止 `hdc uninstall`；真机/模拟器验证结果如实登记，不把未验证项标为已完成。
+6. 本文件可动态修订；理由写入 `REVISION_LOG.md`，状态同步到 `PROJECT_PLAN.md`。
+
+---
+
+## 1. 基线（2026-10-22 实测）
+
+| 项 | 结果 |
+|---|---|
+| 构建 | `BUILD SUCCESSFUL`（增量 1.9s；无源码变更，O3 基线未受影响） |
+| 预置数据 | 23 条遗址 / 184 条事件；无重复 id；核心字段无空 |
+| 图片 | 92 张遗址图 + 8 张事件图 `path` 全为空；`coverImage` 全为空 → 已知 O1 |
+| 诗词 | `poems` 0 条、详情页无诗词页签 → 已知 O12，**不是缺陷** |
+| 硬约束 | 无 `any`/解构；`build()` 根节点前无语句；Canvas `@Watch`/`GestureGroup` 均已落实；`viewScale` 避开内置名 |
+| 路由 | `main_pages.json` 已注册 Index/Detail/NoteEdit/MyNotes/EventDetail |
+
+**不重复项**（已完成或已知遗留，不在本计划重新打开）：
+O1 图片占位、O7 真机分布式联调、O8 Mock 修复、O11 同步面板时序、O12 诗词删除、
+O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4~C1.7 不重新拆分。
+
+---
+
+## 2. 分级与轮次
+
+| 级别 | 含义 | 本轮处理 |
+|---|---|---|
+| 阻塞 | 不修则核心验收无法进行 | 第一轮 |
+| 高 | 数据丢失/同步不收敛/验收口径风险 | 第一轮 |
+| 中 | 一致性、状态管理、UI/UX、工程质量 | 第二轮 |
+| 低 | 维护性、微性能、文档、清理 | 第三轮 |
+
+- **第一轮（本轮目标，P0+P1）**：B1 → H1 → H2 → H3 → H4。
+- **第二轮（P2）**：M1~M11，按「数据一致性 → 状态/架构 → UI/UX → 发布工程」顺序。
+- **第三轮（P3）**：L1~L10，收尾清理、文档、微性能。
+- 每轮完成标准：该轮全部项 `已完成`，构建成功，O3 无新增，文档同步，commit 齐全。
+
+---
+
+## 3. 全量清单
+
+### 3.1 阻塞
+
+- [x] **B1 未申请 `DISTRIBUTED_DATASYNC` 运行时权限**（已完成：代码/构建；权限弹窗与拒绝/重试待设备验证）
+  - 位置：[module.json5](entry/src/main/module.json5#L50-L61)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L95-L134)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L65-L93)
+  - 问题：只声明权限；全库无 `requestPermissionsFromUser`。SDK `PermissionDefinitions.json` 中该权限 `grantMode=user_grant`；`getAvailableDeviceListSync` 未授权抛 201，被 catch 后返回空数组，UI 显示“暂无在线设备”。
+  - 建议：新增 `PermissionService`；启动时申请一次；`SyncService.init` 以权限为门禁；拒绝时面板提供“去设置授权”；授予后重试初始化。
+  - 验收：首次启动出现权限弹窗；授予后 KV 就绪、面板不再显示“未授权”；拒绝后本地功能不受影响、面板显示权限状态与重试入口；构建成功。
+  - 完成记录（2026-10-22）：新增 `service/PermissionService.ets`（查询/首次申请/拒绝后 requestPermissionOnSetting）；`SyncService.init` 权限门禁且未授权不置 initialized；KV ready 后 `notifyStatusListeners()`（顺带补 O11 的触发点）；EntryAbility 启动申请、回前台重试初始化；SyncPanel 三态文案 + 授权按钮。构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致。当前无连接设备，弹窗/拒绝/重试待设备验证。
+  - 依赖：无。
+  - 风险：不修则真机 M3.4/C1.3/C2/C3 全部无法验收，且会被误判为 O7 组网问题。
+
+### 3.2 高
+
+- [ ] **H1 同步只订阅不追赶，初始化失败不可恢复**
+  - 位置：[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L95-L134)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L309-L329)、[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L397-L409)
+  - 问题：KV ready 后无 `getEntries`/`PUSH_PULL` 追赶；`deviceStateChange` 只刷 UI；`initialized=true` 在成功前设置，失败后本进程不再重试。
+  - 建议：KV ready/设备上线时主动 PUSH_PULL；初始化失败保留可重试状态；必要时读取 KV entries 与本地缓存合并。
+  - 验收：第二台设备首次打开能拉到已有数据；离线写入在设备上线后收敛；初始化失败后可在权限授予/面板重试后恢复。
+  - 依赖：B1。
+  - 风险：双端长期不收敛；验收误判同步失效。
+
+- [ ] **H2 删除无墓碑，存在复活与删除覆盖编辑**
+  - 位置：[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L183-L193)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L334-L344)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L381-L443)、[ThemeService.ets](entry/src/main/ets/service/ThemeService.ets#L146-L157)
+  - 问题：删除直接删 KV key；远端删除无条件生效；离线端旧记录可复活；远端删除可覆盖较新的本地编辑。
+  - 建议：删除写 tombstone（`deletedAt + deviceId`）并参与 LWW；合并收藏时校验 `themeIds` 是否仍存在。
+  - 验收：A 删除、B 离线修改后上线，不复活且编辑不静默丢失；主题删除后无悬挂引用；构建成功。
+  - 依赖：H1。
+  - 风险：收藏/笔记/主题丢失或复活；C2 备份恢复会放大。
+
+- [ ] **H3 笔记编辑未保存退出直接丢失**
+  - 位置：[NoteEdit.ets](entry/src/main/ets/pages/NoteEdit.ets#L138-L141)、[NoteEdit.ets](entry/src/main/ets/pages/NoteEdit.ets#L148-L155)
+  - 问题：正文只在 `@State`；返回/系统返回直接离开；无 `onBackPress`。
+  - 建议：dirty 标记 + 二次确认/草稿；拦截系统返回。
+  - 验收：有未保存内容时返回弹确认；选择取消留在页面、选择放弃才离开；无改动直接返回。
+  - 依赖：无。
+  - 风险：长笔记丢失。
+
+- [ ] **H4 API 兼容口径与文档不一致（条件性阻塞）**
+  - 位置：[build-profile.json5](build-profile.json5#L7-L17)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L64-L66)、[README.md](README.md#L25)
+  - 问题：`compatibleSdkVersion: 5.0.4(16)` 最低 API 16，文档/交接称 API 12；若验收用 API 12 镜像会安装失败。
+  - 建议：确认验收下限；要求 API 12 则降 `compatibleSdkVersion` 并以 API 12 SDK 回归；否则统一文档口径为 API 16。
+  - 验收：构建配置、README、计划书、交付说明四处口径一致；目标设备安装通过。
+  - 依赖：无（文档/配置决策）。
+  - 风险：验收环境不匹配时无法安装。
+
+### 3.3 中
+
+- [ ] **M1 LWW 版本标识不可靠**
+  - 位置：[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L196-L225)、[FavoriteService.ets](entry/src/main/ets/service/FavoriteService.ets#L319-L331)、[ThemeService.ets](entry/src/main/ets/service/ThemeService.ets#L122-L140)
+  - 问题：更新只改 `updatedAt` 不改 `deviceId`；Favorite/Theme 各生成一份 deviceId；依赖墙钟；备份恢复复制 deviceId。
+  - 建议：共享 `DeviceIdentity`；每次写刷新 deviceId；必要时逻辑时钟/恢复后重生成。
+  - 验收：双端同时编辑同一条记录，平局兜底与冲突日志能指向真实最后写入设备。
+  - 依赖：H2。
+
+- [ ] **M2 标签编辑器删除标签立即全局持久化**
+  - 位置：[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L273-L291)
+  - 问题：`removeEditorTag` 直接写盘+同步；“取消”无法撤销。
+  - 建议：编辑期只改本地，保存时统一提交；或删除前确认+撤销。
+  - 验收：编辑器中删除标签后点取消，原有关联不变。
+  - 依赖：无。
+
+- [ ] **M3 MyNotes 不订阅数据变化**
+  - 位置：[MyNotes.ets](entry/src/main/ets/pages/MyNotes.ets#L60-L75)
+  - 问题：只在 aboutToAppear/onPageShow 刷新；远端合并时页面停留不更新。
+  - 建议：订阅 `FavoriteService.onDataChanged` 并注销。
+  - 验收：页面停留时远端新增/删除笔记，列表自动刷新。
+  - 依赖：B1/H1（真机验证）。
+
+- [ ] **M4 数据访问层重复，JSON 解析助手 4 份**
+  - 位置：7 个页面加载兜底（Discovery/Detail/EventDetail/Favorites/MyNotes/NoteEdit/KnowledgeGraph）；4 份 `getStr/getNum/getStrArray`
+  - 问题：每页重复 try/catch + mock + Map；类型校验弱；`detail:null` 会丢弃整条。
+  - 建议：`HeritageRepository.load(context)` 返回 `{list,isMock}` 并缓存 Map；抽 `utils/JsonField`；修 null detail。
+  - 验收：7 页行为一致，新增页面不再复制兜底；异常数据不静默丢条目。
+  - 依赖：H3（避免同文件冲突）。
+
+- [ ] **M5 状态刷新双通道**
+  - 位置：[Index.ets](entry/src/main/ets/pages/Index.ets#L30-L32)、[KnowledgeGraph.ets](entry/src/main/ets/pages/KnowledgeGraph.ets#L94-L115)
+  - 问题：Index tick 与 KG 服务订阅同时生效，收藏变化触发两次；Favorites 只靠 tick，MyNotes 没有。
+  - 建议：统一 Tab 直接订阅 service；Index 只保留生命周期信号。
+  - 验收：一次收藏变化只触发一次刷新；各 Tab 刷新行为一致。
+  - 依赖：M3。
+
+- [ ] **M6 无障碍、触控目标与对比度**
+  - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L207-L214)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L571-L578)、[NodeInfoPanel.ets](entry/src/main/ets/components/graph/NodeInfoPanel.ets#L64-L70)
+  - 问题：无 `accessibilityText/role`；多个触控区 <44vp；次要文字对比度 2.07~4.29:1。
+  - 建议：触控区 ≥44vp；文字 ≥4.5:1；补无障碍文本；支持字体缩放。
+  - 验收：关键按钮可点区域达标；对比度核算通过；TalkBack 可读出主要操作。
+  - 依赖：无。
+
+- [ ] **M7 跟随系统深色模式但 UI 全为浅色硬编码**
+  - 位置：[EntryAbility.ets](entry/src/main/ets/entryability/EntryAbility.ets#L29)
+  - 问题：`COLOR_MODE_NOT_SET` + 浅色硬编码；dark 资源只有启动背景。
+  - 建议：明确只支持浅色则设 `COLOR_MODE_LIGHT`；或补齐 dark 资源/token。
+  - 验收：系统深色/浅色切换下状态栏与页面可读性一致。
+  - 依赖：L1（token）。
+
+- [ ] **M8 节点信息卡在首屏下方，平板正文行宽过长**
+  - 位置：[KnowledgeGraph.ets](entry/src/main/ets/pages/KnowledgeGraph.ets#L718-L780)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L407-L412)
+  - 问题：点选节点后信息卡常在首屏下方；平板长文全宽。
+  - 建议：信息卡改 Sheet/浮层或自动滚动；正文 `maxWidth` 居中。
+  - 验收：手机点选节点立即可见反馈；平板行宽适中。
+  - 依赖：无。
+
+- [ ] **M9 拓展推荐节点缺少“收藏并归入主题”闭环**
+  - 位置：[NodeInfoPanel.ets](entry/src/main/ets/components/graph/NodeInfoPanel.ets#L123-L142)
+  - 问题：RECOMMEND 只有“查看详情”。
+  - 建议：增加“收藏并归入当前主题”动作。
+  - 验收：推荐节点一键收藏并归入当前主题，图谱即时刷新。
+  - 依赖：H2/M1（同步一致性）。
+
+- [ ] **M10 应用元信息仍为模板占位**
+  - 位置：[app.json5](AppScope/app.json5#L3-L9)、[string.json](AppScope/resources/base/element/string.json#L1-L8)、[entry string.json](entry/src/main/resources/base/element/string.json#L1-L20)
+  - 问题：`app_name=first`、`bundleName=com.example.first`、`label=label`。
+  - 建议：改为“黄河记忆”、正式 bundleName、标签/描述/版本；同步 `SyncService.BUNDLE_NAME`。
+  - 验收：桌面显示“黄河记忆”；包名与文档一致；真机联调前定稿。
+  - 依赖：H4（API/交付口径）。
+
+- [ ] **M11 无业务单元测试与 CI 门禁**
+  - 位置：[LocalUnit.test.ets](entry/src/test/LocalUnit.test.ets#L24-L31)、[Ability.test.ets](entry/src/ohosTest/ets/test/Ability.test.ets#L25-L32)
+  - 问题：仅模板断言；LWW/推荐/布局/解析无测试；无 CI。
+  - 建议：补 Hypium 单测；CI 执行 build+lint+test。
+  - 验收：核心纯函数有测试；CI 可阻断回归。
+  - 依赖：M1/M4（被测逻辑稳定后）。
+
+### 3.4 低
+
+- [ ] **L1 402 处硬编码颜色，无设计 token 层**
+  - 位置：[EraTheme.ets](entry/src/main/ets/utils/EraTheme.ets#L29-L64)、[Theme.ets](entry/src/main/ets/model/Theme.ets#L27)
+  - 建议：抽 `ThemeTokens`/资源；先覆盖背景、正文、次要文字、边框。
+  - 验收：高频颜色有单一来源；改色不再全库搜。
+
+- [ ] **L2 少量死代码**
+  - 位置：[HeritageCard.ets](entry/src/main/ets/components/graph/HeritageCard.ets#L11)、[GraphNode.ets](entry/src/main/ets/components/graph/GraphNode.ets#L32-L47)
+  - 问题：`isDark` 未使用；GraphNode 的 era/city/type/summary 只写不读（coverImage/Poem 属 O1/O12，不计）。
+  - 建议：删除 `isDark`；预留字段补注释或移除。
+
+- [ ] **L3 mock id 与正式数据不一致**
+  - 位置：[MockHeritages.ets](entry/src/main/ets/data/MockHeritages.ets#L22-L25)
+  - 问题：`mock-*` vs `smx-*`；预览深链找不到。
+  - 建议：mock 使用正式 id 或建立映射。
+
+- [ ] **L4 文档口径漂移**
+  - 位置：[README.md](README.md#L9-L13)、[README.md](README.md#L32-L56)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L228)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L263)
+  - 问题：五层级含诗词、目录树缺 graph、C1.1 store 键名、O1~O7 索引、龙山/仰韶计数与实际不符。
+  - 建议：按代码现状统一 README/计划/遗留项。
+
+- [ ] **L5 微性能**
+  - 位置：[Discovery.ets](entry/src/main/ets/pages/Discovery.ets#L184)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L153-L191)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L79-L83)
+  - 问题：filterList 每次 build ×3；Favorites O(F×N) 笔记计数；笔记变化触发详情推荐重算；Mock 615KB 进包。
+  - 建议：缓存 filtered/noteCount；按数据类型拆分监听；mock 裁剪或按 debug 引入。
+
+- [ ] **L6 路由异常处理不一致**
+  - 位置：[Discovery.ets](entry/src/main/ets/pages/Discovery.ets#L307)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L566)
+  - 建议：统一 `RouterUtil` 包 try/catch。
+
+- [ ] **L7 内容字段填充率不均**
+  - 位置：`heritage_data.json`
+  - 现状：64/184 事件无 figures，73/184 无 artifacts；事件图仅 8 张；龙山仅 1 条。
+  - 建议：按事件补人物/文物/图集；龙山补充或调整筛选预期。
+
+- [ ] **L8 `TimelineTab` 仍接收状态派生参数**
+  - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L312)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L809-L810)
+  - 建议：改无参 Builder 直读 `this.heritage`，或独立组件 + `@Prop`。
+
+- [ ] **L9 ImageGallery 不释放 PixelMap**
+  - 位置：[ImageGallery.ets](entry/src/main/ets/components/ImageGallery.ets#L48-L50)、[ImageGallery.ets](entry/src/main/ets/components/ImageGallery.ets#L62-L88)
+  - 建议：卸载时 `release()`；失败/替换时释放；缩略图限制解码尺寸。
+
+- [ ] **L10 分布式 KV 明文存储**
+  - 位置：[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L111-L118)、[backup_config.json](entry/src/main/resources/base/profile/backup_config.json)
+  - 问题：`encrypt:false`、S1；笔记/收藏明文；系统备份带走 Preferences。
+  - 建议：评估 `encrypt:true` 或登记威胁模型；敏感内容提示。
+
+---
+
+## 4. 第一轮执行顺序
+
+| 顺序 | 项 | 核心理由 | 进入条件 | 完成标志 |
+|---|---|---|---|---|
+| 1 | B1 权限 | 所有真机同步验证的前置 | 本文件建立 | 权限弹窗/授予/拒绝/重试闭环，构建成功 |
+| 2 | H1 同步追赶 | 权限修好后才能验证数据是否真的收敛 | B1 完成 | 新设备/上线 PULL 可验证 |
+| 3 | H2 删除墓碑 | 依赖 H1 的同步链路做双端验证 | H1 完成 | 删除/复活/并发编辑场景通过 |
+| 4 | H3 笔记未保存 | 独立用户数据安全项，可与 H2 并行准备 | 无 | 返回确认闭环 |
+| 5 | H4 API 口径 | 交付/验收决策，避免后续返工 | 前四项完成 | 配置与文档一致 |
+
+**第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
+
+**当前进度（2026-10-22）**：B1 已完成（代码/构建；设备验证待 O7）；下一步 H1 同步追赶与初始化重试。
+
+---
+
+## 5. 第一轮第 1 步：B1 任务卡
+
+### 5.1 目标
+
+补齐 `ohos.permission.DISTRIBUTED_DATASYNC` 的运行时申请与初始化门禁，保证真机上分布式 KV 能真正可用，同时不破坏本地模式。
+
+### 5.2 API 证据（官方文档 + 本机 SDK 双重核对）
+
+- 官方权限列表：`ohos.permission.DISTRIBUTED_DATASYNC`，权限级别 normal，**授权方式 user_grant**。
+- 本机 SDK `PermissionDefinitions.json`：`grantMode: user_grant`。
+- `@ohos.abilityAccessCtrl.d.ts`：
+  - `createAtManager()`；
+  - `checkAccessTokenSync(tokenID, permissionName)`（since 10）；
+  - `requestPermissionsFromUser(context, permissionList)`（Promise，since 9）；
+  - `requestPermissionOnSetting(context, permissionList)`（since 12，用于用户拒绝后的再次授权）；
+  - `GrantStatus.PERMISSION_GRANTED = 0`。
+- `@ohos.distributedDeviceManager.d.ts`：`getAvailableDeviceListSync()` 标注 `@permission ohos.permission.DISTRIBUTED_DATASYNC`，未授权抛 201。
+- `PermissionRequestResult.authResults`：`0=已授权`，`-1=未授权`，`2=无效请求`。
+- 官方说明：用户拒绝后，`requestPermissionsFromUser` **不能再次拉起弹窗**，需 `requestPermissionOnSetting` 或系统设置。
+
+### 5.3 实现方案
+
+1. 新增 `entry/src/main/ets/service/PermissionService.ets`
+   - `isSyncPermissionGranted(): boolean`：`bundleManager.getBundleInfoForSelfSync(GET_BUNDLE_INFO_WITH_APPLICATION)` → `appInfo.accessTokenId` → `checkAccessTokenSync`。
+   - `requestSyncPermission(context: common.UIAbilityContext): Promise<boolean>`：未授予时调用 `requestPermissionsFromUser`，解析 `authResults`；进程内只主动请求一次。
+   - `requestSyncPermissionOnSetting(context: common.UIAbilityContext): Promise<boolean>`：用户拒绝后走 `requestPermissionOnSetting`，异常时回退 `isSyncPermissionGranted()`。
+   - 所有可抛异常包 try/catch，不新增 O3 告警。
+2. 修改 `SyncService.ets`
+   - `init` 开头先判断权限；未授予则记日志并 return，**不设置** `initialized=true`。
+   - `getKVStore().then` 成功后调用 `notifyStatusListeners()`（让同步面板从“单机模式”及时恢复）。
+   - 暴露 `isPermissionGranted()` / `requestPermission(context)` / `requestPermissionOnSetting(context)`；授权成功后调用 `init(context)`。
+3. 修改 `EntryAbility.ets`
+   - `loadContent` 成功后调用一次 `SyncService.requestPermission(this.context)`；
+   - `onForeground` 调 `SyncService.init(this.context)`，覆盖“去系统设置授权后返回”的场景。
+4. 修改 `SyncPanel.ets`
+   - 新增 `@State permissionGranted`；
+   - 未授权时显示说明与“授权分布式同步”按钮；点击后先 `requestPermission`，仍失败再 `requestPermissionOnSetting`；
+   - 授权成功后 `refresh()`，并提示“已授权，等待设备上线”。
+5. 不改动任何数据文件、路由、模型；`FavoriteService` 仅通过 `SyncService.init` 的门禁自然降级。
+
+### 5.4 验收与回归
+
+- 构建：`BUILD SUCCESSFUL`，O3 告警按「文件+类型」无新增。
+- 模拟器/真机：
+  1. 首次启动出现权限弹窗；授予 → 同步面板显示“分布式同步已就绪”，0 台设备为预期；
+  2. 拒绝 → 本地收藏/笔记/主题正常；面板显示未授权与重试按钮；
+  3. 点重试 → 拉起设置授权；授予后返回 → 面板状态刷新；
+  4. 杀进程重开 → 已授权不再弹窗，同步服务正常初始化。
+- 无法验证项：真实双端同步仍归 O7 真机联调，不在本步冒充通过。
+
+### 5.5 回滚
+
+仅新增权限服务与初始化门禁；回滚删除新文件、还原 `SyncService.init`/`EntryAbility`/`SyncPanel` 改动即可，无数据迁移。
+
+---
+
+## 6. 变更记录
+
+| 日期 | 变更 | 理由 |
+|---|---|---|
+| 2026-10-22 | 建立本文件，收录审计 1 阻塞 + 4 高 + 11 中 + 10 低，共 26 项；第一轮定为 B1/H1/H2/H3/H4；B1 开始执行 | 用户要求把审计项固化为第一轮优化目标，并按项目流程逐项实施 |
+| 2026-10-22 | B1 完成代码与构建验证；新增 PermissionService、SyncService 权限门禁与 KV ready 通知、EntryAbility 启动申请、SyncPanel 授权入口；设备验证登记待 O7 | 构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致；当前无连接设备，不能把弹窗/拒绝/重试验收标为已通过 |

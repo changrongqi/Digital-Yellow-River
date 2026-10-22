@@ -6,9 +6,9 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，23 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，24 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
-4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；查决策史 → `REVISION_LOG.md`
+4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN.md`；查决策史 → `REVISION_LOG.md`
 
 ## 不可违反（违反=返工）
 - 禁 `any`、禁解构；build() 根节点前禁任何语句（含 const）
@@ -33,6 +33,7 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 ## 当前状态去哪查（每次接手都现场核实，勿信文档声称）
 - 进度：`PROJECT_PLAN.md` §5 状态表 + 实际代码，两者不一致时以代码为准
+- 优化：`OPTIMIZATION_PLAN.md`（26 项分级/依赖/轮次/验收，状态唯一权威；与 §5 M6 配合）
 - 数据：用 PowerShell `ConvertFrom-Json` 统计 rawfile 条数/字段；mock 需模拟模板求值（`\\n`→`\n`）后再 `JSON.parse` 校验
 - 问题：`ISSUES_RISKS.md` 的 O 系列（R 系列为阶段前置项，需清零）
 - 历史：`REVISION_LOG.md` + `git log`

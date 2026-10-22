@@ -19,9 +19,10 @@
 
 | 文件 | 内容 | 何时读 |
 |---|---|---|
-| **PROJECT_PLAN.md**（本文件） | 产品定位、技术约束、架构目录、数据模型、里程碑 M1~M5、验收标准、开发工作流 | 每次开工前通读 |
-| [PITFALLS.md](PITFALLS.md) | 22 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式/Canvas 等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
-| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O13（环境限制、构建告警基线 O3、图谱手势待实机验证 O13） | 排障、构建告警比对、评估环境限制时 |
+| **PROJECT_PLAN.md**（本文件） | 产品定位、技术约束、架构目录、数据模型、里程碑 M1~M6、验收标准、开发工作流 | 每次开工前通读 |
+| [PITFALLS.md](PITFALLS.md) | 24 条踩坑清单（ArkTS/ArkUI/JSON/构建/路由/分布式/Canvas/权限 等硬约束） | **每次编码前必读全文**，编码中逐条自查 |
+| [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O18（环境限制、构建告警基线 O3、同步/图谱验证） | 排障、构建告警比对、评估环境限制时 |
+| [OPTIMIZATION_PLAN.md](OPTIMIZATION_PLAN.md) | 全项目优化总表（26 项、分级、依赖、第一轮 B1/H1~H4、状态与验收） | 开始/推进优化轮次时，与 §5 M6 配合使用 |
 | [CONTENT_METHODOLOGY.md](CONTENT_METHODOLOGY.md) | 联网搜证 + 内容深写方法论（来源优先级 / 核证纪律 / 事件与文旅结构 / 双份同步 R3 / 图片） | 每批遗址内容深写、事件/文旅/图集开工前 |
 | [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（58 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
 
@@ -252,9 +253,27 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 - C2 分布式数据备份与恢复（⬜）：设备间收藏/笔记/主题/知识图谱完整迁移 + 一键恢复；依赖真机联调（并入 O7）
 - C3 多端协同编辑（⬜）：双端笔记实时同步 + 补充/修改/合并/排序成结构化文档；依赖真机联调（并入 O7）
 
+### M6 全项目优化（2026-10-22 起，见 [OPTIMIZATION_PLAN.md](OPTIMIZATION_PLAN.md)）
+
+> 依据 2026-10-22 全项目优化审计（B1 + H1~H4 + M1~M11 + L1~L10，共 26 项）。完整清单、分级、
+> 依赖与轮次见 **OPTIMIZATION_PLAN.md**（本里程碑只记录状态汇总与计划演进，细节以优化总表为准）。
+
+| 编号 | 子任务 | 内容 | 状态 |
+|---|---|---|---|
+| M6.0 | 优化总表 | 新建 OPTIMIZATION_PLAN.md：26 项、分级、依赖、第一轮 B1/H1/H2/H3/H4、验收标准 | ✅ |
+| M6.1 | B1 分布式同步运行时权限 | 新增 PermissionService（查询/首次申请/拒绝后 requestPermissionOnSetting）；SyncService.init 权限门禁（未授权不置 initialized、KV ready 通知面板）；EntryAbility 启动申请 + 回前台重试初始化；SyncPanel 三态文案 + 授权按钮。构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。权限弹窗/拒绝/重试待设备验证（并入 O7） | ✅ |
+| M6.2 | H1 同步追赶与失败恢复 | 见 OPTIMIZATION_PLAN.md H1 | ⬜ |
+| M6.3 | H2 删除墓碑 | 见 OPTIMIZATION_PLAN.md H2 | ⬜ |
+| M6.4 | H3 笔记未保存退出保护 | 见 OPTIMIZATION_PLAN.md H3 | ⬜ |
+| M6.5 | H4 API 兼容口径 | 见 OPTIMIZATION_PLAN.md H4 | ⬜ |
+| M6.x | 第二轮 M1~M11 | 见 OPTIMIZATION_PLAN.md 3.3 | ⬜ |
+| M6.y | 第三轮 L1~L10 | 见 OPTIMIZATION_PLAN.md 3.4 | ⬜ |
+
+> M6 说明：优化项状态**以 OPTIMIZATION_PLAN.md 为唯一权威**，本表不逐项堆细节，避免双份状态漂移。
+
 ## 6. 踩坑清单（全文见 PITFALLS.md，开工前必读）
 
-> 本节已拆分为独立分册 [PITFALLS.md](PITFALLS.md)**：原 21 条踩坑（含使用纪律与历史教训）原样迁移、无删改，C1.4 新增第 22 条（Canvas 重绘/字段名冲突/滚动容器手势），C1.5 新增第 23 条（字符串枚举不得与空串比较）。
+> 本节已拆分为独立分册 [PITFALLS.md](PITFALLS.md)**：原 21 条踩坑（含使用纪律与历史教训）原样迁移、无删改，C1.4 新增第 22 条（Canvas 重绘/字段名冲突/滚动容器手势），C1.5 新增第 23 条（字符串枚举不得与空串比较），M6.1 新增第 24 条（user_grant 权限申请/拒绝后设置页授权/初始化门禁）。
 > 纪律不变：每个子任务开工前**通读全文** → 编码中逐条自查（尤其第 1~5、13、15、16 条属 ArkUI/ArkTS 声明式约束，最易反复踩）→ 提交前再对照 → 踩到新坑立即补进 PITFALLS.md、同步 REVISION_LOG.md，**禁止只改代码不改清单**。
 
 ### 6.1 当前阶段遗留问题 / 风险（已拆分至 ISSUES_RISKS.md）
