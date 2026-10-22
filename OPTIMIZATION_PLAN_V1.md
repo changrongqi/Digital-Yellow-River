@@ -49,6 +49,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | H3 | M6.4 笔记未保存退出保护 | 2026-10-22 | `27378bc` + 复核补强 | 代码 + 构建；返回确认交互待设备验证 | 已完成（代码/构建） |
 | H4 | M6.5 API 兼容口径统一 | 2026-10-22 | `2a5d0bb` | 文档 + 构建；目标设备安装待 O22 | 已完成（文档/构建） |
 | M1 | M6.6 共享 DeviceIdentity / LWW 版本推进 / 冲突台账设备标识 | 2026-10-22 | `7b9043d` + 复核补强 | 代码 + 构建；双端平局待 O23/O7 | 已完成（代码/构建） |
+| M2 | M6.7 标签删除改为保存时提交 | 2026-10-23 | `01bdb1e` | 代码 + 构建；取消/保存交互待 O24 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -130,11 +131,12 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-22，commit `7b9043d` + 复核补强 `35f9dcf`，执行编号 M6.6）：① **共享设备标识**——新增 `service/DeviceIdentity.ets`：优先使用系统 `deviceInfo.ODID`（API 12+，按设备生成，备份恢复到新设备后自然换成新设备 ID）；ODID 为空/读取失败时回退到 `cacheDir/lww_device_id.txt` 的随机 UUID（官方备份配置默认 `includes` 仅覆盖 files/preferences/database/distributedfiles 等，**不包含 cache**，因此备份恢复到新设备不会复制该 UUID；cache 被清理时会重新生成 ID，仅影响 LWW 平局归因，不影响数据与同步收敛）。FavoriteService / ThemeService 删除各自的 `ensureDeviceId` 与 `device_id` 存储，统一依赖 DeviceIdentity。② **每次写入刷新 deviceId**——新增收藏/笔记/主题、更新标签/主题归类/笔记正文、删标签、删除墓碑时均写入 `DeviceIdentity.get()`；deviceId 语义固定为「最后写入该记录的设备」。③ **版本严格递增**——新增 `utils/LwwVersion.ets` 的 `nextUpdatedAt(previous, now)`：`now > previous ? now : previous + 1`；所有更新路径与墓碑 `deletedAt` 使用它，避免墙钟回拨/同毫秒连续编辑时新版本输给旧版本。④ **冲突台账可定位**——`ConflictLogItem` 增加 `deviceId`，`SyncService.recordConflict` 记录胜出版本的最后写入设备；Favorite/Theme 共 18 处冲突分支传入实际胜方设备 ID，SyncPanel 冲突卡展示「最后写入设备」。⑤ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增。⑥ **残余与验证**——回退标识已移出 Preferences，备份复制风险彻底规避；cache 清理导致 ID 变化属预期（仅影响平局归因）。双端并发的平局判定需真机验证，登记 O23/O7，未冒充通过。
   - 依赖：H2（已完成）。
 
-- [ ] **M2 标签编辑器删除标签立即全局持久化**
-  - 位置：[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L273-L291)
+- [x] **M2 标签编辑器删除标签立即全局持久化**（已完成：代码/构建；取消/保存交互待设备验证）
+  - 位置：[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L93-L100)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L278-L340)
   - 问题：`removeEditorTag` 直接写盘+同步；“取消”无法撤销。
   - 建议：编辑期只改本地，保存时统一提交；或删除前确认+撤销。
   - 验收：编辑器中删除标签后点取消，原有关联不变。
+  - 完成记录（2026-10-23，commit `01bdb1e`，执行编号 M6.7）：① 新增 `editorRemovedTags` 暂存本次编辑中待删除的自定义标签；`removeEditorTag` 只从本地候选 `editorAllTags` 与勾选集合 `editorSelected` 移除，不再调用 `FavoriteService.removeTag`。② `saveTags` 先逐条提交待删除标签（全局 `removeTag`），再提交当前收藏的勾选集合（`updateFavoriteTags`），最后统一刷新分组并关闭弹层。③ 同名标签在本轮删除后又通过输入框重新新增时，从 `editorRemovedTags` 撤销删除，避免保存时被误全局移除。④ `closeSheet` / `openTagEditor` 清空暂存；点「取消」不产生任何持久化或同步副作用。⑤ 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（Favorites 行号漂移：pushUrl 226→230、566→590）；当前无连接设备，取消/保存交互登记 O24，未冒充通过。
   - 依赖：无。
 
 - [ ] **M3 MyNotes 不订阅数据变化**
@@ -263,7 +265,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-22）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1 已完成（代码/构建；双端平局与备份恢复待 O23/O7），下一步 M2 标签编辑器删除标签。
+**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1、M2 已完成（代码/构建；设备验证待 O23/O24/O7），下一步 M3 MyNotes 订阅数据变化。
 
 ---
 
@@ -336,3 +338,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-22 | H4 API 口径统一完成并记录：保持 `compatibleSdkVersion: 5.0.4(16)` 不变，README/PROJECT_PLAN/START_HERE/相关代码注释统一为「最低 API 16（任务书要求 ≥ 12）」；目标设备安装待 O22 | 任务书要求是 ≥ 12，当前最低 16 已满足；本机无 API 12 SDK/镜像，下调后无法做安装回归，按 H4 建议选择「统一文档口径为 API 16」而非未经验证的降级 |
 | 2026-10-22 | 第二轮 M1 完成并记录（commit `7b9043d`，M6.6）：新增共享 DeviceIdentity（ODID 优先、UUID 回退与旧 store 迁移）、所有写入刷新 deviceId、nextUpdatedAt 严格递增、冲突台账记录胜方设备并在同步面板展示；残余 UUID 备份复制风险登记 O23 | 更新不刷新 deviceId 会让平局兜底指向创建者而非最后写入者；各服务独立生成 ID 导致跨实体判定不一致；墙钟回拨会让新编辑输给旧版本。按审计建议共享设备标识并显式化版本推进 |
 | 2026-10-22 | 第二轮 M1 复核补强（commit `35f9dcf`）：回退设备标识从 Preferences 移到 `cacheDir/lww_device_id.txt` | 官方备份默认 includes 不包含 cache，彻底规避「备份恢复到新设备复制同一 deviceId」；cache 清理换 ID 仅影响平局归因，不影响数据与同步收敛 |
+| 2026-10-23 | 第二轮 M2 完成并记录（commit `01bdb1e`，M6.7）：标签编辑器删除自定义标签改为本地暂存、保存时统一提交；取消不产生持久化副作用；同名重新新增视为撤销删除；交互待 O24 设备验证 | 原实现删除即全局落盘+同步，取消无法撤销；按审计建议区分编辑期与提交期 |
