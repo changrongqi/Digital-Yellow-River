@@ -22,8 +22,9 @@ export interface Theme {
 /**
  * 主题色板（单一来源：主题编辑器选色 + 知识图谱中心节点取色共用）。
  * 索引越界或负数按取余兜底，任何主题都有可用颜色。
+ * 色值按「白字 13vp」对比度校验：橙色用深橙 #BF360C（约 5.6:1），避免原 #EF6C00 的约 3.1:1。
  */
-export const THEME_PALETTE: string[] = ['#6D4C41', '#C0392B', '#2E7D32', '#1565C0', '#6A1B9A', '#EF6C00'];
+export const THEME_PALETTE: string[] = ['#6D4C41', '#C0392B', '#2E7D32', '#1565C0', '#6A1B9A', '#BF360C'];
 
 /** 按 colorIndex 取主题色（纯函数，越界取余、负数兜底第一色） */
 export function getThemeColor(colorIndex: number): string {

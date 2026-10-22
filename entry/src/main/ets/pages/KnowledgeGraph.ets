@@ -355,8 +355,11 @@ export struct KnowledgeGraph {
     return buildRecommendReason(recommendation, anchor);
   }
 
-  /** 主题覆盖：已归类遗址数 + 年代数 + 城市数（信息卡用） */
+  /** 主题覆盖：已归类遗址数 + 年代数 + 城市数（仅主题节点需要） */
   private themeCoverageText(): string {
+    if (this.selectedNodeKind !== GraphNodeKind.THEME) {
+      return '';
+    }
     const eras: string[] = [];
     const cities: string[] = [];
     for (let i = 0; i < this.themedHeritages.length; i++) {
@@ -423,18 +426,24 @@ export struct KnowledgeGraph {
     return theme === null ? 0 : theme.colorIndex;
   }
 
-  private saveTheme(name: string, colorIndex: number): void {
+  /** @return false=名称重复等原因未保存，弹层保持打开并显示错误 */
+  private saveTheme(name: string, colorIndex: number): boolean {
     if (this.themeEditorMode) {
-      ThemeService.renameTheme(this.selectedThemeId, name, colorIndex);
+      const renamed: boolean = ThemeService.renameTheme(this.selectedThemeId, name, colorIndex);
+      if (!renamed) {
+        return false;
+      }
     } else {
       const created: Theme | null = ThemeService.addTheme(name, colorIndex);
-      if (created !== null) {
-        this.selectedThemeId = created.id;
-        this.clearSelection();
+      if (created === null) {
+        return false;
       }
+      this.selectedThemeId = created.id;
+      this.clearSelection();
     }
     this.closeSheet();
     this.loadThemes();
+    return true;
   }
 
   private openDeleteConfirm(): void {
@@ -732,7 +741,7 @@ export struct KnowledgeGraph {
                 ? '实心=已归类 · 空心=拓展推荐 · 双指缩放查看'
                 : '点按节点查看 · 拖动平移 · 双指缩放 · 拖动节点可调整位置')
                 .fontSize(11)
-                .fontColor('#A1887F')
+                .fontColor('#8D6E63')
                 .width('100%')
                 .textAlign(TextAlign.Center)
                 .margin({ top: 8 })
@@ -876,7 +885,7 @@ export struct KnowledgeGraph {
               initialName: this.themeNameInput,
               initialColorIndex: this.themeColorIndex,
               onSave: (name: string, colorIndex: number) => {
-                this.saveTheme(name, colorIndex);
+                return this.saveTheme(name, colorIndex);
               },
               onCancel: () => {
                 this.closeSheet();

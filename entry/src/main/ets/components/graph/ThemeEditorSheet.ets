@@ -12,25 +12,31 @@ export struct ThemeEditorSheet {
   @Prop initialName: string = '';
   /** 初始颜色索引（重命名时传入） */
   @Prop initialColorIndex: number = 0;
-  /** 保存回调 */
-  onSave: (name: string, colorIndex: number) => void = () => {};
+  /** 保存回调：返回 false 表示名称重复等原因未保存，弹层保持打开并显示行内错误 */
+  onSave: (name: string, colorIndex: number) => boolean = () => false;
   /** 取消回调 */
   onCancel: () => void = () => {};
 
   @State themeNameInput: string = '';
   @State themeColorIndex: number = 0;
+  @State errorText: string = '';
 
   aboutToAppear(): void {
     this.themeNameInput = this.initialName;
     this.themeColorIndex = this.initialColorIndex;
+    this.errorText = '';
   }
 
   private handleSave(): void {
     const name: string = this.themeNameInput.trim();
     if (name === '') {
+      this.errorText = '主题名称不能为空';
       return;
     }
-    this.onSave(name, this.themeColorIndex);
+    const saved: boolean = this.onSave(name, this.themeColorIndex);
+    if (!saved) {
+      this.errorText = '主题名称已存在，请换一个';
+    }
   }
 
   build() {
@@ -49,7 +55,18 @@ export struct ThemeEditorSheet {
         .margin({ top: 16 })
         .onChange((value: string) => {
           this.themeNameInput = value;
+          if (this.errorText !== '') {
+            this.errorText = '';
+          }
         })
+
+      if (this.errorText !== '') {
+        Text(this.errorText)
+          .fontSize(11)
+          .fontColor('#C0392B')
+          .margin({ top: 6 })
+          .alignSelf(ItemAlign.Start)
+      }
 
       Text('主题颜色')
         .fontSize(13)

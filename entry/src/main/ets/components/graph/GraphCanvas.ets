@@ -220,7 +220,9 @@ export struct GraphCanvas {
     if (this.isPinching || event.fingerList.length === 0) {
       return;
     }
-    const node: GraphNode | null = this.hitTest(event.fingerList[0].localX, event.fingerList[0].localY);
+    // 平移起点只认节点圆：从标签起手仍视为平移视图，避免误拖节点
+    const node: GraphNode | null = this.hitTestNode(event.fingerList[0].localX,
+      event.fingerList[0].localY);
     if (node !== null && !node.pinned) {
       this.draggingNode = node;
       this.dragBaseX = node.x;
@@ -304,8 +306,17 @@ export struct GraphCanvas {
     this.drawGraph();
   }
 
-  /** 屏幕坐标命中测试（世界坐标距离，触控容差随缩放补偿） */
+  /** 点按命中：优先节点圆，其次已绘制的标签（标签在视觉上也属于节点） */
   private hitTest(screenX: number, screenY: number): GraphNode | null {
+    const node: GraphNode | null = this.hitTestNode(screenX, screenY);
+    if (node !== null) {
+      return node;
+    }
+    return this.renderer.hitTestLabel(screenX, screenY);
+  }
+
+  /** 节点圆命中（世界坐标距离，触控容差随缩放补偿；平移起点只用这一层） */
+  private hitTestNode(screenX: number, screenY: number): GraphNode | null {
     if (this.viewScale <= 0) {
       return null;
     }

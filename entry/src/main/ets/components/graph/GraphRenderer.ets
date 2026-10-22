@@ -42,6 +42,9 @@ export class GraphRenderer {
   private neighbors: Map<string, boolean> = new Map();
   private themeNode: GraphNode | null = null;
   private heritageCount: number = 0;
+  /** 本次已绘制标签的屏幕矩形与所属节点（同一数组下标对应），供命中测试复用 */
+  private labelHitNodes: GraphNode[] = [];
+  private labelHitBoxes: LabelBox[] = [];
 
   /** 绘制一次完整画面（快照参数，调用方负责重绘调度） */
   draw(ctx: CanvasRenderingContext2D, model: GraphModel, selectedId: string,
@@ -50,6 +53,8 @@ export class GraphRenderer {
     this.transform = transform;
     this.canvasWidth = width;
     this.canvasHeight = height;
+    this.labelHitNodes = [];
+    this.labelHitBoxes = [];
     if (width <= 0 || height <= 0) {
       return;
     }
@@ -89,6 +94,18 @@ export class GraphRenderer {
     this.drawThemeLabel(ctx);
     this.drawNodeLabels(ctx);
     this.drawEmptyHint(ctx);
+  }
+
+  /** 命中本次已绘制的标签，返回所属节点；未命中返回 null（交互层在节点圆未命中后回退调用） */
+  hitTestLabel(screenX: number, screenY: number): GraphNode | null {
+    for (let i = this.labelHitBoxes.length - 1; i >= 0; i--) {
+      const box: LabelBox = this.labelHitBoxes[i];
+      if (screenX >= box.left && screenX <= box.right &&
+        screenY >= box.top && screenY <= box.bottom) {
+        return this.labelHitNodes[i];
+      }
+    }
+    return null;
   }
 
   // ==================== 选中与坐标辅助 ====================
@@ -388,6 +405,8 @@ export class GraphRenderer {
         continue;
       }
       placed.push(textBox);
+      this.labelHitNodes.push(node);
+      this.labelHitBoxes.push(textBox);
       ctx.globalAlpha = candidate.priority === 0 ? 1 : candidate.alpha * 0.95;
       // 浅色描边文字：压在连线/节点上仍可读
       ctx.strokeStyle = CANVAS_BACKGROUND;
@@ -421,9 +440,9 @@ export class GraphRenderer {
     ctx.font = '11vp sans-serif';
     ctx.fillStyle = '#8D6E63';
     ctx.fillText('尚未归入遗址', screenX, hintY);
-    ctx.font = '10vp sans-serif';
-    ctx.fillStyle = '#A1887F';
-    ctx.fillText('点击下方「归类管理」开始构建知识网络', screenX, hintY + 16);
+    ctx.font = '11vp sans-serif';
+    ctx.fillStyle = '#8D6E63';
+    ctx.fillText('点击下方「归类管理」开始构建知识网络', screenX, hintY + 17);
   }
 
   // ==================== 几何辅助 ====================
