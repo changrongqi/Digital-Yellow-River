@@ -19,7 +19,7 @@ export struct ConfirmDeleteSheet {
         .fontColor('#3E2723')
       Text(`「${this.themeName}」删除后仅移除主题归类，收藏与笔记保留`)
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .margin({ top: 10 })
         .textAlign(TextAlign.Center)
       Row({ space: 12 }) {
@@ -28,6 +28,7 @@ export struct ConfirmDeleteSheet {
           .fontColor('#6D4C41')
           .backgroundColor('#EFEBE9')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.onCancel();
           })
@@ -36,6 +37,7 @@ export struct ConfirmDeleteSheet {
           .fontColor('#FFFFFF')
           .backgroundColor('#C0392B')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.onConfirm();
           })

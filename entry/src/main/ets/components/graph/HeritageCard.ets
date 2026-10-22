@@ -22,7 +22,7 @@ export struct HeritageCard {
         .width('100%')
       Text(this.heritage.summary)
         .fontSize(12)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .lineHeight(18)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })

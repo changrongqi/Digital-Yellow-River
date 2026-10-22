@@ -56,15 +56,19 @@ export struct NodeInfoPanel {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(this.kindLabel)
           .fontSize(10)
-          .fontColor('#8D6E63')
+          .fontColor('#7A5C52')
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .backgroundColor('#F5EFE9')
           .borderRadius(6)
           .margin({ left: 6 })
         Text('✕')
           .fontSize(16)
-          .fontColor('#8D6E63')
-          .padding(4)
+          .fontColor('#7A5C52')
+          .width(44)
+          .height(44)
+          .textAlign(TextAlign.Center)
+          .accessibilityText('关闭节点信息')
+          .accessibilityLevel('yes')
           .onClick(() => {
             this.onClose();
           })
@@ -74,13 +78,14 @@ export struct NodeInfoPanel {
       if (this.kind === GraphNodeKind.THEME) {
         Text(this.coverage)
           .fontSize(12)
-          .fontColor('#8D6E63')
+          .fontColor('#7A5C52')
           .margin({ top: 6 })
         Button('归类管理')
           .fontSize(13)
           .fontColor('#FFFFFF')
           .backgroundColor('#6D4C41')
           .width('100%')
+          .height(44)
           .margin({ top: 12 })
           .onClick(() => {
             this.onOpenManage();
@@ -88,12 +93,12 @@ export struct NodeInfoPanel {
       } else {
         Text(this.meta)
           .fontSize(11)
-          .fontColor('#8D6E63')
+          .fontColor('#7A5C52')
           .margin({ top: 6 })
         if (this.kind === GraphNodeKind.RECOMMEND) {
           Text(this.reason)
             .fontSize(11)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .lineHeight(17)
             .maxLines(3)
             .width('100%')
@@ -113,7 +118,7 @@ export struct NodeInfoPanel {
         if (this.highlights !== '') {
           Text(`看点：${this.highlights}`)
             .fontSize(11)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .lineHeight(17)
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -126,6 +131,7 @@ export struct NodeInfoPanel {
             .fontColor('#FFFFFF')
             .backgroundColor('#6D4C41')
             .layoutWeight(1)
+            .height(44)
             .onClick(() => {
               this.onOpenDetail();
             })
@@ -135,6 +141,7 @@ export struct NodeInfoPanel {
               .fontColor('#6D4C41')
               .backgroundColor('#EFEBE9')
               .layoutWeight(1)
+              .height(44)
               .onClick(() => {
                 this.onRemove();
               })

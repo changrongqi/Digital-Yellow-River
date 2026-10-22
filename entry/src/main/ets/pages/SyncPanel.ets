@@ -146,13 +146,13 @@ export struct SyncPanel {
           Row() {
             Text('服务状态')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
             Blank()
             Text(this.serviceStateText())
               .fontSize(13)
               .fontWeight(FontWeight.Medium)
               .fontColor(this.syncAvailable ? '#6D4C41'
-                : (this.permissionGranted ? '#BCAAA4' : '#C0392B'))
+                : (this.permissionGranted ? '#77635C' : '#C0392B'))
           }
           .width('100%')
           .margin({ top: 12 })
@@ -166,13 +166,13 @@ export struct SyncPanel {
             .margin({ top: 12 })
           Text(`同步进度 ${this.status.progress}%`)
             .fontSize(11)
-            .fontColor('#BCAAA4')
+            .fontColor('#77635C')
             .margin({ top: 4 })
 
           Row() {
             Text('最后同步')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
             Blank()
             Text(this.status.lastSyncTime > 0 ? formatDateTime(this.status.lastSyncTime) : '从未同步')
               .fontSize(13)
@@ -184,7 +184,7 @@ export struct SyncPanel {
           Row() {
             Text('在线设备')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
             Blank()
             Text(`${this.devices.length} 台`)
               .fontSize(13)
@@ -196,7 +196,7 @@ export struct SyncPanel {
           Row() {
             Text('冲突记录')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
             Blank()
             Text(this.status.conflictCount > 0 ? `${this.status.conflictCount} 条` : '无')
               .fontSize(13)
@@ -217,11 +217,11 @@ export struct SyncPanel {
           if (this.devices.length === 0) {
             Text('暂无在线设备')
               .fontSize(13)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
               .margin({ top: 10 })
             Text('两台设备登录同一华为账号、连接同一 WLAN 并开启蓝牙后，将自动组网出现在这里')
               .fontSize(12)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
               .margin({ top: 6 })
           } else {
             ForEach(this.devices, (device: SyncDeviceInfo) => {
@@ -232,7 +232,7 @@ export struct SyncPanel {
                   .layoutWeight(1)
                 Text('可信设备')
                   .fontSize(11)
-                  .fontColor('#8D6E63')
+                  .fontColor('#7A5C52')
                   .padding({ left: 8, right: 8, top: 2, bottom: 2 })
                   .backgroundColor('#EFEBE9')
                   .borderRadius(6)
@@ -257,7 +257,7 @@ export struct SyncPanel {
           this.SectionTitle('手动同步')
           Text('日常写入后自动同步；也可在此手动发起一次全量推送与拉取（PUSH_PULL）')
             .fontSize(12)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 10 })
           if (!this.permissionGranted) {
             Text('分布式同步需要「多设备数据交换」权限；未授权时收藏与笔记仍只在本地保存。')
@@ -280,7 +280,7 @@ export struct SyncPanel {
           if (this.permissionGranted && !this.syncAvailable) {
             Text('同步服务尚未就绪，可重试初始化；本地收藏与笔记不受影响。')
               .fontSize(12)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .lineHeight(19)
               .margin({ top: 8 })
             Button('重试初始化')
@@ -311,7 +311,7 @@ export struct SyncPanel {
           if (this.syncTip !== '') {
             Text(this.syncTip)
               .fontSize(12)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ top: 8 })
               .textAlign(TextAlign.Center)
               .width('100%')
@@ -330,7 +330,7 @@ export struct SyncPanel {
           if (this.status.conflictLog.length === 0) {
             Text('无冲突记录')
               .fontSize(13)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
               .margin({ top: 10 })
           } else {
             ForEach(this.status.conflictLog, (item: ConflictLogItem) => {
@@ -345,17 +345,17 @@ export struct SyncPanel {
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   Text(formatDateTime(item.time))
                     .fontSize(11)
-                    .fontColor('#BCAAA4')
+                    .fontColor('#77635C')
                 }
                 .width('100%')
                 Text(item.reason)
                   .fontSize(12)
-                  .fontColor('#8D6E63')
+                  .fontColor('#7A5C52')
                   .margin({ top: 4 })
                 if (item.deviceId !== '') {
                   Text(`最后写入设备 ${item.deviceId}`)
                     .fontSize(10)
-                    .fontColor('#BCAAA4')
+                    .fontColor('#77635C')
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .margin({ top: 2 })

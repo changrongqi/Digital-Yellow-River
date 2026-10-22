@@ -364,10 +364,12 @@ export struct GraphCanvas {
     Text(label)
       .fontSize(fontSize)
       .fontColor('#6D4C41')
-      .width(32)
-      .height(32)
+      .width(44)
+      .height(44)
       .textAlign(TextAlign.Center)
       .borderRadius(8)
+      .accessibilityText(label === '＋' ? '放大图谱' : (label === '－' ? '缩小图谱' : '重置图谱视图'))
+      .accessibilityLevel('yes')
       .onClick(() => {
         action();
       })
@@ -378,6 +380,8 @@ export struct GraphCanvas {
       Canvas(this.context)
         .width('100%')
         .height('100%')
+        .accessibilityText('知识图谱画布，双指缩放、拖动平移；节点信息显示在下方卡片')
+        .accessibilityLevel('yes')
         .onReady(() => {
           this.onCanvasReady();
         })

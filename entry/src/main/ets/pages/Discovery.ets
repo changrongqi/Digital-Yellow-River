@@ -57,7 +57,7 @@ struct FilterRow {
     Row() {
       Text(this.label)
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .width(40)
       Scroll() {
         Row() {
@@ -67,9 +67,11 @@ struct FilterRow {
               .fontColor(this.selected === opt ? '#FFFFFF' : '#6D4C41')
               .backgroundColor(this.selected === opt ? '#6D4C41' : '#FFFFFF')
               .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+              .constraintSize({ minHeight: 44 })
               .borderRadius(14)
               .border({ width: 1, color: this.selected === opt ? '#6D4C41' : '#E0D6CC' })
               .margin({ right: 8 })
+              .accessibilitySelected(this.selected === opt)
               .onClick(() => {
                 this.onSelect(opt);
               })
@@ -170,7 +172,7 @@ export struct Discovery {
         Blank()
         Text(`${this.filterList().length} 处遗产`)
           .fontSize(13)
-          .fontColor('#8D6E63')
+          .fontColor('#7A5C52')
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 16, bottom: 12 })
@@ -179,7 +181,7 @@ export struct Discovery {
       Row() {
         Search({ placeholder: '搜索遗址名称 / 简介关键词' })
           .width('100%')
-          .height(40)
+          .height(44)
           .backgroundColor('#FFFFFF')
           .borderRadius(20)
           .onChange((value: string) => {
@@ -229,7 +231,7 @@ export struct Discovery {
             .color('#A1887F')
           Text('正在加载文化档案…')
             .fontSize(14)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -243,7 +245,7 @@ export struct Discovery {
             .fontColor('#6D4C41')
           Text(this.loadFailed ? '预置数据解析失败，请检查 rawfile 数据文件' : '预置数据为空')
             .fontSize(13)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -256,7 +258,7 @@ export struct Discovery {
             Row() {
               Text('示例数据 · 预览调试专用（rawfile 加载失败）')
                 .fontSize(12)
-                .fontColor('#8D6E63')
+                .fontColor('#7A5C52')
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 6, bottom: 6 })
@@ -277,7 +279,7 @@ export struct Discovery {
               .fontColor('#6D4C41')
             Text('试试调整筛选条件或更换关键词')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ top: 8 })
           }
           .justifyContent(FlexAlign.Center)
@@ -318,7 +320,7 @@ export struct Discovery {
           .fontColor('#FFFFFF')
         Text(item.era)
           .fontSize(11)
-          .fontColor('#FFE0B2')
+          .fontColor('#FFFFFF')
           .margin({ top: 4 })
       }
       .justifyContent(FlexAlign.Center)
@@ -343,7 +345,7 @@ export struct Discovery {
         Row() {
           Text(item.type)
             .fontSize(11)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .padding({ left: 8, right: 8, top: 2, bottom: 2 })
             .backgroundColor('#EFEBE9')
             .borderRadius(6)

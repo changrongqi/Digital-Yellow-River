@@ -144,9 +144,11 @@ struct MyNotes {
         Text('‹')
           .fontSize(30)
           .fontColor('#6D4C41')
-          .width(36)
-          .height(36)
+          .width(44)
+          .height(44)
           .textAlign(TextAlign.Center)
+          .accessibilityText('返回')
+          .accessibilityLevel('yes')
           .onClick(() => {
             this.goBack();
           })
@@ -158,7 +160,7 @@ struct MyNotes {
           .margin({ left: 8 })
         Text(`${this.totalNotes} 条`)
           .fontSize(13)
-          .fontColor('#8D6E63')
+          .fontColor('#7A5C52')
       }
       .width('100%')
       .padding({ left: 12, right: 20, top: 12, bottom: 12 })
@@ -172,7 +174,7 @@ struct MyNotes {
             .color('#A1887F')
           Text('正在加载笔记…')
             .fontSize(14)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -187,7 +189,7 @@ struct MyNotes {
             .fontColor('#6D4C41')
           Text('在任意遗址详情页点击「写笔记」，之后可在这里快速找回')
             .fontSize(13)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -199,7 +201,7 @@ struct MyNotes {
           Row() {
             Text('示例数据 · 预览调试专用（rawfile 加载失败）')
               .fontSize(12)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .padding({ left: 16, right: 16, top: 6, bottom: 6 })
               .backgroundColor('#FFF3E0')
               .borderRadius(8)
@@ -221,7 +223,7 @@ struct MyNotes {
                     .fontColor('#FFFFFF')
                   Text('笔记')
                     .fontSize(10)
-                    .fontColor('#FFE0B2')
+                    .fontColor('#FFFFFF')
                     .margin({ top: 2 })
                 }
                 .justifyContent(FlexAlign.Center)
@@ -239,7 +241,7 @@ struct MyNotes {
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   Text(`最后编辑 ${formatDateTime(group.lastUpdatedAt)}`)
                     .fontSize(12)
-                    .fontColor('#8D6E63')
+                    .fontColor('#7A5C52')
                     .margin({ top: 6 })
                 }
                 .alignItems(HorizontalAlign.Start)
@@ -248,7 +250,7 @@ struct MyNotes {
 
                 Text('›')
                   .fontSize(22)
-                  .fontColor('#BCAAA4')
+                  .fontColor('#77635C')
                   .margin({ left: 8 })
               }
               .width('100%')

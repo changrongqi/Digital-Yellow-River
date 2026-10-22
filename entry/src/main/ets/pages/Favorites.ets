@@ -363,7 +363,7 @@ export struct Favorites {
           Blank()
           Text(`${this.favoriteCount} 处`)
             .fontSize(13)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
         }
         .width('100%')
         .padding({ left: 20, right: 20, top: 16, bottom: 12 })
@@ -377,12 +377,12 @@ export struct Favorites {
               .fontColor('#6D4C41')
             Text(`${this.noteCount} 条`)
               .fontSize(12)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ left: 8 })
             Blank()
             Text('›')
               .fontSize(18)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 12, bottom: 12 })
@@ -405,7 +405,7 @@ export struct Favorites {
               .color('#A1887F')
             Text('正在加载收藏…')
               .fontSize(14)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ top: 12 })
           }
           .justifyContent(FlexAlign.Center)
@@ -420,11 +420,11 @@ export struct Favorites {
               .fontColor('#6D4C41')
             Text('去发现页探索黄河文化遗产')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ top: 8 })
             Text('在详情页点击收藏后，可回到这里按标签查看')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ top: 4 })
           }
           .justifyContent(FlexAlign.Center)
@@ -436,7 +436,7 @@ export struct Favorites {
             Row() {
               Text('示例数据 · 预览调试专用（rawfile 加载失败）')
                 .fontSize(12)
-                .fontColor('#8D6E63')
+                .fontColor('#7A5C52')
                 .padding({ left: 16, right: 16, top: 6, bottom: 6 })
                 .backgroundColor('#FFF3E0')
                 .borderRadius(8)
@@ -502,7 +502,7 @@ export struct Favorites {
         .fontColor('#3E2723')
       Text(`${count} 处`)
         .fontSize(12)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .margin({ left: 8 })
     }
     .width('100%')
@@ -524,7 +524,7 @@ export struct Favorites {
           if (card.heritage !== null) {
             Text(card.heritage.era)
               .fontSize(11)
-              .fontColor('#FFE0B2')
+              .fontColor('#FFFFFF')
               .margin({ top: 4 })
           }
         }
@@ -532,7 +532,7 @@ export struct Favorites {
         .width(72)
         .height(72)
         .borderRadius(10)
-        .backgroundColor(card.heritage === null ? '#9E9E9E' : '#8D6E63')
+        .backgroundColor(card.heritage === null ? '#757575' : '#8D6E63')
 
         Column() {
           Text(this.cardName(card))
@@ -554,7 +554,7 @@ export struct Favorites {
             ForEach(this.visibleTags(card.favorite.tags), (t: string) => {
               Text(t)
                 .fontSize(11)
-                .fontColor('#8D6E63')
+                .fontColor('#7A5C52')
                 .padding({ left: 8, right: 8, top: 2, bottom: 2 })
                 .backgroundColor('#EFEBE9')
                 .borderRadius(6)
@@ -563,7 +563,7 @@ export struct Favorites {
             if (card.favorite.tags.length > MAX_VISIBLE_TAGS) {
               Text(`+${card.favorite.tags.length - MAX_VISIBLE_TAGS}`)
                 .fontSize(11)
-                .fontColor('#8D6E63')
+                .fontColor('#7A5C52')
                 .padding({ left: 8, right: 8, top: 2, bottom: 2 })
                 .backgroundColor('#EFEBE9')
                 .borderRadius(6)
@@ -576,11 +576,11 @@ export struct Favorites {
           Row() {
             Text(`收藏于 ${formatDate(card.favorite.createdAt)}`)
               .fontSize(11)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
             if (card.noteCount > 0) {
               Text(`${card.noteCount} 条笔记`)
                 .fontSize(11)
-                .fontColor('#BCAAA4')
+                .fontColor('#77635C')
                 .margin({ left: 12 })
             }
           }
@@ -600,9 +600,12 @@ export struct Favorites {
       // 「⋯」菜单按钮（兄弟节点，点击不会冒泡到主区域的跳转 onClick）
       Text('⋯')
         .fontSize(22)
-        .fontColor('#8D6E63')
-        .padding({ left: 8, right: 4, top: 4, bottom: 4 })
-        .margin({ left: 4 })
+        .fontColor('#7A5C52')
+        .width(44)
+        .height(44)
+        .textAlign(TextAlign.Center)
+        .accessibilityText('更多操作')
+        .accessibilityLevel('yes')
         .onClick(() => {
           this.openMenu(card.favorite.itemId, this.cardName(card));
         })
@@ -652,14 +655,14 @@ export struct Favorites {
         .fontColor('#3E2723')
       Text(this.sheetItemName)
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 6 })
 
       Text('选择标签')
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .margin({ top: 16 })
         .alignSelf(ItemAlign.Start)
 
@@ -677,18 +680,22 @@ export struct Favorites {
               if (!this.isBuiltInTag(tag)) {
                 Text('✕')
                   .fontSize(12)
-                  .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFCCBC' : '#BCAAA4')
+                  .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFCCBC' : '#77635C')
                   .padding({ left: 6, right: 2 })
+                  .accessibilityText(`删除标签 ${tag}`)
+                  .accessibilityLevel('yes')
                   .onClick(() => {
                     this.removeEditorTag(tag);
                   })
               }
             }
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+            .constraintSize({ minHeight: 44 })
             .backgroundColor(this.editorSelected.indexOf(tag) >= 0 ? '#6D4C41' : '#FFFFFF')
             .borderRadius(14)
             .border({ width: 1, color: this.editorSelected.indexOf(tag) >= 0 ? '#6D4C41' : '#E0D6CC' })
             .margin({ right: 8, bottom: 8 })
+            .accessibilitySelected(this.editorSelected.indexOf(tag) >= 0)
           }, (tag: string) => `${tag}-${this.editorSelected.indexOf(tag) >= 0}-${this.isBuiltInTag(tag)}`)
         }
         .width('100%')
@@ -702,7 +709,7 @@ export struct Favorites {
       Row({ space: 8 }) {
         TextInput({ placeholder: '自定义标签名', text: this.newTagInput })
           .layoutWeight(1)
-          .height(40)
+          .height(44)
           .fontSize(13)
           .backgroundColor('#FAF6F0')
           .borderRadius(8)
@@ -713,7 +720,7 @@ export struct Favorites {
           .fontSize(13)
           .fontColor('#FFFFFF')
           .backgroundColor('#6D4C41')
-          .height(36)
+          .height(44)
           .onClick(() => {
             this.addNewTag();
           })
@@ -728,6 +735,7 @@ export struct Favorites {
           .fontColor('#6D4C41')
           .backgroundColor('#EFEBE9')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.closeSheet();
           })
@@ -736,6 +744,7 @@ export struct Favorites {
           .fontColor('#FFFFFF')
           .backgroundColor('#6D4C41')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.saveTags();
           })
@@ -760,7 +769,7 @@ export struct Favorites {
         .fontColor('#3E2723')
       Text(`「${this.sheetItemName}」取消收藏后，相关笔记将保留不删除`)
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .margin({ top: 10 })
         .textAlign(TextAlign.Center)
       Row({ space: 12 }) {
@@ -769,6 +778,7 @@ export struct Favorites {
           .fontColor('#6D4C41')
           .backgroundColor('#EFEBE9')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.closeSheet();
           })
@@ -777,6 +787,7 @@ export struct Favorites {
           .fontColor('#FFFFFF')
           .backgroundColor('#C0392B')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.confirmRemove();
           })

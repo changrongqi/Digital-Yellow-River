@@ -412,7 +412,7 @@ export class GraphRenderer {
       ctx.strokeStyle = CANVAS_BACKGROUND;
       ctx.lineWidth = 3;
       ctx.strokeText(label, drawX, labelY);
-      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? '#8D6E63' : '#5D4037';
+      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? '#7A5C52' : '#5D4037';
       ctx.fillText(label, drawX, labelY);
       ctx.globalAlpha = 1;
     }
@@ -438,10 +438,10 @@ export class GraphRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.font = '11vp sans-serif';
-    ctx.fillStyle = '#8D6E63';
+    ctx.fillStyle = '#7A5C52';
     ctx.fillText('尚未归入遗址', screenX, hintY);
     ctx.font = '11vp sans-serif';
-    ctx.fillStyle = '#8D6E63';
+    ctx.fillStyle = '#7A5C52';
     ctx.fillText('点击下方「归类管理」开始构建知识网络', screenX, hintY + 17);
   }
 

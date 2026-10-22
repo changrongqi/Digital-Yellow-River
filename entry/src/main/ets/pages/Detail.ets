@@ -186,9 +186,11 @@ struct Detail {
         Text('‹')
           .fontSize(30)
           .fontColor('#6D4C41')
-          .width(36)
-          .height(36)
+          .width(44)
+          .height(44)
           .textAlign(TextAlign.Center)
+          .accessibilityText('返回')
+          .accessibilityLevel('yes')
           .onClick(() => {
             router.back();
           })
@@ -214,7 +216,7 @@ struct Detail {
             .color('#A1887F')
           Text('正在加载文化档案…')
             .fontSize(14)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -228,7 +230,7 @@ struct Detail {
             .fontColor('#6D4C41')
           Text('数据可能已更新，请返回列表重试')
             .fontSize(13)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -239,7 +241,7 @@ struct Detail {
         if (this.isMockData) {
           Text('示例数据 · 预览调试专用（rawfile 加载失败）')
             .fontSize(12)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .width('100%')
             .padding({ left: 16, right: 16, top: 6, bottom: 6 })
             .backgroundColor('#FFF3E0')
@@ -262,7 +264,7 @@ struct Detail {
           .margin({ top: 12 })
           Text(this.heritage.summary)
             .fontSize(13)
-            .fontColor('rgba(255,255,255,0.92)')
+            .fontColor('#FFFFFF')
             .lineHeight(21)
             .margin({ top: 12 })
         }
@@ -323,7 +325,7 @@ struct Detail {
       .fontSize(12)
       .fontColor('#FFFFFF')
       .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-      .backgroundColor('rgba(255,255,255,0.22)')
+      .backgroundColor('rgba(62,39,35,0.30)')
       .borderRadius(8)
       .margin({ right: 8 })
   }
@@ -339,10 +341,14 @@ struct Detail {
       .fontSize(13)
       .fontWeight(FontWeight.Medium)
       .fontColor(this.isFav ? '#FFFFFF' : '#6D4C41')
+      .constraintSize({ minHeight: 44 })
       .padding({ left: 14, right: 14, top: 6, bottom: 6 })
       .backgroundColor(this.isFav ? '#6D4C41' : '#FFFFFF')
       .borderRadius(14)
       .border({ width: 1, color: this.isFav ? '#6D4C41' : '#E0D6CC' })
+      .accessibilityText(this.isFav ? '已收藏，双击取消收藏' : '收藏该遗址')
+      .accessibilitySelected(this.isFav)
+      .accessibilityLevel('yes')
       .onClick(() => {
         this.toggleFav();
       })
@@ -379,7 +385,7 @@ struct Detail {
           if (this.heritage.detail.intro.length === 0) {
             Text('暂无内容')
               .fontSize(14)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
               .padding({ top: 40 })
           } else {
             Text(this.heritage.detail.intro)
@@ -402,7 +408,7 @@ struct Detail {
               Row() {
                 Text(spec.label)
                   .fontSize(13)
-                  .fontColor('#8D6E63')
+                  .fontColor('#7A5C52')
                   .width(88)
                 Text(spec.value)
                   .fontSize(13)
@@ -483,7 +489,7 @@ struct Detail {
         .width('100%')
       Text(rec.summary)
         .fontSize(12)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .lineHeight(18)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -521,7 +527,7 @@ struct Detail {
           if (this.heritage.detail.discovery.length === 0) {
             Text('暂无内容')
               .fontSize(14)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
               .padding({ top: 40 })
           } else {
             Text(this.heritage.detail.discovery)
@@ -616,7 +622,7 @@ struct Detail {
         if (this.tourismEmpty()) {
           Text('暂无内容')
             .fontSize(14)
-            .fontColor('#BCAAA4')
+            .fontColor('#77635C')
             .padding({ top: 40 })
         } else {
           // 1. 概览正文
@@ -791,7 +797,7 @@ struct Detail {
         if (events.length === 0) {
           Text('暂无内容')
             .fontSize(14)
-            .fontColor('#BCAAA4')
+            .fontColor('#77635C')
             .padding({ top: 40 })
         } else {
           ForEach(events, (item: HeritageEvent, idx: number) => {
@@ -817,7 +823,7 @@ struct Detail {
                 // 可点击入口提示（M1.8）
                 Text('›')
                   .fontSize(18)
-                  .fontColor('#A1887F')
+                  .fontColor('#7D655B')
                   .margin({ left: 8 })
               }
               .width('100%')
@@ -842,7 +848,7 @@ struct Detail {
         if (events.length > 0 && events.length < 4) {
           Text('更多考古进程正在整理中')
             .fontSize(12)
-            .fontColor('#BCAAA4')
+            .fontColor('#77635C')
             .margin({ top: 20, bottom: 8 })
         }
       }
@@ -875,9 +881,12 @@ struct Detail {
             .fontSize(13)
             .fontWeight(FontWeight.Medium)
             .fontColor('#6D4C41')
+            .constraintSize({ minHeight: 44 })
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
             .backgroundColor('#EFEBE9')
             .borderRadius(14)
+            .accessibilityText('添加笔记')
+            .accessibilityLevel('yes')
             .onClick(() => {
               this.openNoteEditor('');
             })
@@ -888,7 +897,7 @@ struct Detail {
         if (this.notes.length === 0) {
           Text('还没有笔记，点击「写笔记」记录你的想法')
             .fontSize(13)
-            .fontColor('#BCAAA4')
+            .fontColor('#77635C')
             .margin({ top: 12 })
         } else {
           ForEach(this.notes, (note: Note) => {
@@ -901,7 +910,7 @@ struct Detail {
                 .lineHeight(22)
               Text(`最后编辑 ${formatDateTime(note.updatedAt)}`)
                 .fontSize(11)
-                .fontColor('#BCAAA4')
+                .fontColor('#77635C')
                 .margin({ top: 6 })
             }
             .width('100%')

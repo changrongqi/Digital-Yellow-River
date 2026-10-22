@@ -51,12 +51,12 @@ export function getEraTheme(era: string): EraTheme {
   } else if (era === HeritageEra.HAN_TANG) {
     // 鎏金赭：汉唐鎏金器物的赭金
     theme.deep = '#7F5423';
-    theme.mid = '#A87C3B';
+    theme.mid = '#8A622B';
     theme.soft = '#F5ECDC';
   } else if (era === HeritageEra.SONG) {
     // 青瓷：宋代青瓷的天青釉色
     theme.deep = '#466960';
-    theme.mid = '#6F908A';
+    theme.mid = '#4E726C';
     theme.soft = '#E7F0EE';
   } else {
     return DEFAULT_THEME;

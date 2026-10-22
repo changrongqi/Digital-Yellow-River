@@ -140,9 +140,11 @@ struct EventDetail {
         Text('‹')
           .fontSize(30)
           .fontColor('#6D4C41')
-          .width(36)
-          .height(36)
+          .width(44)
+          .height(44)
           .textAlign(TextAlign.Center)
+          .accessibilityText('返回')
+          .accessibilityLevel('yes')
           .onClick(() => {
             router.back();
           })
@@ -167,7 +169,7 @@ struct EventDetail {
             .color('#A1887F')
           Text('正在加载事件专题…')
             .fontSize(14)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -181,7 +183,7 @@ struct EventDetail {
             .fontColor('#6D4C41')
           Text('数据可能已更新，请返回列表重试')
             .fontSize(13)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -192,7 +194,7 @@ struct EventDetail {
         if (this.isMockData) {
           Text('示例数据 · 预览调试专用（rawfile 加载失败）')
             .fontSize(12)
-            .fontColor('#8D6E63')
+            .fontColor('#7A5C52')
             .width('100%')
             .padding({ left: 16, right: 16, top: 6, bottom: 6 })
             .backgroundColor('#FFF3E0')
@@ -208,7 +210,7 @@ struct EventDetail {
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#FFFFFF')
                 .padding({ left: 12, right: 12, top: 5, bottom: 5 })
-                .backgroundColor('rgba(255,255,255,0.22)')
+                .backgroundColor('rgba(62,39,35,0.30)')
                 .borderRadius(10)
               Text(this.event.title)
                 .fontSize(22)
@@ -219,7 +221,7 @@ struct EventDetail {
               if (this.event.summary.length > 0) {
                 Text(this.event.summary)
                   .fontSize(13)
-                  .fontColor('rgba(255,255,255,0.92)')
+                  .fontColor('#FFFFFF')
                   .lineHeight(21)
                   .margin({ top: 12 })
               }
@@ -300,7 +302,7 @@ struct EventDetail {
                   .margin({ top: 18, bottom: 8 })
                 Text(this.event.furtherReading)
                   .fontSize(12)
-                  .fontColor('#8D6E63')
+                  .fontColor('#7A5C52')
                   .lineHeight(19)
                   .width('100%')
               }

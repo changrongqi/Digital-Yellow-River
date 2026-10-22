@@ -48,7 +48,7 @@ export struct ThemeEditorSheet {
 
       TextInput({ placeholder: '主题名称（如「彩陶文化」「青铜文明」）', text: this.themeNameInput })
         .width('100%')
-        .height(42)
+        .height(44)
         .fontSize(14)
         .backgroundColor('#FAF6F0')
         .borderRadius(8)
@@ -70,23 +70,34 @@ export struct ThemeEditorSheet {
 
       Text('主题颜色')
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .margin({ top: 16 })
         .alignSelf(ItemAlign.Start)
-      Row() {
-        ForEach(THEME_PALETTE, (color: string, index: number) => {
-          Row()
-            .width(26)
-            .height(26)
-            .borderRadius(13)
-            .backgroundColor(color)
-            .border({ width: 2, color: this.themeColorIndex === index ? '#3E2723' : '#E0D6CC' })
-            .margin({ right: 10 })
+      Scroll() {
+        Row() {
+          ForEach(THEME_PALETTE, (color: string, index: number) => {
+            Row() {
+              Row()
+                .width(26)
+                .height(26)
+                .borderRadius(13)
+                .backgroundColor(color)
+                .border({ width: 2, color: this.themeColorIndex === index ? '#3E2723' : '#E0D6CC' })
+            }
+            .width(44)
+            .height(44)
+            .justifyContent(FlexAlign.Center)
+            .accessibilityText(`主题颜色 ${index + 1}`)
+            .accessibilitySelected(this.themeColorIndex === index)
+            .accessibilityLevel('yes')
             .onClick(() => {
               this.themeColorIndex = index;
             })
-        }, (color: string, index: number) => `${color}-${index}`)
+          }, (color: string, index: number) => `${color}-${index}`)
+        }
       }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
       .width('100%')
       .margin({ top: 10 })
 
@@ -96,6 +107,7 @@ export struct ThemeEditorSheet {
           .fontColor('#6D4C41')
           .backgroundColor('#EFEBE9')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.onCancel();
           })
@@ -104,6 +116,7 @@ export struct ThemeEditorSheet {
           .fontColor('#FFFFFF')
           .backgroundColor('#6D4C41')
           .layoutWeight(1)
+          .height(44)
           .onClick(() => {
             this.handleSave();
           })

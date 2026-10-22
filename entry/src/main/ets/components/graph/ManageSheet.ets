@@ -27,14 +27,14 @@ export struct ManageSheet {
         .fontColor('#3E2723')
       Text(this.themeName)
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 6 })
 
       Text('已归类（点击 ✕ 移除）')
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .margin({ top: 14 })
         .alignSelf(ItemAlign.Start)
       Scroll() {
@@ -42,7 +42,7 @@ export struct ManageSheet {
           if (this.included.length === 0) {
             Text('暂无，从下方收藏中添加')
               .fontSize(12)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
               .padding({ top: 4, bottom: 4 })
           }
           ForEach(this.included, (h: Heritage) => {
@@ -58,10 +58,13 @@ export struct ManageSheet {
                 .padding({ left: 6, right: 2 })
             }
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+            .constraintSize({ minHeight: 44 })
             .backgroundColor('#FBE9E7')
             .borderRadius(14)
             .border({ width: 1, color: '#FFCCBC' })
             .margin({ right: 8, bottom: 8 })
+            .accessibilityText(`将 ${h.name} 移出主题`)
+            .accessibilityLevel('yes')
             .onClick(() => {
               this.onRemove(h.id);
             })
@@ -76,7 +79,7 @@ export struct ManageSheet {
 
       Text('未归类收藏（点击加入）')
         .fontSize(13)
-        .fontColor('#8D6E63')
+        .fontColor('#7A5C52')
         .margin({ top: 14 })
         .alignSelf(ItemAlign.Start)
       Scroll() {
@@ -84,7 +87,7 @@ export struct ManageSheet {
           if (this.available.length === 0) {
             Text('没有可加入的收藏（全部已归类或暂无收藏）')
               .fontSize(12)
-              .fontColor('#BCAAA4')
+              .fontColor('#77635C')
               .padding({ top: 4, bottom: 4 })
           }
           ForEach(this.available, (h: Heritage) => {
@@ -100,10 +103,13 @@ export struct ManageSheet {
                 .padding({ left: 6, right: 2 })
             }
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+            .constraintSize({ minHeight: 44 })
             .backgroundColor('#E8F5E9')
             .borderRadius(14)
             .border({ width: 1, color: '#A5D6A7' })
             .margin({ right: 8, bottom: 8 })
+            .accessibilityText(`将 ${h.name} 加入主题`)
+            .accessibilityLevel('yes')
             .onClick(() => {
               this.onAdd(h.id);
             })
@@ -121,6 +127,7 @@ export struct ManageSheet {
         .fontColor('#FFFFFF')
         .backgroundColor('#6D4C41')
         .width('100%')
+        .height(44)
         .margin({ top: 16 })
         .onClick(() => {
           this.onDone();

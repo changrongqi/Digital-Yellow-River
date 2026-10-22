@@ -85,7 +85,8 @@ struct Index {
       Text(title)
         .fontSize(15)
         .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
-        .fontColor(this.currentIndex === index ? '#6D4C41' : '#BCAAA4')
+        .fontColor(this.currentIndex === index ? '#6D4C41' : '#77635C')
+        .accessibilitySelected(this.currentIndex === index)
     }
     .width('100%')
     .height(56)

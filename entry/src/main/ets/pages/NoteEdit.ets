@@ -179,9 +179,11 @@ struct NoteEdit {
           Text('‹')
             .fontSize(30)
             .fontColor('#6D4C41')
-            .width(36)
-            .height(36)
+            .width(44)
+            .height(44)
             .textAlign(TextAlign.Center)
+            .accessibilityText('返回')
+            .accessibilityLevel('yes')
             .onClick(() => {
               this.handleBack();
             })
@@ -197,7 +199,10 @@ struct NoteEdit {
             Text('删除')
               .fontSize(14)
               .fontColor('#C0392B')
+              .constraintSize({ minHeight: 44 })
               .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+              .accessibilityText('删除笔记')
+              .accessibilityLevel('yes')
               .onClick(() => {
                 this.confirmDeleting = true;
               })
@@ -213,7 +218,7 @@ struct NoteEdit {
             if (this.itemTitle !== '') {
               Text(`关于「${this.itemTitle}」`)
                 .fontSize(13)
-                .fontColor('#8D6E63')
+                .fontColor('#7A5C52')
                 .margin({ bottom: 8 })
             }
             TextArea({ placeholder: '记录你的想法…', text: this.content })
@@ -233,10 +238,10 @@ struct NoteEdit {
               Column() {
                 Text(`创建于 ${formatDateTime(this.createdAt)}`)
                   .fontSize(12)
-                  .fontColor('#BCAAA4')
+                  .fontColor('#77635C')
                 Text(`最后编辑 ${formatDateTime(this.updatedAt)}`)
                   .fontSize(12)
-                  .fontColor('#BCAAA4')
+                  .fontColor('#77635C')
                   .margin({ top: 4 })
               }
               .width('100%')
@@ -246,7 +251,7 @@ struct NoteEdit {
             if (this.isLoading) {
               Text('正在加载…')
                 .fontSize(12)
-                .fontColor('#BCAAA4')
+                .fontColor('#77635C')
                 .margin({ top: 10 })
             }
           }
@@ -296,7 +301,7 @@ struct NoteEdit {
               .fontColor('#3E2723')
             Text('删除后不可恢复')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ top: 10 })
             Row({ space: 12 }) {
               Button('再想想')
@@ -304,6 +309,7 @@ struct NoteEdit {
                 .fontColor('#6D4C41')
                 .backgroundColor('#EFEBE9')
                 .layoutWeight(1)
+                .height(44)
                 .onClick(() => {
                   this.confirmDeleting = false;
                 })
@@ -312,6 +318,7 @@ struct NoteEdit {
                 .fontColor('#FFFFFF')
                 .backgroundColor('#C0392B')
                 .layoutWeight(1)
+                .height(44)
                 .onClick(() => {
                   this.deleteCurrent();
                 })
@@ -344,7 +351,7 @@ struct NoteEdit {
               .fontColor('#3E2723')
             Text('返回后本次编辑的内容将丢失')
               .fontSize(13)
-              .fontColor('#8D6E63')
+              .fontColor('#7A5C52')
               .margin({ top: 10 })
             Row({ space: 12 }) {
               Button('继续编辑')
