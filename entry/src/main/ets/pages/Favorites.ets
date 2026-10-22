@@ -675,6 +675,9 @@ export struct Favorites {
               Text(tag)
                 .fontSize(13)
                 .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFFFFF' : '#6D4C41')
+                .height(44)
+                .padding({ left: 12, right: this.isBuiltInTag(tag) ? 12 : 4 })
+                .accessibilitySelected(this.editorSelected.indexOf(tag) >= 0)
                 .onClick(() => {
                   this.toggleEditorTag(tag);
                 })
@@ -682,7 +685,9 @@ export struct Favorites {
                 Text('✕')
                   .fontSize(12)
                   .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFCCBC' : '#77635C')
-                  .padding({ left: 6, right: 2 })
+                  .width(32)
+                  .height(44)
+                  .textAlign(TextAlign.Center)
                   .accessibilityText(`删除标签 ${tag}`)
                   .accessibilityLevel('yes')
                   .onClick(() => {
@@ -690,13 +695,11 @@ export struct Favorites {
                   })
               }
             }
-            .padding({ left: 12, right: 12, top: 6, bottom: 6 })
             .constraintSize({ minHeight: 44 })
             .backgroundColor(this.editorSelected.indexOf(tag) >= 0 ? '#6D4C41' : '#FFFFFF')
             .borderRadius(14)
             .border({ width: 1, color: this.editorSelected.indexOf(tag) >= 0 ? '#6D4C41' : '#E0D6CC' })
             .margin({ right: 8, bottom: 8 })
-            .accessibilitySelected(this.editorSelected.indexOf(tag) >= 0)
           }, (tag: string) => `${tag}-${this.editorSelected.indexOf(tag) >= 0}-${this.isBuiltInTag(tag)}`)
         }
         .width('100%')
