@@ -47,7 +47,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | H1 | M6.2 同步追赶 / 初始化重试 / sync 目标 networkId | 2026-10-22 | `40f990f` + 复核补强 | 代码 + 构建；双端首次拉取与设备上线收敛待 O7 设备验证 | 已完成（代码/构建） |
 | H2 | M6.3 删除墓碑与主题引用校验 | 2026-10-22 | `bdb18ee` | 代码 + 构建；双端删除/复活/并发编辑场景待 O7 设备验证 | 已完成（代码/构建） |
 | H3 | M6.4 笔记未保存退出保护 | 2026-10-22 | `27378bc` + 复核补强 | 代码 + 构建；返回确认交互待设备验证 | 已完成（代码/构建） |
-| H4 | M6.5 API 兼容口径统一 | 2026-10-22 | 本条提交 | 文档 + 构建；目标设备安装待 O22 | 已完成（文档/构建） |
+| H4 | M6.5 API 兼容口径统一 | 2026-10-22 | `2a5d0bb` | 文档 + 构建；目标设备安装待 O22 | 已完成（文档/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -115,7 +115,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 位置：[build-profile.json5](build-profile.json5#L7-L17)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L63-L67)、[README.md](README.md#L19-L30)、[START_HERE.md](START_HERE.md#L1-L4)
   - 问题：`compatibleSdkVersion: 5.0.4(16)` 最低 API 16，文档/交接称 API 12；若验收用 API 12 镜像会安装失败。
   - 建议：确认验收下限；要求 API 12 则降 `compatibleSdkVersion` 并以 API 12 SDK 回归；否则统一文档口径为 API 16。
-  - 完成记录（2026-10-22，commit 见本条提交）：① **决策依据**——PROJECT_PLAN §2 明确任务书要求为「≥ 12」，并非必须等于 12；当前 `compatibleSdkVersion: 5.0.4(16)` 满足下限，且本机仅安装编译 SDK 26、无 API 12 SDK/镜像可用于下调后的安装回归，贸然降级会产生不可验证的交付风险。② **结论**——保持构建配置不变（`compatibleSdkVersion: 5.0.4(16)`、`targetSdkVersion: 26.0.0`），统一文档口径为「最低 API 16（任务书要求 ≥ 12）」：PROJECT_PLAN §0 速记与 §2 技术约束、README 技术栈表与快速开始、START_HERE 首行；同步修正 C1 里程碑中「API 12 CanvasRenderingContext2D」的易误解表述。③ **代码注释**——`SyncService` 标注「API 12 文档口径；本机编译 SDK 26、最低运行 API 16」，`FavoriteService` 改为「本机 SDK 实测存在」，避免把文档口径误读为运行下限。④ **构建**——`BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增。⑤ **未验证范围**——目标设备安装登记 O22；若验收方明确要求 API 12 镜像，需另立任务：安装 API 12 SDK、下调 `compatibleSdkVersion` 并做 API 12 设备/模拟器安装与功能回归，不能只改配置不验证。
+  - 完成记录（2026-10-22，commit `2a5d0bb`）：① **决策依据**——PROJECT_PLAN §2 明确任务书要求为「≥ 12」，并非必须等于 12；当前 `compatibleSdkVersion: 5.0.4(16)` 满足下限，且本机仅安装编译 SDK 26、无 API 12 SDK/镜像可用于下调后的安装回归，贸然降级会产生不可验证的交付风险。② **结论**——保持构建配置不变（`compatibleSdkVersion: 5.0.4(16)`、`targetSdkVersion: 26.0.0`），统一文档口径为「最低 API 16（任务书要求 ≥ 12）」：PROJECT_PLAN §0 速记与 §2 技术约束、README 技术栈表与快速开始、START_HERE 首行；同步修正 C1 里程碑中「API 12 CanvasRenderingContext2D」的易误解表述。③ **代码注释**——`SyncService` 标注「API 12 文档口径；本机编译 SDK 26、最低运行 API 16」，`FavoriteService` 改为「本机 SDK 实测存在」，避免把文档口径误读为运行下限。④ **构建**——`BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增。⑤ **未验证范围**——目标设备安装登记 O22；若验收方明确要求 API 12 镜像，需另立任务：安装 API 12 SDK、下调 `compatibleSdkVersion` 并做 API 12 设备/模拟器安装与功能回归，不能只改配置不验证。
   - 依赖：无（文档/配置决策）。
   - 风险：验收环境不匹配时无法安装。
 
