@@ -10,9 +10,10 @@
  * 3. 独立 store 名 'yellow_river_themes'（不共享 FavoriteService 的 pref 实例，
  *    避免两个实例并发写同一 Preferences 文件导致一致性风险；各自文件各自实例）。
  * 4. 删除主题：仅清收藏上的关联引用（经 FavoriteService 逐条剥离 themeIds），不删除收藏本身；
- *    远端删除主题同理（先删主题，再剥离本端收藏引用）。
+ *    远端删除主题同理（先删主题，再剥离本端收藏引用）；M6.3 起删除改为写墓碑，
+ *    由 LWW 决定删除与并发编辑谁生效，避免离线端旧主题复活。
  * 5. LWW：updatedAt 新者胜、相等 deviceId 字典序小者胜（与 M3 收藏/笔记判定原语一致，
- *    复用 SyncService.lwwRemoteWins）。
+ *    复用 SyncService.lwwRemoteWins）；墓碑用 deletedAt 作为版本时间。
  * 6. 踩坑 1/2/4：Preferences 读回 JSON 逐字段显式转换 + 合法性校验，非法条目跳过记日志；
  *    全程不用 any、不用解构赋值；可抛异常 SDK 调用包 try/catch。
  */
@@ -23,6 +24,7 @@ import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { Theme } from '../model/Theme';
 import { Favorite } from '../model/Favorite';
+import { Tombstone } from '../model/Tombstone';
 import { FavoriteService } from './FavoriteService';
 import { SyncService, RemoteChanges } from './SyncService';
 
@@ -34,6 +36,8 @@ export class ThemeService {
   private static readonly STORE_NAME = 'yellow_river_themes';
   /** 主题整表存储键（JSON 数组文本） */
   private static readonly KEY_THEMES = 'themes_json';
+  /** 主题删除墓碑存储键（M6.3） */
+  private static readonly KEY_THEME_TOMBSTONES = 'theme_tombstones_json';
   /** 本机设备标识存储键（与 FavoriteService 各自存一份，值一致生成） */
   private static readonly KEY_DEVICE_ID = 'device_id';
 
@@ -41,10 +45,14 @@ export class ThemeService {
   private static pref: preferences.Preferences | null = null;
   /** 主题内存缓存（唯一数据源，变更后同步落盘） */
   private static themesCache: Theme[] = [];
+  /** 主题删除墓碑（M6.3，id=themeId，参与 LWW） */
+  private static themeTombstones: Tombstone[] = [];
   /** 本机设备标识 */
   private static device: string = '';
   /** 远端主题合并处理器是否已注册（init 可能重入，只注册一次） */
   private static mergeRegistered: boolean = false;
+  /** KV 就绪重放墓碑是否已注册（init 可能重入，只注册一次） */
+  private static readyRegistered: boolean = false;
   /** 主题数据变更监听者（本地 CRUD 与远端合并后通知，页面订阅刷新 UI） */
   private static dataListeners: Array<() => void> = [];
 
@@ -62,6 +70,18 @@ export class ThemeService {
       SyncService.onRemoteChange((changes: RemoteChanges) => {
         ThemeService.mergeRemoteThemes(changes);
       });
+      // M6.3：向 FavoriteService 注册主题 id 校验器，采纳远端收藏时剔除已删除主题的引用
+      // （回调方式避免两个服务循环 import）。
+      FavoriteService.setThemeIdValidator((ids: string[]): string[] => {
+        return ThemeService.filterDeletedThemeIds(ids);
+      });
+    }
+    // M6.3：KV 就绪后重放主题墓碑（离线删除此时才写进 KV）。
+    if (!ThemeService.readyRegistered) {
+      ThemeService.readyRegistered = true;
+      SyncService.onReady(() => {
+        ThemeService.replayThemeTombstones();
+      });
     }
     try {
       const options: preferences.Options = { name: ThemeService.STORE_NAME };
@@ -73,8 +93,12 @@ export class ThemeService {
     }
     ThemeService.themesCache =
       ThemeService.parseThemes(ThemeService.readStored(ThemeService.KEY_THEMES));
+    ThemeService.themeTombstones =
+      ThemeService.parseTombstones(ThemeService.readStored(ThemeService.KEY_THEME_TOMBSTONES));
     ThemeService.ensureDeviceId();
-    hilog.info(DOMAIN, TAG, 'init ok: %{public}d themes', ThemeService.themesCache.length);
+    ThemeService.replayThemeTombstonesIfAvailable();
+    hilog.info(DOMAIN, TAG, 'init ok: %{public}d themes, %{public}d tombstones',
+      ThemeService.themesCache.length, ThemeService.themeTombstones.length);
   }
 
   // ==================== 主题查询 ====================
@@ -142,14 +166,22 @@ export class ThemeService {
   /**
    * 删除主题：只删主题本身，不清除收藏；同时剥离各收藏对该主题的关联引用
    * （经 FavoriteService.updateFavoriteThemes，逐条双写同步）。远端删除主题同理。
+   * M6.3：删除写墓碑并覆盖 KV 记录，让离线端的旧主题不会复活。
    */
   static removeTheme(id: string): boolean {
     const before: number = ThemeService.themesCache.length;
     ThemeService.themesCache = ThemeService.filterOutTheme(ThemeService.themesCache, id);
     const removed: boolean = ThemeService.themesCache.length < before;
     if (removed) {
+      const tomb: Tombstone = {
+        id: id,
+        deletedAt: Date.now(),
+        deviceId: ThemeService.ensureDeviceId()
+      };
+      ThemeService.upsertThemeTombstone(tomb);
       ThemeService.persist(ThemeService.KEY_THEMES, ThemeService.themesCache);
-      SyncService.removeThemeSync(id); // C1.3 双写：移除分布式 KV 记录
+      ThemeService.persist(ThemeService.KEY_THEME_TOMBSTONES, ThemeService.themeTombstones);
+      SyncService.syncThemeTombstone(tomb); // M6.3 双写：墓碑覆盖 KV 记录
       ThemeService.stripThemeFromFavorites(id);
       ThemeService.notifyDataChanged();
     }
@@ -194,16 +226,36 @@ export class ThemeService {
   }
 
   /**
-   * 远端主题 LWW 合并（C1.3，SyncService 回调触发；本服务是主题数据唯一权威）。
+   * 远端主题 LWW 合并（C1.3 + M6.3 墓碑；本服务是主题数据唯一权威）。
    * 合并规则与收藏/笔记一致：远端新增→采纳；双端版本不同→LWW（新者胜、deviceId 兜底）；
-   * 远端删除→移除主题并剥离本端收藏引用。
+   * 实体与墓碑之间比较 updatedAt vs deletedAt；墓碑胜→移除主题并剥离本端收藏引用；
+   * 实体胜→回写本端主题让对端收敛；本机无主题但收到墓碑→仅记墓碑防止旧主题复活。
    */
   private static mergeRemoteThemes(changes: RemoteChanges): void {
     let changed: boolean = false;
+    let tombChanged: boolean = false;
+
     for (let i = 0; i < changes.upsertThemes.length; i++) {
       const remote: Theme = changes.upsertThemes[i];
+      const localTomb: Tombstone | null = ThemeService.findThemeTombstone(remote.id);
       const local: Theme | null = ThemeService.findTheme(remote.id);
-      if (local === null) {
+      if (localTomb !== null) {
+        if (SyncService.lwwRemoteWins(localTomb.deletedAt, localTomb.deviceId,
+          remote.updatedAt, remote.deviceId)) {
+          ThemeService.dropThemeTombstone(remote.id);
+          if (local === null) {
+            ThemeService.themesCache.push(remote);
+          } else {
+            ThemeService.replaceThemeById(remote.id, remote);
+          }
+          SyncService.recordConflict(remote.id, '主题删除后远端有更新版本，采纳远端主题');
+          changed = true;
+          tombChanged = true;
+        } else {
+          SyncService.syncThemeTombstone(localTomb);
+          SyncService.recordConflict(remote.id, '远端主题版本早于本地删除，维持删除');
+        }
+      } else if (local === null) {
         ThemeService.themesCache.push(remote);
         changed = true;
       } else if (local.updatedAt !== remote.updatedAt || local.deviceId !== remote.deviceId) {
@@ -217,6 +269,37 @@ export class ThemeService {
         }
       }
     }
+    for (let i = 0; i < changes.themeTombstones.length; i++) {
+      const remoteTomb: Tombstone = changes.themeTombstones[i];
+      const localTomb: Tombstone | null = ThemeService.findThemeTombstone(remoteTomb.id);
+      if (localTomb !== null) {
+        if (SyncService.lwwRemoteWins(localTomb.deletedAt, localTomb.deviceId,
+          remoteTomb.deletedAt, remoteTomb.deviceId)) {
+          ThemeService.upsertThemeTombstone(remoteTomb);
+          tombChanged = true;
+        }
+        continue;
+      }
+      const local: Theme | null = ThemeService.findTheme(remoteTomb.id);
+      if (local === null) {
+        ThemeService.upsertThemeTombstone(remoteTomb);
+        tombChanged = true;
+        continue;
+      }
+      if (SyncService.lwwRemoteWins(local.updatedAt, local.deviceId,
+        remoteTomb.deletedAt, remoteTomb.deviceId)) {
+        ThemeService.themesCache = ThemeService.filterOutTheme(ThemeService.themesCache, remoteTomb.id);
+        ThemeService.upsertThemeTombstone(remoteTomb);
+        ThemeService.stripThemeFromFavorites(remoteTomb.id);
+        SyncService.recordConflict(remoteTomb.id, '远端删除比本地主题编辑新，删除生效');
+        changed = true;
+        tombChanged = true;
+      } else {
+        SyncService.syncTheme(local);
+        SyncService.recordConflict(remoteTomb.id, '本地主题编辑比远端删除新，保留本地主题');
+      }
+    }
+    // 旧版本硬删除（deleteEntries，无时间戳）：兼容保留「删除生效」语义。
     for (let i = 0; i < changes.deletedThemeIds.length; i++) {
       const themeId: string = changes.deletedThemeIds[i];
       if (ThemeService.findTheme(themeId) !== null) {
@@ -228,6 +311,69 @@ export class ThemeService {
     if (changed) {
       ThemeService.persist(ThemeService.KEY_THEMES, ThemeService.themesCache);
       ThemeService.notifyDataChanged();
+    }
+    if (tombChanged) {
+      ThemeService.persist(ThemeService.KEY_THEME_TOMBSTONES, ThemeService.themeTombstones);
+    }
+  }
+
+  // ==================== 主题引用校验 / 删除墓碑（M6.3） ====================
+
+  /**
+   * 过滤掉已删除主题的引用（供 FavoriteService 校验远端收藏的 themeIds）。
+   * 只剔除有墓碑的主题：远端主题与收藏可能同批到达、或主题稍后才同步过来，
+   * 不能因为「当前缓存里没有」就误删有效引用；真正的删除由墓碑这一确定事实表达。
+   */
+  private static filterDeletedThemeIds(ids: string[]): string[] {
+    const result: string[] = [];
+    for (let i = 0; i < ids.length; i++) {
+      if (ThemeService.findThemeTombstone(ids[i]) === null) {
+        result.push(ids[i]);
+      }
+    }
+    return result;
+  }
+
+  private static findThemeTombstone(themeId: string): Tombstone | null {
+    for (let i = 0; i < ThemeService.themeTombstones.length; i++) {
+      if (ThemeService.themeTombstones[i].id === themeId) {
+        return ThemeService.themeTombstones[i];
+      }
+    }
+    return null;
+  }
+
+  private static upsertThemeTombstone(tomb: Tombstone): void {
+    for (let i = 0; i < ThemeService.themeTombstones.length; i++) {
+      if (ThemeService.themeTombstones[i].id === tomb.id) {
+        ThemeService.themeTombstones[i] = tomb;
+        return;
+      }
+    }
+    ThemeService.themeTombstones.push(tomb);
+  }
+
+  private static dropThemeTombstone(themeId: string): boolean {
+    const next: Tombstone[] = [];
+    for (let i = 0; i < ThemeService.themeTombstones.length; i++) {
+      if (ThemeService.themeTombstones[i].id !== themeId) {
+        next.push(ThemeService.themeTombstones[i]);
+      }
+    }
+    const dropped: boolean = next.length < ThemeService.themeTombstones.length;
+    ThemeService.themeTombstones = next;
+    return dropped;
+  }
+
+  private static replayThemeTombstones(): void {
+    for (let i = 0; i < ThemeService.themeTombstones.length; i++) {
+      SyncService.syncThemeTombstone(ThemeService.themeTombstones[i]);
+    }
+  }
+
+  private static replayThemeTombstonesIfAvailable(): void {
+    if (SyncService.isAvailable()) {
+      ThemeService.replayThemeTombstones();
     }
   }
 
@@ -371,6 +517,36 @@ export class ThemeService {
       hilog.error(DOMAIN, TAG, 'parse theme #%{public}d error: %{public}s', index, JSON.stringify(err));
       return null;
     }
+  }
+
+  private static parseTombstones(text: string): Tombstone[] {
+    const result: Tombstone[] = [];
+    if (text === '') {
+      return result;
+    }
+    let parsed: object[] = [];
+    try {
+      parsed = JSON.parse(text) as object[];
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'tombstones parse failed: %{public}s', JSON.stringify(err));
+      return result;
+    }
+    for (let i = 0; i < parsed.length; i++) {
+      const rec = parsed[i] as Record<string, Object>;
+      const id: string = ThemeService.getStr(rec, 'id');
+      const deletedAt: number = ThemeService.getNum(rec, 'deletedAt');
+      if (id === '' || deletedAt <= 0) {
+        hilog.warn(DOMAIN, TAG, 'skip invalid tombstone #%{public}d', i);
+        continue;
+      }
+      const tomb: Tombstone = {
+        id: id,
+        deletedAt: deletedAt,
+        deviceId: ThemeService.getStr(rec, 'deviceId')
+      };
+      result.push(tomb);
+    }
+    return result;
   }
 
   private static getStr(rec: Record<string, Object>, key: string): string {

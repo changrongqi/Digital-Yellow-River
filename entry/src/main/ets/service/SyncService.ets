@@ -32,6 +32,7 @@ import { distributedDeviceManager } from '@kit.DistributedServiceKit';
 import { Favorite } from '../model/Favorite';
 import { Note } from '../model/Note';
 import { Theme } from '../model/Theme';
+import { Tombstone } from '../model/Tombstone';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
 import { PermissionService } from './PermissionService';
 
@@ -54,6 +55,14 @@ const MAX_CONFLICT_LOG = 50;
 const INIT_RETRY_MIN_INTERVAL = 3000;
 /** 自动同步最小间隔（ms）：设备上下线/回前台可能连续触发，避免重复 sync */
 const AUTO_SYNC_MIN_INTERVAL = 2000;
+/** KV 未就绪时的待写队列上限（同键只保留最后一次，超出丢最旧） */
+const MAX_PENDING_PUTS = 200;
+
+/** 待写记录（M6.3：KV 未就绪时本地仍可操作，就绪后补写，避免删除/重新收藏状态丢失） */
+interface PendingPut {
+  key: string;
+  json: string;
+}
 
 /**
  * 远端变更事件（已解析、去噪）。
@@ -64,9 +73,12 @@ export interface RemoteChanges {
   upsertFavorites: Favorite[];  // 远端新增/覆盖的收藏
   upsertNotes: Note[];          // 远端新增/覆盖的笔记
   upsertThemes: Theme[];        // 远端新增/覆盖的主题（C1.3）
-  deletedFavoriteItemIds: string[]; // 远端删除的收藏（itemId）
-  deletedNoteIds: string[];     // 远端删除的笔记（noteId）
-  deletedThemeIds: string[];    // 远端删除的主题（themeId，C1.3）
+  favoriteTombstones: Tombstone[]; // 远端删除收藏的墓碑（M6.3，id=itemId）
+  noteTombstones: Tombstone[];     // 远端删除笔记的墓碑（M6.3，id=noteId）
+  themeTombstones: Tombstone[];    // 远端删除主题的墓碑（M6.3，id=themeId）
+  deletedFavoriteItemIds: string[]; // 旧版本硬删除的收藏（无时间戳，兼容保留）
+  deletedNoteIds: string[];     // 旧版本硬删除的笔记
+  deletedThemeIds: string[];    // 旧版本硬删除的主题
 }
 
 /**
@@ -96,6 +108,10 @@ export class SyncService {
   private static permissionWarned: boolean = false;
   /** 远端变更监听者（M3.2 起 FavoriteService 注册消费） */
   private static listeners: Array<(changes: RemoteChanges) => void> = [];
+  /** KV 就绪监听者（M6.3：墓碑重放入口，业务方注册后 KV ready 时触发一次） */
+  private static readyListeners: Array<() => void> = [];
+  /** KV 未就绪期间的待写记录（M6.3，就绪后补写；同键保留最后一次） */
+  private static pendingPuts: PendingPut[] = [];
   /** 同步状态监听者（M3.3：进度/最后同步时间/设备上下线变化时通知，面板订阅） */
   private static statusListeners: Array<() => void> = [];
   /** DeviceManager 实例（M3.3：在线设备查询，懒创建） */
@@ -167,11 +183,17 @@ export class SyncService {
         SyncService.kvStore = store;
         SyncService.initializing = false;
         SyncService.initialized = true;
+        // M6.3：补写 KV 未就绪期间（未授权/初始化失败/离线）的本地变更，
+        // 避免旧的墓碑或旧记录残留在 KV 中与当前本地状态冲突。
+        SyncService.flushPendingPuts();
         SyncService.subscribeRemoteChanges();
         SyncService.subscribeSyncComplete();
         hilog.info(DOMAIN, TAG, 'distributed kv store ready');
         // M6.1：KV 就绪后主动通知面板，避免面板停留在「单机模式」（O11 的同一触发点）。
         SyncService.notifyStatusListeners();
+        // M6.3：KV 未就绪期间的删除只落了本地墓碑，ready 后重放写入 KV，
+        // 否则本地 KV 中的旧记录会在下次同步中把已删除数据推给对端。
+        SyncService.notifyReadyListeners();
         // M6.2：autoSync 只在数据变更时自动推拉；新设备首次启动/离线期间的数据
         // 需要通过一次 PUSH_PULL 主动追赶。无在线设备时为空操作，设备上线事件会再触发。
         SyncService.syncWhenOnline();
@@ -250,14 +272,18 @@ export class SyncService {
     SyncService.putRecord(`${KEY_NOTE_PREFIX}${note.id}`, JSON.stringify(note));
   }
 
-  /** 收藏删除后同步移除分布式 KV 记录（远端以 deleteEntries 通知对端） */
-  static removeFavoriteSync(itemId: string): void {
-    SyncService.deleteRecord(`${KEY_FAV_PREFIX}${itemId}`);
+  /**
+   * 收藏删除后写入墓碑（M6.3）。
+   * 用同一键 fav_{itemId} 覆盖原记录，让删除作为带时间戳的版本参与 LWW，
+   * 而不是直接删键——直接删键无法阻止离线设备的旧记录复活。
+   */
+  static syncFavoriteTombstone(tomb: Tombstone): void {
+    SyncService.putRecord(`${KEY_FAV_PREFIX}${tomb.id}`, JSON.stringify(tomb));
   }
 
-  /** 笔记删除后同步移除分布式 KV 记录 */
-  static removeNoteSync(noteId: string): void {
-    SyncService.deleteRecord(`${KEY_NOTE_PREFIX}${noteId}`);
+  /** 笔记删除后写入墓碑（M6.3，键 note_{noteId} 覆盖原记录） */
+  static syncNoteTombstone(tomb: Tombstone): void {
+    SyncService.putRecord(`${KEY_NOTE_PREFIX}${tomb.id}`, JSON.stringify(tomb));
   }
 
   /** 主题写入/更新后上抛分布式 KV（C1.3；降级时静默跳过，本地不受影响） */
@@ -265,9 +291,9 @@ export class SyncService {
     SyncService.putRecord(`${KEY_THEME_PREFIX}${theme.id}`, JSON.stringify(theme));
   }
 
-  /** 主题删除后同步移除分布式 KV 记录（C1.3；远端以 deleteEntries 通知对端） */
-  static removeThemeSync(themeId: string): void {
-    SyncService.deleteRecord(`${KEY_THEME_PREFIX}${themeId}`);
+  /** 主题删除后写入墓碑（M6.3，键 theme_{themeId} 覆盖原记录） */
+  static syncThemeTombstone(tomb: Tombstone): void {
+    SyncService.putRecord(`${KEY_THEME_PREFIX}${tomb.id}`, JSON.stringify(tomb));
   }
 
   // ==================== LWW 冲突判定原语（纯函数） ====================
@@ -305,6 +331,24 @@ export class SyncService {
     SyncService.listeners.push(listener);
   }
 
+  /**
+   * 注册 KV 就绪监听（M6.3）：用于重放本地墓碑。
+   * 已就绪时立即执行，保证注册晚于初始化时也不会漏掉。
+   */
+  static onReady(listener: () => void): void {
+    if (SyncService.kvStore !== null) {
+      listener();
+      return;
+    }
+    SyncService.readyListeners.push(listener);
+  }
+
+  private static notifyReadyListeners(): void {
+    for (let i = 0; i < SyncService.readyListeners.length; i++) {
+      SyncService.readyListeners[i]();
+    }
+  }
+
   private static notifyListeners(changes: RemoteChanges): void {
     for (let i = 0; i < SyncService.listeners.length; i++) {
       SyncService.listeners[i](changes);
@@ -336,6 +380,9 @@ export class SyncService {
       upsertFavorites: [],
       upsertNotes: [],
       upsertThemes: [],
+      favoriteTombstones: [],
+      noteTombstones: [],
+      themeTombstones: [],
       deletedFavoriteItemIds: [],
       deletedNoteIds: [],
       deletedThemeIds: []
@@ -351,7 +398,17 @@ export class SyncService {
     for (let i = 0; i < upserts.length; i++) {
       const entry: distributedKVStore.Entry = upserts[i];
       const text: string = SyncService.entryText(entry);
-      if (entry.key.indexOf(KEY_FAV_PREFIX) === 0) {
+      // M6.3：同一键既可能是实体记录，也可能是删除墓碑；以 deletedAt 字段区分。
+      const tomb: Tombstone | null = SyncService.parseTombstone(text, entry.key);
+      if (tomb !== null) {
+        if (entry.key.indexOf(KEY_FAV_PREFIX) === 0) {
+          changes.favoriteTombstones.push(tomb);
+        } else if (entry.key.indexOf(KEY_NOTE_PREFIX) === 0) {
+          changes.noteTombstones.push(tomb);
+        } else if (entry.key.indexOf(KEY_THEME_PREFIX) === 0) {
+          changes.themeTombstones.push(tomb);
+        }
+      } else if (entry.key.indexOf(KEY_FAV_PREFIX) === 0) {
         const fav: Favorite | null = SyncService.parseFavoriteFromWire(text, entry.key);
         if (fav !== null) {
           changes.upsertFavorites.push(fav);
@@ -569,7 +626,9 @@ export class SyncService {
   private static putRecord(key: string, json: string): void {
     const store = SyncService.kvStore;
     if (store === null) {
-      return; // 降级：本地照常工作，仅不同步
+      // M6.3：KV 未就绪（降级/未授权/初始化中）时排队，就绪后补写。
+      SyncService.enqueuePendingPut(key, json);
+      return;
     }
     // 本 SDK 版本 SingleKVStore 仅有 Promise 形式 put/delete（d.ts 实测，无 putSync）
     store.put(key, json)
@@ -581,18 +640,70 @@ export class SyncService {
       });
   }
 
-  private static deleteRecord(key: string): void {
+  /** 待写入队：同键只保留最后一次写入（如「删除 → 重新收藏」只留新记录） */
+  private static enqueuePendingPut(key: string, json: string): void {
+    for (let i = 0; i < SyncService.pendingPuts.length; i++) {
+      if (SyncService.pendingPuts[i].key === key) {
+        SyncService.pendingPuts.splice(i, 1);
+        break;
+      }
+    }
+    const put: PendingPut = {
+      key: key,
+      json: json
+    };
+    SyncService.pendingPuts.push(put);
+    if (SyncService.pendingPuts.length > MAX_PENDING_PUTS) {
+      SyncService.pendingPuts.splice(0, SyncService.pendingPuts.length - MAX_PENDING_PUTS);
+    }
+  }
+
+  /** KV 就绪后补写待写记录（队列只在内存中，进程被杀则丢弃；用户数据本身仍由 Preferences 持久化） */
+  private static flushPendingPuts(): void {
     const store = SyncService.kvStore;
     if (store === null) {
       return;
     }
-    store.delete(key)
-      .catch((err: BusinessError) => {
-        hilog.error(DOMAIN, TAG, 'delete %{public}s failed: %{public}s', key, JSON.stringify(err));
-      });
+    const pending: PendingPut[] = SyncService.pendingPuts.slice();
+    SyncService.pendingPuts = [];
+    for (let i = 0; i < pending.length; i++) {
+      const put: PendingPut = pending[i];
+      store.put(put.key, put.json)
+        .then(() => {
+          SyncService.progress = 100;
+        })
+        .catch((err: BusinessError) => {
+          hilog.error(DOMAIN, TAG, 'flush %{public}s failed: %{public}s', put.key, JSON.stringify(err));
+        });
+    }
   }
 
   // ==================== 线格式解析（踩坑 1/2/4：逐字段显式转换） ====================
+
+  /** 解析删除墓碑（M6.3）：仅有 deletedAt>0 的条目才是墓碑；实体记录返回 null 交给各自解析 */
+  private static parseTombstone(text: string, key: string): Tombstone | null {
+    try {
+      const rec = JSON.parse(text) as Record<string, Object>;
+      const deletedAt: number = SyncService.getNum(rec, 'deletedAt');
+      if (deletedAt <= 0) {
+        return null;
+      }
+      const id: string = SyncService.getStr(rec, 'id');
+      if (id === '') {
+        hilog.warn(DOMAIN, TAG, 'skip invalid remote tombstone %{public}s', key);
+        return null;
+      }
+      const tomb: Tombstone = {
+        id: id,
+        deletedAt: deletedAt,
+        deviceId: SyncService.getStr(rec, 'deviceId')
+      };
+      return tomb;
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'parse remote tombstone %{public}s failed: %{public}s', key, JSON.stringify(err));
+      return null;
+    }
+  }
 
   private static parseFavoriteFromWire(text: string, key: string): Favorite | null {
     try {
