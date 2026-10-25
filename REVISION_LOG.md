@@ -5,6 +5,7 @@
 
 | 日期 | 修订内容 |
 |---|---|
+| 2026-10-26 | **pictures 素材归档入库**：`pictures/`（123 张原图 + `MANIFEST.md` + `_manifest.json`）纳入版本控制，作为版权与溯源归档；`rawfile/images/` 仍是运行唯一来源，两者职责分离（踩坑 46 ⑦ 同步改写）。代码无变更。 |
 | 2026-10-25 | **O1 图片接入（123 张素材 + 双份路径 + 列表封面；构建 BUILD SUCCESSFUL，WARN 4 条，42 用例通过；数据 commit `0257c34` + 本轮 UI）**：把 `pictures/images/` 的 123 张已核证素材（23 封面 / 92 详情图集 / 8 事件图）拷入 `rawfile/images/`；按 `pictures/MANIFEST.md` 映射补齐 `coverImage`（23）与 `path`（100），rawfile 与 MockHeritages 双份同构（Node 脚本按 id 排序深度相等）；新增 `components/CoverImage`，发现页卡片与收藏页卡片按长边 320px 缩略解码显示封面，缺失/加载失败回落文字徽标，卸载/迟到/失败三路释放；HAP 2.4MB→21.05MB。真机看图与内存回归并入 O38，版权署名复核属内容侧人工确认。 |
 | 2026-10-25 | **L13 合并判定抽纯函数并补单测（构建 BUILD SUCCESSFUL，WARN 4 条，本地用例 33→42 全通过）**：`lwwRemoteWins`（版本大者胜、平局 deviceId 字典序小者胜，同一函数用于实体 updatedAt vs 墓碑 deletedAt）从 `SyncService` 移入 `utils/LwwVersion`，`SyncService.lwwRemoteWins` 改为委托（import 别名 `resolveLwwRemoteWins`），FavoriteService/ThemeService 的 8 处调用与合并流程零改动。新增 9 个本地用例：远端更新/更旧、平局双向、同版本同设备不采纳、编辑晚于删除（采纳）、编辑早于删除（维持删除）、墓碑平局、双向互斥。首次运行 `bothDirectionsNeverDisagree` 断言方向写反被门禁拦下并修正。端到端合并（写回/冲突台账/主题校验）仍需双端真机（O7/O20/O23）。 |
 | 2026-10-25 | **L12 路由注释同步（纯注释；构建 BUILD SUCCESSFUL，WARN 4 条，33 用例通过）**：Detail 头部与 `openRecommendedDetail`、EventDetail、NoteEdit（含 `leaving` 字段）的注释由 `router.pushUrl/back` 改为 `utils/RouterUtil.push/back`，删除「deprecate 告警 +1 / 更新 O3 基线」等过时说明；同段「诗词页签」「古风卡」按 O12 标注已移除。无代码行为变化。 |

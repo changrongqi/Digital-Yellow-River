@@ -1,0 +1,863 @@
+[
+ {
+  "rel": "images/smx-yangshao-01/01.jpg",
+  "caption": "仰韶村遗址全景（北依韶山的黄土台地地貌）",
+  "source": "新华网 / 渑池县人民政府",
+  "purl": "http://www.ncha.gov.cn/art/2022/6/2/art_2632_174732.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2206022059488183062.jpg"
+ },
+ {
+  "rel": "images/smx-yangshao-01/02.jpg",
+  "caption": "小口尖底瓶（距今6000—5000年，残留物检出发酵酒）",
+  "source": "河南省文物考古研究院",
+  "purl": "http://news.cnwest.com/sxxw/a/2025/02/22/23003726.html",
+  "murl": "http://img.cnwest.com/a/10001/202502/22/01050b0ed870a57776682dcaee1b9034.png"
+ },
+ {
+  "rel": "images/smx-yangshao-01/03.jpg",
+  "caption": "1921年首次科学发掘现场（安特生、袁复礼主持）",
+  "source": "河南省文物局 / 新华社",
+  "purl": "https://hct.henan.gov.cn/2023/03-09/2703669.html",
+  "murl": "https://img.henan.gov.cn/7ed91e0fb1427df30b1f59eec31eb7ae?p=0"
+ },
+ {
+  "rel": "images/smx-yangshao-01/04.jpg",
+  "caption": "仰韶文化博物馆（2024年9月全新开馆）",
+  "source": "渑池县人民政府",
+  "purl": "http://ha.news.cn/special/special2021/yswh2021/picture/2021-10/13/c_1127953979.htm",
+  "murl": "http://ha.news.cn/special/special2021/yswh2021/picture/2021-10/13/1127953979_16341183816191n.jpg"
+ },
+ {
+  "rel": "images/smx-yangshao-01/e02-02.jpg",
+  "caption": "安特生旧居（村民王二保家老窑洞）",
+  "source": "新华社",
+  "purl": "https://hct.henan.gov.cn/2023/03-09/2703669.html",
+  "murl": "https://img.henan.gov.cn/dd0c1d936d5a62edc9cf54a1a4c00539?p=0"
+ },
+ {
+  "rel": "images/smx-yangshao-01/e06-01.jpg",
+  "caption": "青灰色「混凝土」式地坪（第四次发掘发现）",
+  "source": "人民日报 / 河南省文物考古研究院",
+  "purl": "https://baike.so.com/gallery/list?ghid=first&pic_idx=1&eid=9536865&sid=9881275",
+  "murl": "https://p1.ssl.qhimg.com/t01594adb0e0df71a3a.jpg"
+ },
+ {
+  "rel": "images/smx-yangshao-01/e07-01.jpg",
+  "caption": "象牙镯形器（第四次发掘首次发现，钻孔工艺精良）",
+  "source": "河南省文物考古研究院 / 新华社",
+  "purl": "http://www.ncha.gov.cn/art/2024/3/28/art_2758_188039.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2403282151213587516.jpg"
+ },
+ {
+  "rel": "images/smx-yangshao-01/e07-02.jpg",
+  "caption": "玉钺（军事王权象征，仰韶村遗址首次发现）",
+  "source": "新华社 / 河南省文物考古研究院",
+  "purl": "http://news.cnwest.com/bwyc/a/2021/05/22/19694576.html",
+  "murl": "http://img.cnwest.com/a/10001/202105/22/f58297c06ee89616c51ab4df6f9e74a6.jpeg"
+ },
+ {
+  "rel": "images/smx-guoguo-01/01.jpg",
+  "caption": "虢国博物馆外景（遗址上专题性遗址类博物馆）",
+  "source": "虢国博物馆官网",
+  "purl": "https://www.iwenbo.fun/museum/3186.html",
+  "murl": "https://www.iwenbo.fun/storage/museum/20200912/5f5ba1bb12e04.jpg"
+ },
+ {
+  "rel": "images/smx-guoguo-01/02.jpg",
+  "caption": "玉柄铁剑（「中华第一剑」，通长34.2厘米）",
+  "source": "河南省文物局 / 河南博物院",
+  "purl": "https://www.hubei.gov.cn/jmct/gcww/201507/t20150721_1679249.shtml",
+  "murl": "https://www.hubei.gov.cn/jmct/gcww/201507/W020150721589336001841.jpg"
+ },
+ {
+  "rel": "images/smx-guoguo-01/03.jpg",
+  "caption": "一号车马坑（虢季陪葬坑，13车64马军阵）",
+  "source": "河南省人民政府门户网站",
+  "purl": "http://news.cnwest.com/tianxia/a/2024/10/18/22829966.html",
+  "murl": "http://img.cnwest.com/a/10001/202410/18/8946f550cb8f68f99eff29ac420f2dfd.jpeg"
+ },
+ {
+  "rel": "images/smx-guoguo-01/04.jpg",
+  "caption": "缀玉瞑目（58件玉饰，金缕玉衣雏形）",
+  "source": "河南省文物局 / 央视新闻",
+  "purl": "https://k.sina.com.cn/article_6729205697_1911787c10010154j8.html",
+  "murl": "http://n.sinaimg.cn/sinacn20200206ac/224/w640h384/20200206/d418-inzcrxt0108545.jpg"
+ },
+ {
+  "rel": "images/smx-guoguo-01/e01-01.jpg",
+  "caption": "三门峡市车马坑陈列馆（1956年原地保护车马坑，5车10马）",
+  "source": "河南省人民政府门户网站",
+  "purl": "https://k.sina.cn/article_3960624673_pec125621027015cl8.html",
+  "murl": "https://k.sinaimg.cn/n/sinakd20113/0/w2048h1152/20230301/df36-6c4708f47fa91fd8868f0638201be680.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/smx-guoguo-01/e04-01.jpg",
+  "caption": "虢仲墓（M2009）出土白玉器（西周玉礼文化典型代表）",
+  "source": "河南省文物考古研究院",
+  "purl": "https://k.sina.com.cn/article_2490780034_p9476498202700h2a7.html",
+  "murl": "http://n.sinaimg.cn/sinacn20112/40/w2048h1192/20190422/bd41-hvvuiyn5289712.jpg"
+ },
+ {
+  "rel": "images/ly-erlitou-01/01.jpg",
+  "caption": "二里头遗址航拍图（伊洛河间高地，现存约300万平方米）",
+  "source": "人民日报",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1398342&pid=9814867",
+  "murl": "http://vip-public.people.com.cn/photo/2021/1/28/4d69cc66576f4856a76f39b589b73c48j8Cs_m.jpg"
+ },
+ {
+  "rel": "images/ly-erlitou-01/02.jpg",
+  "caption": "绿松石龙形器（64.5厘米，2000余片绿松石）",
+  "source": "新华社 / 河南省文物局",
+  "purl": "https://www.lyjjw.gov.cn/sitesources/lysjwjcw/page_pc/lzyw/article73aa32b1ab9c40ffadbf8764e5bc36e8.html",
+  "murl": "https://www.lyjjw.gov.cn/sitesources/lysjwjcw/upload/202101/20210125171647400.jpg"
+ },
+ {
+  "rel": "images/ly-erlitou-01/03.jpg",
+  "caption": "二里头夏都遗址博物馆（2019年10月开馆）",
+  "source": "河南省文化和旅游厅 / 洛阳日报",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1398342",
+  "murl": "http://vip-public.people.com.cn/photo/2021/1/28/34c156e17a3841ab83d0126b8a23b1abyUbB_m.jpg"
+ },
+ {
+  "rel": "images/ly-erlitou-01/04.jpg",
+  "caption": "乳钉纹青铜爵（中国最早的青铜酒器之一）",
+  "source": "新华社",
+  "purl": "https://www.lyjjw.gov.cn/sitesources/lysjwjcw/page_pc/lzyw/article73aa32b1ab9c40ffadbf8764e5bc36e8.html",
+  "murl": "https://www.lyjjw.gov.cn/sitesources/lysjwjcw/upload/202101/20210125171738489.jpg"
+ },
+ {
+  "rel": "images/ly-longmen-01/01.jpg",
+  "caption": "卢舍那大佛（奉先寺主佛，通高17.14米）",
+  "source": "龙门石窟研究院 / 央广网",
+  "purl": "https://k.sina.cn/article_6629765729_18b2a326100100cxqt.html?from=travel",
+  "murl": "http://n.sinaimg.cn/sinacn11/257/w640h417/20181029/aa3c-hnaivxq1770590.jpg"
+ },
+ {
+  "rel": "images/ly-longmen-01/02.jpg",
+  "caption": "奉先寺大卢舍那像龛（九尊大像群雕）",
+  "source": "龙门石窟研究院",
+  "purl": "https://k.sina.com.cn/article_6629765729_18b2a326100100cxqt.html",
+  "murl": "http://k.sinaimg.cn/n/sinacn11/257/w640h417/20181029/aa3c-hnaivxq1770590.jpg/w700d1q75cms.jpg?by=cms_fixed_width"
+ },
+ {
+  "rel": "images/ly-longmen-01/03.jpg",
+  "caption": "龙门石窟远眺（伊河两岸崖壁窟龛）",
+  "source": "河南省文化和旅游厅",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1402234",
+  "murl": "http://vip-public.people.com.cn/photo/2021/2/7/f7c4fc1558bb46f0a955e0f79a5c9619ZZZ9_m.jpg"
+ },
+ {
+  "rel": "images/ay-yinxu-01/01.jpg",
+  "caption": "殷墟宫殿宗庙遗址（商代晚期王都核心区）",
+  "source": "新华社 / 光明日报",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1398366&pid=9815101",
+  "murl": "http://vip-public.people.com.cn/photo/2021/1/28/f092470974b74f759a0c3021156ec538oWOq_m.jpg"
+ },
+ {
+  "rel": "images/ay-yinxu-01/02.jpg",
+  "caption": "YH127甲骨窖穴（1936年出土17096片甲骨）",
+  "source": "河南省文物局 / 安阳融媒",
+  "purl": "https://en.dahe.cn/2020/12-09/771326.html",
+  "murl": "https://file.dahe.cn/image/jpeg/20201209/1607506614926442.jpg?imageMogr2/thumbnail/600>/format/jpg"
+ },
+ {
+  "rel": "images/ay-yinxu-01/03.jpg",
+  "caption": "妇好墓出土文物（妇好鸮尊等1928件随葬品）",
+  "source": "河南省文物局 / 新华社",
+  "purl": "https://k.sina.com.cn/article_2490780034_p9476498202700ftkd.html",
+  "murl": "http://n.sinaimg.cn/sinacn20112/655/w2048h3407/20190224/f459-htknpmi3337959.jpg"
+ },
+ {
+  "rel": "images/ay-yinxu-01/04.jpg",
+  "caption": "殷墟博物馆新馆（2024年2月开馆）",
+  "source": "河南省文化和旅游厅 / 郑州晚报",
+  "purl": "http://www.ncha.gov.cn/art/2025/2/11/art_722_193998.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2502110317566576264.jpg"
+ },
+ {
+  "rel": "images/zz-shangcheng-01/01.jpg",
+  "caption": "郑州商城商代城墙（3600年夯土城墙，高出地面4—5米）",
+  "source": "河南省文化和旅游厅 / 大河网",
+  "purl": "http://www.ncha.gov.cn/art/2023/5/12/art_722_181531.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2305120840383971638.jpg"
+ },
+ {
+  "rel": "images/zz-shangcheng-01/02.jpg",
+  "caption": "杜岭方鼎（通高100厘米、重86.4公斤，河南博物院镇院之宝）",
+  "source": "河南博物院 / 郑州市文物局",
+  "purl": "https://www.chnmus.net/sitesources/hnsbwy/page_pc/dzjp/zyzb/articlecc3a53c2a97149d4bf62fb583ef0dc9d.html",
+  "murl": "https://www.chnmus.net/sitesources/20201102114942243.jpg"
+ },
+ {
+  "rel": "images/zz-shangcheng-01/03.jpg",
+  "caption": "郑州商都遗址博物院（2022年7月开馆）",
+  "source": "河南省文化和旅游厅 / 郑州日报",
+  "purl": "http://www.ncha.gov.cn/art/2022/7/27/art_722_176100.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2207271513031672283.jpg"
+ },
+ {
+  "rel": "images/zz-shangcheng-01/04.jpg",
+  "caption": "书院街墓地金覆面（2022年出土，中原首见商代金覆面）",
+  "source": "河南省文化和旅游厅 / 郑州市文物考古研究院",
+  "purl": "https://cj.sina.com.cn/articles/view/5173583894/p1345ea0160270101am",
+  "murl": "https://n.sinaimg.cn/sinakd20106/587/w1920h1067/20220121/481b-c4a25b4c089a69e31b4b7345b27ca1e7.jpg"
+ },
+ {
+  "rel": "images/kf-bianliang-01/01.jpg",
+  "caption": "州桥石壁浮雕（海马瑞兽祥云，通高3.3米、总长约30米）",
+  "source": "河南省文物局 / 新华社",
+  "purl": "https://henan.china.com/m/news/hot/2022/0929/2530314047.html",
+  "murl": "https://media2.hndt.com/data_01/1/1/2022/09/28/410fc75897d7e10a3130f251a7563595.jpg"
+ },
+ {
+  "rel": "images/kf-bianliang-01/02.jpg",
+  "caption": "州桥及汴河遗址考古现场（4400平方米探方）",
+  "source": "开封市人民政府 / 新华网",
+  "purl": "http://ha.news.cn/wangqun/2021-10/20/c_1127977500.htm",
+  "murl": "http://ha.news.cn/wangqun/2021-10/20/1127977500_16347186248021n.png"
+ },
+ {
+  "rel": "images/kf-bianliang-01/03.jpg",
+  "caption": "北宋东京城平面布局图（三重城与御街）",
+  "source": "河南省文化和旅游厅 / 大河网",
+  "purl": "https://www.canalmuseum.net/yunbozixun/863.html",
+  "murl": "https://canalmuseum.net/uploads/20241114/18ff6d73a56e4f86a65da061444c88f8.jpg"
+ },
+ {
+  "rel": "images/py-qi-01/02.jpg",
+  "caption": "会盟台（春秋夯筑高台，七次诸侯会盟之地）",
+  "source": "河南省文化和旅游厅",
+  "purl": "http://news.cnwest.com/szyw/a/2023/02/21/21274352.html",
+  "murl": "http://img.cnwest.com/a/10001/202302/21/b294302787ebfe6bf9a4fbd32ee26a4d.png"
+ },
+ {
+  "rel": "images/py-qi-01/03.jpg",
+  "caption": "「中华第一龙」蚌塑龙形图案（距今6500余年）",
+  "source": "河南省文化和旅游厅 / 濮阳市文物局",
+  "purl": "http://news.cnwest.com/szyw/a/2023/02/21/21274352.html",
+  "murl": "http://img.cnwest.com/a/10001/202302/21/0c16b77103bfc9315ef47f639348beb3.png"
+ },
+ {
+  "rel": "images/py-qi-01/04.jpg",
+  "caption": "子路墓祠（子路博物馆，「仲夫子祠」）",
+  "source": "河南省文化和旅游厅",
+  "purl": "https://www.topnews.cn/news/145CD4ED40B14B73",
+  "murl": "https://img.dingxinwen.cn/fw/20260323/3517742575097970000_320C9390EDB1239B147B4CA972594820.jpg"
+ },
+ {
+  "rel": "images/ly-yanshi-01/01.jpg",
+  "caption": "偃师商城遗址宫城区四号宫殿遗址保护展示",
+  "source": "河南省发展和改革委员会 / 大河网",
+  "purl": "http://news.cnwest.com/tianxia/a/2024/09/19/22789670.html",
+  "murl": "http://img.cnwest.com/a/10001/202409/19/571a3568a7ddcb182d719bc0166ce261.jpeg"
+ },
+ {
+  "rel": "images/ly-yanshi-01/02.jpg",
+  "caption": "大城西城垣遗址（三重城垣格局）",
+  "source": "洛阳市文物局 / 洛阳地名网",
+  "purl": "http://news.cnwest.com/bwyc/a/2023/07/13/21654089.html",
+  "murl": "http://img.cnwest.com/a/10001/202307/13/1b262093975feb87755f90d01e92b223.png"
+ },
+ {
+  "rel": "images/ly-yanshi-01/03.jpg",
+  "caption": "偃师商城宫城复原效果图",
+  "source": "洛阳日报",
+  "purl": "https://k.sina.cn/article_2145932192_p7fe853a002700ny8t.html",
+  "murl": "https://k.sinaimg.cn/n/sinacn20117/298/w942h956/20200227/ee54-ipzreiw7663581.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/ly-yanshi-01/04.jpg",
+  "caption": "水系遗存（倒「几」字形水道，商代最早最完备城市水系）",
+  "source": "大河网 / 中国社会科学院考古研究所",
+  "purl": "http://www.ncha.gov.cn/art/2022/7/26/art_2588_110.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2207261421314807075.jpg"
+ },
+ {
+  "rel": "images/ly-hanwei-01/01.jpg",
+  "caption": "太极殿遗址（「正殿之祖」，2015年度全国十大考古新发现）",
+  "source": "洛阳市文物局 / 人民日报",
+  "purl": "http://www.ncha.gov.cn/art/2017/6/2/art_2008_141360.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/1706020925327273572.png"
+ },
+ {
+  "rel": "images/smx-guoguo-01/e03-01.jpg",
+  "caption": "玉柄铁剑（「中华第一剑」，通长34.2厘米）",
+  "source": "河南省文物局 / 河南博物院",
+  "purl": "http://www.chnmus.net/sitesources/hnsbwy/page_pc/bwzl/jxysyhjsqjytzgygbz/jyhy/article2ff8d5d4e3a44448b3233e8c57835a1d.html",
+  "murl": "http://www.chnmus.net/sitesources/20220120105756840.jpg"
+ },
+ {
+  "rel": "images/kf-bianliang-01/04.jpg",
+  "caption": "明代州桥复原图（李琛手绘）",
+  "source": "开封市文化广电和旅游局",
+  "purl": "https://henan.china.com/m/news/hot/2022/0929/2530314047.html",
+  "murl": "https://media2.hndt.com/data_01/1/1/2022/09/28/0c6ab1f20fcdde0c01692ecb04c3f3f4.jpg"
+ },
+ {
+  "rel": "images/py-qi-01/01.jpg",
+  "caption": "戚城遗址古城垣（东周夯土城墙，最高残存8.5米）",
+  "source": "河南省文化和旅游厅 / 濮阳网",
+  "purl": "https://k.sina.com.cn/article_2748597475_a3d444e302001ehdh.html",
+  "murl": "https://n.sinaimg.cn/sinakd20230220s/408/w737h471/20230220/e69c-c7ec2269cf23ea179d91aeee60ca8eeb.png"
+ },
+ {
+  "rel": "images/ly-hanwei-01/02.jpg",
+  "caption": "阊阖门遗址（迄今年代最早的连接双阙的宫城城门）",
+  "source": "洛阳市文物局 / 洛阳网",
+  "purl": "http://slide.city.finance.sina.com.cn/image_13_849_7789.html",
+  "murl": "http://www.sinaimg.cn/dy/slidenews/13_img/2010_14/849_7789_276423.jpg"
+ },
+ {
+  "rel": "images/ly-hanwei-01/03.jpg",
+  "caption": "铜驼街遗址（车辙石板路面，中轴线御道）",
+  "source": "人民日报海外版 / 洛阳日报",
+  "purl": "https://lvyou.henan100.com/2025/1224911.shtml",
+  "murl": "https://www.henan100.com/d/file/lvyou/zixun/hangye/20250606/23874461f334c4448a51a83e8481ea5e.jpg"
+ },
+ {
+  "rel": "images/ly-hanwei-01/04.jpg",
+  "caption": "汉魏洛阳故城遗址博物馆（高台阙楼形制，2025年开放）",
+  "source": "河南省文物局 / 中国文化报",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1947949&pid=14457860",
+  "murl": "http://vip-public.people.com.cn/photo/2025/6/5/1e15a039b2cf4a9b8a732ce037f59a00kMJz_m.jpg"
+ },
+ {
+  "rel": "images/zz-wangchenggang-01/01.jpg",
+  "caption": "王城岗龙山大城城墙（中原龙山晚期最大城址）",
+  "source": "河南省文化和旅游厅 / 河南日报",
+  "purl": "https://k.sina.cn/article_6534269558_185790a7600100c1bu.html",
+  "murl": "http://k.sinaimg.cn/n/sinacn17/424/w640h584/20181110/b54e-hnstwwq2081899.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/zz-wangchenggang-01/02.jpg",
+  "caption": "王城岗遗址远景（告成镇，嵩山背景下）",
+  "source": "河南省文物考古研究院",
+  "purl": "http://www.ncha.gov.cn/art/2023/12/21/art_722_186110.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2312211719343458936.png"
+ },
+ {
+  "rel": "images/zz-wangchenggang-01/03.jpg",
+  "caption": "奠基坑遗迹（筑城人牲祭祀实证）",
+  "source": "河南省文物考古研究院",
+  "purl": "http://www.ncha.gov.cn/art/2023/12/21/art_722_186110.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2312211719341992460.png"
+ },
+ {
+  "rel": "images/zz-wangchenggang-01/04.jpg",
+  "caption": "登封观星台（相邻地标，元代郭守敬创建）",
+  "source": "登封市人民政府 / 郑州日报",
+  "purl": "https://kandian.sina.cn/article_1831650534_6d2cc4e600101jfy4.html",
+  "murl": "https://n.sinaimg.cn/sinakd20117/799/w1024h575/20250701/de5a-ca2c90c4b7eaa13ee65b89e8552b0dcf.jpg"
+ },
+ {
+  "rel": "images/zz-shaolin-01/01.jpg",
+  "caption": "少林寺常住院山门（「天下第一名刹」）",
+  "source": "少林寺官网 / 郑州市文化广电和旅游局",
+  "purl": "https://k.sina.com.cn/article_6500816531_1837a969300100a7ls.html",
+  "murl": "http://n.sinaimg.cn/sinacn14/249/w637h412/20180907/0a61-hitesuz7911083.jpg"
+ },
+ {
+  "rel": "images/zz-shaolin-01/02.jpg",
+  "caption": "千佛殿《五百罗汉朝毗卢》壁画（明代）",
+  "source": "郑州市文物局",
+  "purl": "https://k.sina.com.cn/article_5340804094_p13e5633fe02700cn42.html",
+  "murl": "https://n.sinaimg.cn/sinacn21/627/w690h737/20180916/fa09-hkahyhx8772286.jpg"
+ },
+ {
+  "rel": "images/zz-shaolin-01/03.jpg",
+  "caption": "少林寺塔林（中国现存规模最大的古塔建筑群）",
+  "source": "郑州市文化广电和旅游局",
+  "purl": "https://henan.china.com/news/dsxy/2022/0418/2530273005.html",
+  "murl": "http://www.news.cn/photo/2022-04/12/1128554312_16497754994791n.jpg"
+ },
+ {
+  "rel": "images/zz-shaolin-01/04.jpg",
+  "caption": "少林功夫表演（少林武术发源地）",
+  "source": "郑州市文化广电和旅游局",
+  "purl": "http://www.ha.xinhuanet.com/20240618/b7fcb145aa67412090fcd2a90aeb6ff0/c.html",
+  "murl": "http://www.ha.xinhuanet.com/20240618/b7fcb145aa67412090fcd2a90aeb6ff0/20240618b7fcb145aa67412090fcd2a90aeb6ff0_20240618ae6f1b4356bf453c99df5b59c6a4fb44.jpg"
+ },
+ {
+  "rel": "images/ly-mangshan-01/01.jpg",
+  "caption": "邙山陵墓群田野封土冢（「北邙山头少闲土」）",
+  "source": "洛阳市文物局",
+  "purl": "http://cj.sina.com.cn/article/detail/2381596945/61590",
+  "murl": "http://sinastorage.com/storage.caitou.sina.com.cn/products/201609/2b1ceaee7656f1db432ccfb131c82e0a.jpeg"
+ },
+ {
+  "rel": "images/ly-mangshan-01/02.jpg",
+  "caption": "北魏宣武帝景陵地宫（洛阳古墓博物馆）",
+  "source": "洛阳古墓博物馆",
+  "purl": "https://k.sina.com.cn/article_3960624673_pec12562102700k1gf.html",
+  "murl": "http://n.sinaimg.cn/sinacn20112/384/w2048h1536/20190915/16bc-iepyyhi8470954.jpg"
+ },
+ {
+  "rel": "images/ly-mangshan-01/03.jpg",
+  "caption": "东汉大汉冢（符合文献记载的东汉帝陵墓冢）",
+  "source": "洛阳市文物局",
+  "purl": "https://k.sina.cn/article_1191867367_p470a73e702700dor6.html",
+  "murl": "https://n.sinaimg.cn/sinacn20117/213/w2048h1365/20190223/02f5-htknpmi0621419.jpg"
+ },
+ {
+  "rel": "images/ly-mangshan-01/04.jpg",
+  "caption": "洛阳古墓博物馆（河南古代壁画馆）",
+  "source": "洛阳古墓博物馆",
+  "purl": "https://www.gumumuseum.com/detail/468",
+  "murl": "https://www.gumumuseum.com/upload/image/20230302/64002aa5afdc4.webp"
+ },
+ {
+  "rel": "images/zz-huanye-01/01.jpg",
+  "caption": "黄冶唐三彩窑址（黄冶河两岸窑场分布，文化堆积厚达3米以上）",
+  "source": "郑州市文物局",
+  "purl": "https://k.sina.cn/article_3960624673_pec12562102700tn1s.html",
+  "murl": "https://n.sinaimg.cn/sinakd20110/779/w2048h2731/20200913/bb0d-iyywcta0568133.jpg"
+ },
+ {
+  "rel": "images/zz-huanye-01/03.jpg",
+  "caption": "三彩鹅衔梅花杯（巩义市博物馆藏）",
+  "source": "巩义市博物馆",
+  "purl": "https://szb.northnews.cn/nmgrb/html/2023-08/31/content_43672_215338.htm",
+  "murl": "https://szb.northnews.cn/nmgrb/resfile/2023-08-31/12/2927562_an_1693212314167_s.jpg"
+ },
+ {
+  "rel": "images/zz-huanye-01/04.jpg",
+  "caption": "唐青花蓝釉点彩水注（巩义市博物馆藏）",
+  "source": "巩义市博物馆",
+  "purl": "https://k.sina.cn/article_6416155066_17e6ec1ba001009cqp.html",
+  "murl": "http://k.sinaimg.cn/n/sinacn00/235/w640h395/20180622/4bc2-hefphqm2702462.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/kf-tieta-01/01.jpg",
+  "caption": "开封铁塔全景（八角十三层琉璃砖塔）",
+  "source": "河南省人民政府门户网站 / 河南日报",
+  "purl": "https://k.sina.cn/article_7059752076_p1a4cb448c0010185b0.html",
+  "murl": "https://n.sinaimg.cn/sinakd10111/720/w800h720/20200318/cb08-iqyryku9856603.jpg"
+ },
+ {
+  "rel": "images/kf-tieta-01/02.jpg",
+  "caption": "铁塔琉璃花砖（佛龛/乐伎等50余种图案）",
+  "source": "河南省文物局",
+  "purl": "https://www.topnews.cn/news/145DDEE747BD4878",
+  "murl": "https://img.dingxinwen.cn/image/20260219/7e1c23816e2576ee3ba124407fbd36e9.jpeg"
+ },
+ {
+  "rel": "images/kf-tieta-01/03.jpg",
+  "caption": "铁塔公园「天下第一塔」石碑",
+  "source": "开封市人民政府网站",
+  "purl": "https://k.sina.cn/article_7833343419_1d2e755bb00102gs8p.html",
+  "murl": "https://n.sinaimg.cn/sinakd20110/355/w660h495/20230919/4688-0e206c5ca8571ec657ccf47b78a49288.jpg"
+ },
+ {
+  "rel": "images/kf-tieta-01/04.jpg",
+  "caption": "接引殿（铁塔公园内，供奉北宋接引佛）",
+  "source": "开封本地宝",
+  "purl": "https://k.sina.cn/article_1920374981_p727698c5027009ifh.html",
+  "murl": "https://n.sinaimg.cn/sinacn23/0/w2048h1152/20180623/c416-heirxye7644291.jpg"
+ },
+ {
+  "rel": "images/kf-fanta-01/01.jpg",
+  "caption": "繁塔全貌（六角形楼阁式青砖塔，躯粗首小状似编钟）",
+  "source": "开封市文化广电和旅游局",
+  "purl": "https://k.sina.com.cn/article_7041939423_p1a3bb77df00100j1tb.html",
+  "murl": "https://n.sinaimg.cn/sinacn10103/582/w2048h2534/20190615/e67e-hymscpq3753331.jpg"
+ },
+ {
+  "rel": "images/kf-fanta-01/02.jpg",
+  "caption": "繁塔佛像砖（一砖一佛，形象百余种）",
+  "source": "开封日报",
+  "purl": "https://www.chnmuseum.cn/zp/zpml/kgfjp/202111/t20211116_252302.shtml",
+  "murl": "https://www.chnmuseum.cn/zp/zpml/kgfjp/202111/P020220810623029029688.jpg"
+ },
+ {
+  "rel": "images/kf-fanta-01/04.jpg",
+  "caption": "禹王台公园古吹台牌坊（清代）",
+  "source": "禹王台区人民政府",
+  "purl": "https://www.kflz.gov.cn/sitesources/kflzw/page_pc/lzwh/qfwy/articlea63acfc86eb141d1918dab96b498b63a.html",
+  "murl": "https://www.kflz.gov.cn/sitesources/kflzw/upload/202008/20200819151307410.png"
+ },
+ {
+  "rel": "images/smx-miaodigou-01/01.jpg",
+  "caption": "庙底沟花瓣纹彩陶（「中华文明之花」）",
+  "source": "三门峡庙底沟博物馆",
+  "purl": "http://www.chnmus.net/sitesources/hnsbwy/page_pc/wbzx/ggyg/article167f250eec064af1bb68f5e5cef0b9c6.html",
+  "murl": "http://www.chnmus.net/sitesources/20230301160108434.jpg"
+ },
+ {
+  "rel": "images/smx-miaodigou-01/02.jpg",
+  "caption": "庙底沟遗址考古发掘现场",
+  "source": "河南省文物局 / 大河网",
+  "purl": "http://news.cnwest.com/sxxw/a/2025/01/09/22942391.html",
+  "murl": "http://img.cnwest.com/a/10001/202501/09/2e1459f918852224092640f3c0fa1f4e.jpeg"
+ },
+ {
+  "rel": "images/smx-miaodigou-01/03.jpg",
+  "caption": "三门峡庙底沟博物馆（《花开中国》展厅）",
+  "source": "三门峡庙底沟博物馆",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1411296",
+  "murl": "http://vip-public.people.com.cn/photo/2021/3/3/96d7ed3fc64b479c8fce39f4a02b793bdjbA_m.jpg"
+ },
+ {
+  "rel": "images/smx-miaodigou-01/04.jpg",
+  "caption": "庙底沟遗址公园景观",
+  "source": "三门峡市文化广电和旅游局",
+  "purl": "http://news.cnwest.com/sxxw/a/2025/01/09/22942391.html",
+  "murl": "http://img.cnwest.com/a/10001/202501/09/0b15d22f1c51f6af9e7ddf9299a2fb87.jpeg"
+ },
+ {
+  "rel": "images/smx-hangu-01/01.jpg",
+  "caption": "函谷关「鼎」字形关楼",
+  "source": "灵宝市人民政府",
+  "purl": "https://cj.sina.com.cn/articles/view/7477530563/p1bdb20fc30010144jk",
+  "murl": "https://n.sinaimg.cn/sinakd10100/438/w2000h838/20220614/8c89-815848729721cf66bf7580ac27efe693.jpg"
+ },
+ {
+  "rel": "images/smx-hangu-01/02.jpg",
+  "caption": "太初宫（老子著《道德经》处）",
+  "source": "灵宝市人民政府",
+  "purl": "https://www.lingbao.gov.cn/16031/616500000/1265843.html",
+  "murl": "https://www.lingbao.gov.cn/backend/ueditor/jsp/upload/files/lb_data/2018/1123/20181123100307788.jpg"
+ },
+ {
+  "rel": "images/smx-hangu-01/03.jpg",
+  "caption": "函关古道（汉唐宋车辙遗迹）",
+  "source": "灵宝市人民政府",
+  "purl": "https://k.sina.cn/article_2642373644_9d7f6c0c00100snm1.html",
+  "murl": "http://k.sinaimg.cn/n/sinakd20200927ac/409/w723h486/20200927/f095-izrvxmh4852210.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/smx-hangu-01/04.jpg",
+  "caption": "老子圣像与道德天书（老子广场）",
+  "source": "函谷关旅游区",
+  "purl": "https://www.lingbao.gov.cn/16031/616500000/1265843.html",
+  "murl": "https://www.lingbao.gov.cn/backend/ueditor/jsp/upload/files/lb_data/2018/1123/20181123100308108.jpg"
+ },
+ {
+  "rel": "images/py-xishuipo-01/01.jpg",
+  "caption": "「中华第一龙」蚌塑龙（中国国家博物馆藏）",
+  "source": "河南省人民政府门户网站 / 河南日报",
+  "purl": "https://www.bbnews.cn/2024/05-22/z1Ra7Xkq.html",
+  "murl": "https://oss.bbnews.cn/a/10001/202405/810f08c9258c22ee956d827026a816cd.jpeg"
+ },
+ {
+  "rel": "images/py-xishuipo-01/02.jpg",
+  "caption": "M45墓蚌塑龙虎图案复原场景",
+  "source": "濮阳市文化遗产保护中心",
+  "purl": "https://k.sina.cn/article_1358804463_p50fdb5ef02701cfh1.html?from=job",
+  "murl": "https://n.sinaimg.cn/sinakd20107/747/w970h1377/20200927/d95a-izrvxmh1800275.jpg"
+ },
+ {
+  "rel": "images/py-xishuipo-01/03.jpg",
+  "caption": "西水坡遗址发掘现场（1987年）",
+  "source": "濮阳县文旅云",
+  "purl": "https://k.sina.cn/article_1349714023_50730067001012ibp.html?vt=4&from=history",
+  "murl": "http://n.sinaimg.cn/sinakd20220430ac/552/w800h552/20220430/a17f-dbf66c541c63bcad1176762ab67fa77c.jpg"
+ },
+ {
+  "rel": "images/py-xishuipo-01/04.jpg",
+  "caption": "戚城考古遗址公园·中华第一龙遗址陈列馆",
+  "source": "濮阳市文化遗产保护中心",
+  "purl": "http://news.cnwest.com/szyw/a/2023/02/21/21274352.html",
+  "murl": "http://img.cnwest.com/a/10001/202302/21/74450c5a82bc7173d5299ff63c92df0c.png"
+ },
+ {
+  "rel": "images/py-huailuan-01/01.jpg",
+  "caption": "回銮碑（契丹出境碑）",
+  "source": "河南省文物局 / 大象新闻",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1036423&pid=6801282",
+  "murl": "http://vip-public.people.com.cn/photo/2017/1/18/1036423/6801282_m.jpg"
+ },
+ {
+  "rel": "images/py-huailuan-01/02.jpg",
+  "caption": "御井（「御井甘泉」开州八景）",
+  "source": "濮阳县文化广电和旅游局",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1036423&pid=6801281",
+  "murl": "http://vip-public.people.com.cn/photo/2017/1/18/1036423/6801281_m.jpg"
+ },
+ {
+  "rel": "images/py-huailuan-01/03.jpg",
+  "caption": "澶渊之盟纪念馆",
+  "source": "濮阳日报",
+  "purl": "https://mw.hebei.gov.cn/system/2026/03/04/030376883.shtml",
+  "murl": "https://mw.hebei.gov.cn/pic/003/002/648/00300264839_0b87f069.png"
+ },
+ {
+  "rel": "images/py-huailuan-01/04.jpg",
+  "caption": "濮阳老城四牌楼（古十字街）",
+  "source": "濮阳日报",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1036423",
+  "murl": "http://vip-public.people.com.cn/photo/2017/1/18/1036423/6801283_m.jpg"
+ },
+ {
+  "rel": "images/ay-xiudingsi-01/01.jpg",
+  "caption": "修定寺塔全景（清凉山下）",
+  "source": "安阳市文物局",
+  "purl": "https://k.sina.cn/article_7067575122_p1a542a35200100r6tw.html",
+  "murl": "https://n.sinaimg.cn/sinacn10115/477/w800h477/20190929/5636-ifffqup9929630.jpg"
+ },
+ {
+  "rel": "images/ay-xiudingsi-01/02.jpg",
+  "caption": "塔身浮雕砖（飞天/力士/莲花等72种图案）",
+  "source": "安阳市文物局",
+  "purl": "https://k.sina.cn/article_7068101418_p1a54aab2a00100ld7x.html",
+  "murl": "https://k.sinaimg.cn/n/sinacn10112/384/w1280h704/20190912/afb8-iepyyhh6478232.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/ay-xiudingsi-01/03.jpg",
+  "caption": "塔门三世佛像龛（阿难/迦叶/胁侍菩萨/天王）",
+  "source": "安阳市文物局",
+  "purl": "https://k.sina.cn/article_7067575122_p1a542a35200100r6tw.html",
+  "murl": "https://n.sinaimg.cn/sinacn10115/718/w690h828/20190929/62c2-ifffqup9930006.jpg"
+ },
+ {
+  "rel": "images/ay-xiudingsi-01/04.jpg",
+  "caption": "修定寺塔花砖修复（1983—1984年）",
+  "source": "百科 / 安阳市文化广电体育旅游局",
+  "purl": "https://k.sina.cn/article_7068101418_p1a54aab2a00100ld7x.html",
+  "murl": "https://k.sinaimg.cn/n/sinacn10112/429/w888h1141/20190912/3bf4-iepyyhh6477972.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/ay-wenfeng-01/01.jpg",
+  "caption": "文峰塔全景（上大下小伞状塔形）",
+  "source": "安阳市文物局",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1399919&pid=9827970",
+  "murl": "http://vip-public.people.com.cn/photo/2021/2/1/03d8f1e3078f42bc9f8979a8e8a662f5PelJ_m.jpg"
+ },
+ {
+  "rel": "images/ay-wenfeng-01/02.jpg",
+  "caption": "塔身佛传故事浮雕（晚唐造像遗风）",
+  "source": "安阳市文物局",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1399919&pid=9827966",
+  "murl": "http://vip-public.people.com.cn/photo/2021/2/1/b187d167b9ad45189fc2ac03f03064b6h7Nt_m.jpg"
+ },
+ {
+  "rel": "images/ay-wenfeng-01/03.jpg",
+  "caption": "「文峰耸秀」门额与塔门",
+  "source": "安阳市文物局",
+  "purl": "https://xiangchengxian.gov.cn/zjxc/002004/20191008/717d3c1d-8d3c-4908-88e1-1f9434bdae24.html",
+  "murl": "https://xiangchengxian.gov.cn/uploadfile/717d3c1d-8d3c-4908-88e1-1f9434bdae24/20191008152132769.jpg"
+ },
+ {
+  "rel": "images/ay-wenfeng-01/04.jpg",
+  "caption": "塔顶平台与塔刹（俯瞰安阳老城）",
+  "source": "河南日报客户端",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1399919&pid=9827971",
+  "murl": "http://vip-public.people.com.cn/photo/2021/2/1/ffce766737564da7990d2c6730bfbcb3hVvS_m.jpg"
+ },
+ {
+  "rel": "images/ay-lingquan-01/01.jpg",
+  "caption": "灵泉寺石窟全景（宝山峡谷，八山环抱状若莲台）",
+  "source": "河南省文化和旅游厅 / 安阳市龙安区文广体旅局",
+  "purl": "https://cj.sina.com.cn/articles/view/3960624673/ec12562102700zfmk",
+  "murl": "https://n.sinaimg.cn/sinakd20110/200/w1080h720/20210906/dc98-23599ff2b3dcd78a35c80e5a90f7aca7.jpg"
+ },
+ {
+  "rel": "images/ay-lingquan-01/02.jpg",
+  "caption": "大住圣窟（整块巨石开凿，门神护法）",
+  "source": "安阳市龙安区文广体旅局",
+  "purl": "https://cj.sina.com.cn/articles/view/3960624673/ec12562102700zfmk",
+  "murl": "https://n.sinaimg.cn/sinakd20110/200/w1080h720/20210906/fa52-e22ff161aa0adc582579fde6da9180ab.jpg"
+ },
+ {
+  "rel": "images/ay-lingquan-01/03.jpg",
+  "caption": "道凭法师双石塔（中国现存最早的野外双石塔）",
+  "source": "安阳市文物考古研究院",
+  "purl": "https://ds.163.com/article/64bae18c46f4a600019d7279/",
+  "murl": "https://img.166.net/reunionpub/ds/kol/20230811/131210-g85ab6yqsi.png?imageView&tostatic=0&thumbnail=1500x0"
+ },
+ {
+  "rel": "images/ay-lingquan-01/04.jpg",
+  "caption": "摩崖浮雕塔林（万佛沟）",
+  "source": "河南省文化和旅游厅",
+  "purl": "https://k.sina.com.cn/article_1780858251_6a25bd8b00101nybn.html",
+  "murl": "http://n.sinaimg.cn/sinakd10002/66/w1000h666/20220506/1b52-7280991c57956862d322557cd7b6f81b.jpg"
+ },
+ {
+  "rel": "images/ly-longmen-01/04.jpg",
+  "caption": "",
+  "source": "",
+  "purl": "https://k.sina.com.cn/article_5638975650_1501bf0a200101976i.html",
+  "murl": "http://n.sinaimg.cn/sinakd20211026ac/369/w1080h1689/20211026/51dd-e0a2992de1755881a55119c5353666dd.jpg"
+ },
+ {
+  "rel": "images/zz-huanye-01/02.jpg",
+  "caption": "",
+  "source": "",
+  "purl": "https://k.sina.cn/article_3960624673_pec12562102700tn1s.html",
+  "murl": "https://n.sinaimg.cn/sinakd20110/779/w2048h2731/20200913/45b5-iyywcta0567687.jpg"
+ },
+ {
+  "rel": "images/kf-fanta-01/03.jpg",
+  "caption": "",
+  "source": "",
+  "purl": "https://whly.ln.gov.cn/whly/wlzt/lnww/zdwwbhdw/AA7D5CF9E5B848E2A2EDB489FFC773A9/index.shtml",
+  "murl": "https://whly.ln.gov.cn/eportal/fileDir/data/lnswhlyt/W020200827543408150030.png"
+ },
+ {
+  "rel": "images/smx-yangshao-01/cover.jpg",
+  "caption": "仰韶村遗址 封面",
+  "source": "",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1405917",
+  "murl": "http://vip-public.people.com.cn/photo/2021/2/18/ff1adf7dc7e342d796d591f0a09e5f32mFR6_m.jpg"
+ },
+ {
+  "rel": "images/smx-guoguo-01/cover.jpg",
+  "caption": "虢国墓地 封面",
+  "source": "",
+  "purl": "https://k.sina.cn/article_3960624673_pec125621027015cl8.html",
+  "murl": "https://k.sinaimg.cn/n/sinakd20113/0/w2048h1152/20230301/a800-33ba880b8918f47bb0e3f26a88db10dd.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/ly-erlitou-01/cover.jpg",
+  "caption": "二里头遗址 封面",
+  "source": "",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1398342&pid=9814847",
+  "murl": "http://vip-public.people.com.cn/photo/2021/1/28/b513aa94ea994db3b69a8facbb065fb9PUqG_m.jpg"
+ },
+ {
+  "rel": "images/ly-longmen-01/cover.jpg",
+  "caption": "龙门石窟 封面",
+  "source": "",
+  "purl": "https://fo.ifeng.com/c/8E5Jo3VmMXd",
+  "murl": "https://x0.ifengimg.com/ucms/2022_10/5716EE5D8A6E146CA4E5744AC5DB9BEBE792F271_size1508_w1080_h731.png"
+ },
+ {
+  "rel": "images/ay-yinxu-01/cover.jpg",
+  "caption": "殷墟 封面",
+  "source": "",
+  "purl": "https://www.jia.com/baike/bdetail-2312/",
+  "murl": "https://tgi1.jia.com/114/822/14822081.jpg"
+ },
+ {
+  "rel": "images/zz-shangcheng-01/cover.jpg",
+  "caption": "郑州商城遗址 封面",
+  "source": "",
+  "purl": "http://www.ncha.gov.cn/art/2025/3/3/art_722_194414.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2503031552481677074.jpg"
+ },
+ {
+  "rel": "images/kf-bianliang-01/cover.jpg",
+  "caption": "北宋东京城遗址 封面",
+  "source": "",
+  "purl": "https://k.sina.com.cn/article_1828887503_v6d029bcf0190125m9.html",
+  "murl": "https://n.sinaimg.cn/sinakd20230111s/591/w1080h1111/20230111/b051-1f75b826dd742da40833486f1fb5837f.jpg"
+ },
+ {
+  "rel": "images/py-qi-01/cover.jpg",
+  "caption": "戚城遗址 封面",
+  "source": "",
+  "purl": "https://k.sina.com.cn/article_6927749581_19ced11cd00100odng.html",
+  "murl": "http://n.sinaimg.cn/sinakd20200513ac/272/w640h432/20200513/8fc0-itmiwrz7122100.jpg"
+ },
+ {
+  "rel": "images/ly-yanshi-01/cover.jpg",
+  "caption": "偃师商城遗址 封面",
+  "source": "",
+  "purl": "http://www.sh-gaozhong.com/product-item-64.html",
+  "murl": "https://img01.71360.com/file/read/www/M00/12/97/wKgDYl6dPmKAL3F8AAhg_E9Z4ps718.jpg"
+ },
+ {
+  "rel": "images/ly-hanwei-01/cover.jpg",
+  "caption": "汉魏洛阳故城 封面",
+  "source": "",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1885640&pid=13917265",
+  "murl": "http://vip-public.people.com.cn/photo/2025/1/8/c9ecc34ee58349bc8f53cf3fafce99dczHpK_l.jpg"
+ },
+ {
+  "rel": "images/zz-wangchenggang-01/cover.jpg",
+  "caption": "王城岗遗址 封面",
+  "source": "",
+  "purl": "http://www.ncha.gov.cn/art/2025/1/25/art_1027_193779.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2501251445174636012.jpg"
+ },
+ {
+  "rel": "images/zz-shaolin-01/cover.jpg",
+  "caption": "少林寺常住院 封面",
+  "source": "",
+  "purl": "https://cj.sina.com.cn/articles/view/1191867367/p470a73e702701242d",
+  "murl": "https://k.sinaimg.cn/n/sinakd20109/766/w880h686/20230421/3fcf-632f7f83d0bda2bd15ab4564a4fc423b.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/ly-mangshan-01/cover.jpg",
+  "caption": "邙山陵墓群 封面",
+  "source": "",
+  "purl": "https://www.shamoku.net/gesheng/henan/10107.html",
+  "murl": "https://www.shamoku.net/uploadfile/thumb/d8/4f/d947bf06a885db0d477d707121934ff8/1000x1000_water_.jpg"
+ },
+ {
+  "rel": "images/kf-tieta-01/cover.jpg",
+  "caption": "开宝寺塔（铁塔） 封面",
+  "source": "",
+  "purl": "https://k.sina.cn/article_7833343419_1d2e755bb00102gs8p.html",
+  "murl": "http://k.sinaimg.cn/n/sinakd20110/341/w660h481/20230919/6a6b-26b9b26beb38a640478e80683a56c88a.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/kf-fanta-01/cover.jpg",
+  "caption": "繁塔 封面",
+  "source": "",
+  "purl": "https://k.sina.cn/article_7041939423_p1a3bb77df00100kdti.html",
+  "murl": "https://n.sinaimg.cn/sinacn10118/320/w1200h720/20190814/e79f-ichcymv1191893.jpg"
+ },
+ {
+  "rel": "images/smx-miaodigou-01/cover.jpg",
+  "caption": "庙底沟遗址 封面",
+  "source": "",
+  "purl": "http://news.cnwest.com/sxxw/a/2026/01/16/23278394.html",
+  "murl": "http://img.cnwest.com/a/10001/202601/16/935fc108eb71d2ac6723dca47b0a6eba.png"
+ },
+ {
+  "rel": "images/smx-hangu-01/cover.jpg",
+  "caption": "函谷关 封面",
+  "source": "",
+  "purl": "https://k.sina.cn/article_2642373644_9d7f6c0c00100snm1.html",
+  "murl": "http://k.sinaimg.cn/n/sinakd20200927ac/399/w713h486/20200927/4b33-izrvxmh4852216.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/py-xishuipo-01/cover.jpg",
+  "caption": "西水坡遗址 封面",
+  "source": "",
+  "purl": "https://cj.sina.com.cn/articles/view/3484956790/pcfb8387602701a52s",
+  "murl": "https://k.sinaimg.cn/n/sinakd20109/384/w2048h1536/20231001/4ee9-34ba5fc94e29c4def4a9549919fac565.jpg/w700d1q75cms.jpg"
+ },
+ {
+  "rel": "images/py-huailuan-01/cover.jpg",
+  "caption": "回銮碑 封面",
+  "source": "",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1036423&pid=6801285",
+  "murl": "http://vip-public.people.com.cn/photo/2017/1/18/1036423/6801285_m.jpg"
+ },
+ {
+  "rel": "images/ay-xiudingsi-01/cover.jpg",
+  "caption": "修定寺塔 封面",
+  "source": "",
+  "purl": "https://k.sina.cn/article_7145169210_1a9e2a13a00100pnc9.html",
+  "murl": "http://n.sinaimg.cn/sinakd10114/154/w1080h674/20201007/84d0-kaaxtfn5236959.jpg"
+ },
+ {
+  "rel": "images/ay-wenfeng-01/cover.jpg",
+  "caption": "安阳文峰塔 封面",
+  "source": "",
+  "purl": "http://vip.people.com.cn/albumsDetail?aid=1399919&pid=9827972",
+  "murl": "http://vip-public.people.com.cn/photo/2021/2/1/de282824378d47f09be9d05357edcb261Ayb_m.jpg"
+ },
+ {
+  "rel": "images/ay-lingquan-01/cover.jpg",
+  "caption": "灵泉寺石窟 封面",
+  "source": "",
+  "purl": "https://k.sina.com.cn/article_6527736147_p18515595300100hu4n.html",
+  "murl": "http://n.sinaimg.cn/sinacn10114/742/w1024h518/20190722/f183-iaantfi6137086.jpg"
+ },
+ {
+  "rel": "images/zz-huanye-01/cover.jpg",
+  "caption": "巩义黄冶三彩窑址 封面",
+  "source": "",
+  "purl": "https://k.sina.cn/article_1349714023_5073006700100tzji.html",
+  "murl": "https://n.sinaimg.cn/sinakd20201003ac/60/w1000h660/20201003/fa1b-izwfpyt6613162.jpg"
+ },
+ {
+  "rel": "images/smx-yangshao-01/e02-01.jpg",
+  "caption": "袁复礼绘制的中国第一张田野考古地形图",
+  "source": "",
+  "purl": "http://www.ncha.gov.cn/art/2021/10/23/art_2548_171503.html",
+  "murl": "http://www.ncha.gov.cn/picture/0/2110231552568778059.jpg"
+ }
+]

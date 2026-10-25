@@ -24,7 +24,7 @@
 | [ISSUES_RISKS.md](ISSUES_RISKS.md) | 阶段遗留问题 R1~R4（已全部清零）+ 观察项 O1~O38（环境限制、构建告警基线 O3、同步/图谱/编辑保护/API 口径/设备标识/标签编辑/页面订阅/数据仓库/刷新单通道/无障碍设备验证/深浅色验证/滚动定位与大屏限宽验证/推荐转收藏闭环验证/应用元信息与 token 化回归/mock 深链/内容缺口/L5-L6 回归/KV 威胁模型/L8-L10 回归） | 排障、构建告警比对、评估环境限制时 |
 | [OPTIMIZATION_PLAN_V1.md](OPTIMIZATION_PLAN_V1.md) | 全项目优化总表（29 项、分级、依赖、第一轮 B1/H1~H4、状态与验收） | 开始/推进优化轮次时，与 §5 M6 配合使用 |
 | [CONTENT_METHODOLOGY.md](CONTENT_METHODOLOGY.md) | 联网搜证 + 内容深写方法论（来源优先级 / 核证纪律 / 事件与文旅结构 / 双份同步 R3 / 图片） | 每批遗址内容深写、事件/文旅/图集开工前 |
-| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（当前 93 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
+| [REVISION_LOG.md](REVISION_LOG.md) | 全部修订历史（当前 94 条，按时间倒序、最新在前） | 追溯决策理由、交接前补记 |
 
 **接手速记（最高优先级硬约束，细节见对应分册）**
 
@@ -339,5 +339,5 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 ## 9. 修订记录（已拆分至 REVISION_LOG.md）
 
-> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 93 条，以分册为准）。
+> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 94 条，以分册为准）。
 > 维护规则：新增/调整子任务、范围、顺序、数据结构或踩坑条目时，先在 REVISION_LOG.md 表格顶部插入一行（`| 日期 | 修订内容 |`）写明理由，再同步更新本计划书状态、PITFALLS.md / ISSUES_RISKS.md / CONTENT_METHODOLOGY.md 等受影响分册。
