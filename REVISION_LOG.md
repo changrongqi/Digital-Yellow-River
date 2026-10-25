@@ -5,6 +5,9 @@
 
 | 日期 | 修订内容 |
 |---|---|
+| 2026-10-25 | **L10 KV 明文威胁模型与隐私提示（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `b764af2`）**：保持 `distributedKVStore` `encrypt:false`（仅建库时生效，已有 store 不能直接切换；Preferences 仍明文），登记威胁模型 O37（资产/存储面/攻击面/缓解/剩余风险）。SyncPanel 新增「隐私与存储说明」：私有目录 + 同账号 P2P 同步、未开启数据库加密、勿存密码/证件号、系统备份可在设置关闭；SyncService 注释迁移前提。UI 与备份行为回归登记 O38。 |
+| 2026-10-25 | **L9 ImageGallery PixelMap 释放（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `812ec8d`）**：`aboutToDisappear` 整体摘除并逐个 release；异步迟到结果立即 release 不写回；异常时释放已创建的 PixelMap；`ImageSource` 在 finally 统一 release；解码前读原尺寸，长边 >1600px 按比例 desiredSize。当前图片 path 全空（O1），真实解码/内存回归登记 O38。 |
+| 2026-10-25 | **L8 TimelineTab 无参化（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `6c965c2`）**：`TimelineTab` 改为无参 `@Builder`，新增 `timelineEvents()` 直读 `this.heritage`（null → 空数组），避免 @Builder 参数按值传递的状态失联；调用点同步；顺带把遗留 `#EFE9E2` 分隔线并入 `ThemeTokens.DIVIDER`，非数据文件该色值清零。 |
 | 2026-10-25 | **L7 内容缺口口径（全项目优化第三轮；仅文档/口径；commit `43e38d1`）**：184 事件中 64 无 figures、73 无 artifacts、8 条事件图片 path 全空（O1），龙山仅王城岗 1 条。按内容方法论不虚构数据：L7 从「补齐」调整为「口径与兜底」，EventDetail 空块隐藏已核查，README 明确「可核证才补、缺失隐藏」，内容补全登记 O35 backlog。 |
 | 2026-10-25 | **L6 路由统一封装（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `4c0ae86`）**：新增 `utils/RouterUtil` 统一 push/back/getParams + try/catch，push 参数用 `RouteParams` 接口、取参返回 `Record<string, Object>`（规避 arkts-no-props-by-index）；7 个页面迁移，页面不再直接调用 router。页面级 router 告警 15→3，构建基线 16→4，O3 与 CI 阈值同步；全路由回归登记 O36。 |
 | 2026-10-25 | **L5 微性能（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `52b9f37`）**：Discovery 筛选结果缓存到 `filteredList`（关键词/三筛选/加载时重算）；Favorites 笔记计数一次聚合 Map（消除 O(F×标签×N)）；Detail 推荐按收藏 id 签名重算，笔记/标签变化不再触发；Mock 615KB 评估后保留（预览兜底与同构基准），交互回归登记 O36。 |

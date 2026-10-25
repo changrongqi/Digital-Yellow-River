@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，41 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，43 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN_V1.md`；查决策史 → `REVISION_LOG.md`
 
@@ -34,6 +34,8 @@
 - 派生数据：筛选/排序结果缓存到 `@State`（变化入口重算，build 内不调用原函数）；关联计数用一次 Map 聚合；服务通知无法分类型时用签名判断是否重算
 - 路由：页面禁止直接调用 `router`，统一走 `utils/RouterUtil`；push 参数用 `RouteParams`，getParams 返回 `Record<string, Object>`（对 interface 下标访问会触发 arkts-no-props-by-index）
 - 内容缺口：人物/文物/图片无可靠来源时保持为空，页面隐藏对应区块，禁止虚构；缺口见 ISSUES_RISKS O35
+- 图片内存：PixelMap 必须显式释放（卸载/迟到/失败三路），ImageSource 在 finally release；解码长边上限 1600px
+- 存储安全：KV `encrypt` 仅建库时生效，禁止直接改已有 store；收藏/笔记为明文，SyncPanel 已提示勿存敏感信息；威胁模型见 O37
 - 预置数据加载统一走 `HeritageRepository`（`{list,byId,isMock}`）；JSON 字段统一 `JsonField`；`detail` 缺失/null/非对象降级为空 detail，不得丢整条
 - mock 数据 id 必须与 rawfile 正式 id 完全一致（禁 `mock-*` 前缀）；图谱节点只保留 key/label/kind/样式/坐标，未读字段及时删除
 - API 口径以 `build-profile.json5` 为准：最低 API16（任务书要求 ≥12），文档禁写死 12；下调最低版本必须配套 SDK 与安装回归

@@ -66,6 +66,9 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | L5 | 微性能：筛选缓存/笔记计数聚合/推荐按收藏签名重算 | 2026-10-25 | `52b9f37` | 代码 + 33 用例；设备性能手感待 O36 | 已完成（代码/构建） |
 | L6 | 路由异常处理统一为 RouterUtil | 2026-10-25 | `4c0ae86` | 代码 + 构建；告警基线 16→4；全路由回归待 O36 | 已完成（代码/构建） |
 | L7 | 内容字段缺口口径与兜底 | 2026-10-25 | `43e38d1` | 文档/口径；不虚构内容，缺口登记 O35 | 已完成（文档/口径） |
+| L8 | TimelineTab 改为无参 Builder | 2026-10-25 | `6c965c2` | 代码 + 33 用例；无可见行为变化 | 已完成（代码/构建） |
+| L9 | ImageGallery PixelMap 释放与解码上限 | 2026-10-25 | `812ec8d` | 代码 + 33 用例；内存/图集回归待 O38 | 已完成（代码/构建） |
+| L10 | KV 明文存储威胁模型与隐私提示 | 2026-10-25 | `b764af2` | 代码/文档 + 33 用例；隐私说明回归待 O38 | 已完成（代码/文档） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -270,18 +273,26 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 建议：按事件补人物/文物/图集；龙山补充或调整筛选预期。
   - 完成记录（2026-10-25，commit `43e38d1`）：① **口径决策**——按内容方法论「禁止凭记忆写精简数据」，缺失字段没有可靠官方来源时不虚构；L7 从「补齐内容」调整为「口径与兜底」：能核证才补，不能核证保持为空。② **UI 核查**——EventDetail 对 figures/artifacts/images 均 `if (length > 0)` 条件渲染，空字段自动隐藏整块，无空标题/空卡。③ **README**——明确「事件专题人物/文物/图片按可核证资料填充，缺失不虚构，页面隐藏对应区块」，并登记缺口清单 O35。④ **数据统计**——复核 184 事件、64 无 figures、73 无 artifacts、8 条图片条目（path 均为空，属 O1 占位）；龙山仅王城岗遗址 1 条，筛选结果按实际显示，不人为补数据。⑤ **后续**——内容补全列为 O35 独立 backlog，按批次联网搜证后补入并同步 mock。
 
-- [ ] **L8 `TimelineTab` 仍接收状态派生参数**
+- [x] **L8 `TimelineTab` 仍接收状态派生参数**（已完成：代码/构建）
   - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L312)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L809-L810)
   - 建议：改无参 Builder 直读 `this.heritage`，或独立组件 + `@Prop`。
+  - 完成记录（2026-10-25，commit `6c965c2`）：① `TimelineTab` 改为无参 `@Builder`，新增 `timelineEvents()` 私有方法直读 `this.heritage`（null 时返回空数组），规避 @Builder 参数按值传递在状态变化后不刷新；② 调用点改为 `this.TimelineTab()`；③ 顺带把该页遗留的 `#EFE9E2` 分隔线改用 `ThemeTokens.DIVIDER`，非数据文件中已无该色值；④ clean 构建 `BUILD SUCCESSFUL`、33 用例通过，无可见行为变化。
 
-- [ ] **L9 ImageGallery 不释放 PixelMap**
+- [x] **L9 ImageGallery 不释放 PixelMap**（已完成：代码/构建；内存回归待设备）
   - 位置：[ImageGallery.ets](entry/src/main/ets/components/ImageGallery.ets#L48-L50)、[ImageGallery.ets](entry/src/main/ets/components/ImageGallery.ets#L62-L88)
   - 建议：卸载时 `release()`；失败/替换时释放；缩略图限制解码尺寸。
+  - 完成记录（2026-10-25，commit `812ec8d`）：
+    ① **卸载释放**——`aboutToDisappear` 置 `disposed` 并调用 `releaseAll()`：先整体摘除 `pixelMaps` 再逐个 `release()`，异常只记日志；
+    ② **迟到结果释放**——异步加载完成时若组件已卸载，立即 `release()` 该 PixelMap 后返回，不再写回 @State；
+    ③ **失败/中间态释放**——加载异常时若已创建 PixelMap 先 release；`ImageSource` 在 `finally` 统一 release（Promise 形式）；
+    ④ **解码上限**——先用 `getImageInfo()` 读原尺寸，长边 >1600px 时按比例设置 `desiredSize` 解码，兼顾缩略图内存与 Lightbox 清晰度；
+    ⑤ clean 构建与 33 用例通过；真实图片加载/放大/卸载内存回归登记 O38（当前 rawfile 图片 path 全空，属 O1，无法本地验证实际解码路径）。
 
-- [ ] **L10 分布式 KV 明文存储**
+- [x] **L10 分布式 KV 明文存储**（已完成：代码/文档；威胁模型已登记）
   - 位置：[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L111-L118)、[backup_config.json](entry/src/main/resources/base/profile/backup_config.json)
   - 问题：`encrypt:false`、S1；笔记/收藏明文；系统备份带走 Preferences。
   - 建议：评估 `encrypt:true` 或登记威胁模型；敏感内容提示。
+  - 完成记录（2026-10-25，commit `b764af2`）：① **决策**——KV 的 `encrypt` 只在创建时生效，已存在的 store 不支持直接切换，强行开启需要清库/迁移与设备验证；且本地 Preferences 本身仍为明文，单独加密 KV 不能覆盖完整资产。当前保持 `encrypt:false`，登记威胁模型（O37），不采用未经验证的迁移。② **用户提示**——SyncPanel 新增「隐私与存储说明」卡：说明收藏/笔记存于应用私有目录并通过同账号设备同步、当前未开启数据库加密、勿存密码/证件号等敏感信息、系统备份可能包含数据并可在系统设置关闭。③ **代码注释**——`SyncService` 的 `encrypt:false` 旁注明决策与迁移前提，避免后续误改。④ **威胁模型**（O37）——资产=收藏/笔记/主题；攻击面=物理接触/root、系统备份提取、同账号设备；缓解=应用沙箱、同账号 P2P、无公网传输、用户提示；剩余风险=明文落盘与备份。⑤ 构建与 33 用例通过；隐私说明 UI 与备份行为登记 O38。
 
 ---
 
@@ -297,7 +308,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成（代码/构建/测试；设备验证待 O23~O36/O7）；第三轮 L1~L7 已完成，下一步 L8 TimelineTab 参数。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成；第三轮 L1~L10 全部完成（代码/构建/测试均通过；所有设备相关验收统一待 O7/O18~O38 真机/预览器验证）。优化总表条目全部收口，后续按 O 项做验证与内容 backlog（O35）。
 
 ---
 
@@ -387,3 +398,6 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-25 | 第三轮 L5 完成并记录（commit `52b9f37`）：Discovery 筛选结果缓存到 `filteredList`（变化时重算一次）；Favorites 笔记计数一次聚合为 Map；Detail 推荐按已收藏签名重算，笔记/标签变化不再触发；Mock 体积评估后保留 | build 内重复计算与 O(F×标签×N) 扫描会造成无谓开销；推荐依赖收藏集合而非笔记，签名可精准降噪；Mock 是预览兜底与同构基准，裁掉收益低于损失 |
 | 2026-10-25 | 第三轮 L6 完成并记录（commit `4c0ae86`）：新增 `utils/RouterUtil` 统一 push/back/getParams 与异常处理，7 个页面全部迁移；router 告警由 15 条合并为 3 条，构建基线 16→4；CI 门禁同步 | 各页 try/catch 口径不一致（Discovery/Favorites 未包），且 router deprecated 调用分散；集中封装便于日后迁移 Navigation，同时降低告警噪声；取参需用 Record 规避 ArkTS 下标限制 |
 | 2026-10-25 | 第三轮 L7 完成并记录（commit `43e38d1`）：内容缺口从「补齐」调整为「口径与兜底」——无可靠来源的人物/文物/图片不虚构，EventDetail 自动隐藏空块；登记 O35 内容补全 backlog；README 说明 | 内容方法论禁止凭记忆写数据，64/73 条缺口需要逐条联网搜证，不能在优化任务中批量臆造；先保证 UI 兜底与口径透明，内容补全另立 backlog |
+| 2026-10-25 | 第三轮 L8 完成并记录（commit `6c965c2`）：TimelineTab 改为无参 Builder，新增 timelineEvents() 直读 heritage；顺带把 #EFE9E2 分隔线并入 ThemeTokens.DIVIDER | 状态派生参数经 @Builder 按值传递，状态变化后存在不刷新风险；无参直读页面状态与其它页签保持一致 |
+| 2026-10-25 | 第三轮 L9 完成并记录（commit `812ec8d`）：ImageGallery 卸载/迟到/失败三路释放 PixelMap 与 ImageSource，长边 >1600px 按比例 desiredSize 解码 | PixelMap 占用原生内存且 Image 组件不会代为释放；当前图片 path 全空（O1），先补齐生命周期与解码上限，待真实图片接入后验证 |
+| 2026-10-25 | 第三轮 L10 完成并记录（commit `b764af2`）：保持 KV encrypt:false，登记威胁模型 O37；SyncPanel 新增隐私与存储说明；SyncService 注释迁移前提 | KV encrypt 仅创建时生效，直接切换需清库/迁移与设备验证，且 Preferences 仍为明文；先明确威胁模型与用户提示，避免未经验证的加密迁移 |
