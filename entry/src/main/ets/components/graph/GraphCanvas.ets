@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 知识图谱 Canvas 交互与视图控制组件（C1.4 重构，C1.6 渲染层拆分）
  *
  * 职责：数据刷新调度、视口变换、手势识别、命中测试与右上角控件；
@@ -31,6 +31,7 @@ import {
   computeFitTransform
 } from './GraphLayout';
 import { GraphRenderer } from './GraphRenderer';
+import { ThemeTokens } from '../../utils/ThemeTokens';
 
 /** 用户缩放范围（视口初始适配范围更窄，见 GraphLayout） */
 const MIN_USER_SCALE: number = 0.45;
@@ -363,7 +364,7 @@ export struct GraphCanvas {
   controlButton(label: string, fontSize: number, action: () => void) {
     Text(label)
       .fontSize(fontSize)
-      .fontColor('#6D4C41')
+      .fontColor(ThemeTokens.PRIMARY)
       .width(44)
       .height(44)
       .textAlign(TextAlign.Center)

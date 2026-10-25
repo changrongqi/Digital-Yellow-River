@@ -3,6 +3,7 @@
  */
 
 import { THEME_PALETTE } from '../../model/Theme';
+import { ThemeTokens } from '../../utils/ThemeTokens';
 
 @Component
 export struct ThemeEditorSheet {
@@ -44,13 +45,13 @@ export struct ThemeEditorSheet {
       Text(this.isRename ? '编辑主题' : '新建主题')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
 
       TextInput({ placeholder: '主题名称（如「彩陶文化」「青铜文明」）', text: this.themeNameInput })
         .width('100%')
         .height(44)
         .fontSize(14)
-        .backgroundColor('#FAF6F0')
+        .backgroundColor(ThemeTokens.BG_PAGE)
         .borderRadius(8)
         .margin({ top: 16 })
         .onChange((value: string) => {
@@ -63,14 +64,14 @@ export struct ThemeEditorSheet {
       if (this.errorText !== '') {
         Text(this.errorText)
           .fontSize(11)
-          .fontColor('#C0392B')
+          .fontColor(ThemeTokens.DANGER)
           .margin({ top: 6 })
           .alignSelf(ItemAlign.Start)
       }
 
       Text('主题颜色')
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .margin({ top: 16 })
         .alignSelf(ItemAlign.Start)
       Scroll() {
@@ -82,7 +83,7 @@ export struct ThemeEditorSheet {
                 .height(26)
                 .borderRadius(13)
                 .backgroundColor(color)
-                .border({ width: 2, color: this.themeColorIndex === index ? '#3E2723' : '#E0D6CC' })
+                .border({ width: 2, color: this.themeColorIndex === index ? ThemeTokens.TEXT_PRIMARY : ThemeTokens.BORDER })
             }
             .width(44)
             .height(44)
@@ -105,8 +106,8 @@ export struct ThemeEditorSheet {
       Row({ space: 12 }) {
         Button('取消')
           .fontSize(14)
-          .fontColor('#6D4C41')
-          .backgroundColor('#EFEBE9')
+          .fontColor(ThemeTokens.PRIMARY)
+          .backgroundColor(ThemeTokens.BG_SOFT)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -114,8 +115,8 @@ export struct ThemeEditorSheet {
           })
         Button('保存')
           .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#6D4C41')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+          .backgroundColor(ThemeTokens.PRIMARY)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -127,7 +128,7 @@ export struct ThemeEditorSheet {
     }
     .width('88%')
     .padding(20)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(16)
     .alignItems(HorizontalAlign.Start)
   }

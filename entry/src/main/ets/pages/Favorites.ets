@@ -35,6 +35,7 @@ import { Favorite } from '../model/Favorite';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDate } from '../utils/TimeFormat';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 const DOMAIN = 0x0000;
 const TAG = 'Favorites';
@@ -359,11 +360,11 @@ export struct Favorites {
           Text('我的收藏')
             .fontSize(24)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#3E2723')
+            .fontColor(ThemeTokens.TEXT_PRIMARY)
           Blank()
           Text(`${this.favoriteCount} 处`)
             .fontSize(13)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
         }
         .width('100%')
         .padding({ left: 20, right: 20, top: 16, bottom: 12 })
@@ -374,22 +375,22 @@ export struct Favorites {
             Text('📝 我的笔记')
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
-              .fontColor('#6D4C41')
+              .fontColor(ThemeTokens.PRIMARY)
             Text(`${this.noteCount} 条`)
               .fontSize(12)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ left: 8 })
             Blank()
             Text('›')
               .fontSize(18)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 12, bottom: 12 })
           .constraintSize({ minHeight: 44 })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(12)
-          .border({ width: 1, color: '#E0D6CC' })
+          .border({ width: 1, color: ThemeTokens.BORDER })
           .onClick(() => {
             this.openMyNotes();
           })
@@ -403,10 +404,10 @@ export struct Favorites {
             LoadingProgress()
               .width(48)
               .height(48)
-              .color('#A1887F')
+              .color(ThemeTokens.ACCENT_MUTED)
             Text('正在加载收藏…')
               .fontSize(14)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 12 })
           }
           .justifyContent(FlexAlign.Center)
@@ -418,14 +419,14 @@ export struct Favorites {
             Text('暂无收藏')
               .fontSize(18)
               .fontWeight(FontWeight.Medium)
-              .fontColor('#6D4C41')
+              .fontColor(ThemeTokens.PRIMARY)
             Text('去发现页探索黄河文化遗产')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 8 })
             Text('在详情页点击收藏后，可回到这里按标签查看')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 4 })
           }
           .justifyContent(FlexAlign.Center)
@@ -437,9 +438,9 @@ export struct Favorites {
             Row() {
               Text('示例数据 · 预览调试专用（rawfile 加载失败）')
                 .fontSize(12)
-                .fontColor('#7A5C52')
+                .fontColor(ThemeTokens.TEXT_SECONDARY)
                 .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-                .backgroundColor('#FFF3E0')
+                .backgroundColor(ThemeTokens.BG_WARNING)
                 .borderRadius(8)
             }
             .width('100%')
@@ -466,7 +467,7 @@ export struct Favorites {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#FAF6F0')
+      .backgroundColor(ThemeTokens.BG_PAGE)
 
       // 弹层：遮罩 + 对话框（一律经显式按钮关闭）
       if (this.sheetType !== SheetType.None) {
@@ -500,10 +501,10 @@ export struct Favorites {
       Text(tag)
         .fontSize(15)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
       Text(`${count} 处`)
         .fontSize(12)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .margin({ left: 8 })
     }
     .width('100%')
@@ -521,11 +522,11 @@ export struct Favorites {
           Text(card.heritage === null ? '?' : card.heritage.city)
             .fontSize(15)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
+            .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
           if (card.heritage !== null) {
             Text(card.heritage.era)
               .fontSize(11)
-              .fontColor('#FFFFFF')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
               .margin({ top: 4 })
           }
         }
@@ -533,19 +534,19 @@ export struct Favorites {
         .width(72)
         .height(72)
         .borderRadius(10)
-        .backgroundColor(card.heritage === null ? '#757575' : '#8D6E63')
+        .backgroundColor(card.heritage === null ? '#757575' : ThemeTokens.ACCENT_FALLBACK)
 
         Column() {
           Text(this.cardName(card))
             .fontSize(17)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#3E2723')
+            .fontColor(ThemeTokens.TEXT_PRIMARY)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           if (card.heritage !== null) {
             Text(card.heritage.summary)
               .fontSize(13)
-              .fontColor('#6D4C41')
+              .fontColor(ThemeTokens.PRIMARY)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .margin({ top: 6 })
@@ -555,18 +556,18 @@ export struct Favorites {
             ForEach(this.visibleTags(card.favorite.tags), (t: string) => {
               Text(t)
                 .fontSize(11)
-                .fontColor('#7A5C52')
+                .fontColor(ThemeTokens.TEXT_SECONDARY)
                 .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-                .backgroundColor('#EFEBE9')
+                .backgroundColor(ThemeTokens.BG_SOFT)
                 .borderRadius(6)
                 .margin({ right: 6 })
             }, (t: string) => t)
             if (card.favorite.tags.length > MAX_VISIBLE_TAGS) {
               Text(`+${card.favorite.tags.length - MAX_VISIBLE_TAGS}`)
                 .fontSize(11)
-                .fontColor('#7A5C52')
+                .fontColor(ThemeTokens.TEXT_SECONDARY)
                 .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-                .backgroundColor('#EFEBE9')
+                .backgroundColor(ThemeTokens.BG_SOFT)
                 .borderRadius(6)
             }
           }
@@ -577,11 +578,11 @@ export struct Favorites {
           Row() {
             Text(`收藏于 ${formatDate(card.favorite.createdAt)}`)
               .fontSize(11)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
             if (card.noteCount > 0) {
               Text(`${card.noteCount} 条笔记`)
                 .fontSize(11)
-                .fontColor('#77635C')
+                .fontColor(ThemeTokens.TEXT_MUTED)
                 .margin({ left: 12 })
             }
           }
@@ -601,7 +602,7 @@ export struct Favorites {
       // 「⋯」菜单按钮（兄弟节点，点击不会冒泡到主区域的跳转 onClick）
       Text('⋯')
         .fontSize(22)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .width(44)
         .height(44)
         .textAlign(TextAlign.Center)
@@ -613,7 +614,7 @@ export struct Favorites {
     }
     .width('100%')
     .padding(12)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(12)
     .alignItems(VerticalAlign.Center)
   }
@@ -624,24 +625,24 @@ export struct Favorites {
     Column() {
       Text('管理标签')
         .fontSize(16)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
         .padding({ top: 14, bottom: 14 })
         .onClick(() => {
           this.openTagEditor();
         })
       Divider()
-        .color('#E0D6CC')
+        .color(ThemeTokens.BORDER)
         .margin({ left: 16, right: 16 })
       Text('取消收藏')
         .fontSize(16)
-        .fontColor('#C0392B')
+        .fontColor(ThemeTokens.DANGER)
         .padding({ top: 14, bottom: 14 })
         .onClick(() => {
           this.sheetType = SheetType.ConfirmRemove;
         })
     }
     .width('64%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(16)
     .clip(true)
   }
@@ -653,17 +654,17 @@ export struct Favorites {
       Text('管理标签')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
       Text(this.sheetItemName)
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 6 })
 
       Text('选择标签')
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .margin({ top: 16 })
         .alignSelf(ItemAlign.Start)
 
@@ -674,7 +675,7 @@ export struct Favorites {
             Row() {
               Text(tag)
                 .fontSize(13)
-                .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFFFFF' : '#6D4C41')
+                .fontColor(this.editorSelected.indexOf(tag) >= 0 ? ThemeTokens.TEXT_ON_PRIMARY : ThemeTokens.PRIMARY)
                 .height(44)
                 .padding({ left: 12, right: this.isBuiltInTag(tag) ? 12 : 4 })
                 .accessibilitySelected(this.editorSelected.indexOf(tag) >= 0)
@@ -684,7 +685,7 @@ export struct Favorites {
               if (!this.isBuiltInTag(tag)) {
                 Text('✕')
                   .fontSize(12)
-                  .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFCCBC' : '#77635C')
+                  .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFCCBC' : ThemeTokens.TEXT_MUTED)
                   .width(32)
                   .height(44)
                   .textAlign(TextAlign.Center)
@@ -696,9 +697,9 @@ export struct Favorites {
               }
             }
             .constraintSize({ minHeight: 44 })
-            .backgroundColor(this.editorSelected.indexOf(tag) >= 0 ? '#6D4C41' : '#FFFFFF')
+            .backgroundColor(this.editorSelected.indexOf(tag) >= 0 ? ThemeTokens.PRIMARY : ThemeTokens.BG_CARD)
             .borderRadius(14)
-            .border({ width: 1, color: this.editorSelected.indexOf(tag) >= 0 ? '#6D4C41' : '#E0D6CC' })
+            .border({ width: 1, color: this.editorSelected.indexOf(tag) >= 0 ? ThemeTokens.PRIMARY : ThemeTokens.BORDER })
             .margin({ right: 8, bottom: 8 })
           }, (tag: string) => `${tag}-${this.editorSelected.indexOf(tag) >= 0}-${this.isBuiltInTag(tag)}`)
         }
@@ -715,15 +716,15 @@ export struct Favorites {
           .layoutWeight(1)
           .height(44)
           .fontSize(13)
-          .backgroundColor('#FAF6F0')
+          .backgroundColor(ThemeTokens.BG_PAGE)
           .borderRadius(8)
           .onChange((value: string) => {
             this.newTagInput = value;
           })
         Button('新增')
           .fontSize(13)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#6D4C41')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+          .backgroundColor(ThemeTokens.PRIMARY)
           .height(44)
           .onClick(() => {
             this.addNewTag();
@@ -736,8 +737,8 @@ export struct Favorites {
       Row({ space: 12 }) {
         Button('取消')
           .fontSize(14)
-          .fontColor('#6D4C41')
-          .backgroundColor('#EFEBE9')
+          .fontColor(ThemeTokens.PRIMARY)
+          .backgroundColor(ThemeTokens.BG_SOFT)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -745,8 +746,8 @@ export struct Favorites {
           })
         Button('保存')
           .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#6D4C41')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+          .backgroundColor(ThemeTokens.PRIMARY)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -758,7 +759,7 @@ export struct Favorites {
     }
     .width('88%')
     .padding(20)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(16)
     .alignItems(HorizontalAlign.Start)
   }
@@ -770,17 +771,17 @@ export struct Favorites {
       Text('确认取消收藏')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
       Text(`「${this.sheetItemName}」取消收藏后，相关笔记将保留不删除`)
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .margin({ top: 10 })
         .textAlign(TextAlign.Center)
       Row({ space: 12 }) {
         Button('再想想')
           .fontSize(14)
-          .fontColor('#6D4C41')
-          .backgroundColor('#EFEBE9')
+          .fontColor(ThemeTokens.PRIMARY)
+          .backgroundColor(ThemeTokens.BG_SOFT)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -788,8 +789,8 @@ export struct Favorites {
           })
         Button('取消收藏')
           .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#C0392B')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+          .backgroundColor(ThemeTokens.DANGER)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -801,7 +802,7 @@ export struct Favorites {
     }
     .width('76%')
     .padding(20)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(16)
     .alignItems(HorizontalAlign.Center)
   }

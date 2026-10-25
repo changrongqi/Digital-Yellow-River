@@ -16,6 +16,7 @@
 import { Heritage } from '../../model/Heritage';
 import { Theme, getThemeColor } from '../../model/Theme';
 import { getEraTheme } from '../../utils/EraTheme';
+import { ThemeTokens } from '../../utils/ThemeTokens';
 import { GraphNode, GraphEdge, GraphModel, GraphNodeKind, GraphEdgeKind } from './GraphNode';
 
 /** 中心主题节点半径（世界坐标） */
@@ -216,7 +217,7 @@ function makeRecommendNode(heritage: Heritage): GraphNode {
     city: heritage.city,
     type: heritage.type,
     summary: heritage.summary,
-    fill: '#FFFFFF',
+    fill: ThemeTokens.BG_CARD,
     stroke: eraTheme.deep,
     radius: RECOMMEND_RADIUS,
     degree: 0,

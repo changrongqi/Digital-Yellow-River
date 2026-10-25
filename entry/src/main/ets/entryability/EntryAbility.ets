@@ -2,6 +2,7 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { SyncService } from '../service/SyncService';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 const DOMAIN = 0x0000;
 
@@ -46,9 +47,9 @@ export default class EntryAbility extends UIAbility {
     try {
       const mainWindow: window.Window = windowStage.getMainWindowSync();
       await mainWindow.setWindowSystemBarProperties({
-        statusBarColor: '#FAF6F0',
+        statusBarColor: ThemeTokens.BG_PAGE,
         statusBarContentColor: '#000000',
-        navigationBarColor: '#FAF6F0',
+        navigationBarColor: ThemeTokens.BG_PAGE,
         navigationBarContentColor: '#000000'
       });
       hilog.info(DOMAIN, 'testTag', 'Applied light color mode and system bar colors');

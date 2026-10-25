@@ -35,6 +35,7 @@ import { getEraTheme } from '../utils/EraTheme';
 import { formatDateTime } from '../utils/TimeFormat';
 import { recommendHeritages } from '../utils/Recommendation';
 import { ImageGallery } from '../components/ImageGallery';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 const DOMAIN = 0x0000;
 const TAG = 'Detail';
@@ -187,7 +188,7 @@ struct Detail {
       Row() {
         Text('‹')
           .fontSize(30)
-          .fontColor('#6D4C41')
+          .fontColor(ThemeTokens.PRIMARY)
           .width(44)
           .height(44)
           .textAlign(TextAlign.Center)
@@ -199,7 +200,7 @@ struct Detail {
         Text(this.heritage === null ? '遗产详情' : this.heritage.name)
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#3E2723')
+          .fontColor(ThemeTokens.TEXT_PRIMARY)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
@@ -215,10 +216,10 @@ struct Detail {
           LoadingProgress()
             .width(48)
             .height(48)
-            .color('#A1887F')
+            .color(ThemeTokens.ACCENT_MUTED)
           Text('正在加载文化档案…')
             .fontSize(14)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -229,10 +230,10 @@ struct Detail {
           Text('未找到该遗产')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#6D4C41')
+            .fontColor(ThemeTokens.PRIMARY)
           Text('数据可能已更新，请返回列表重试')
             .fontSize(13)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -243,10 +244,10 @@ struct Detail {
         if (this.isMockData) {
           Text('示例数据 · 预览调试专用（rawfile 加载失败）')
             .fontSize(12)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .width('100%')
             .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-            .backgroundColor('#FFF3E0')
+            .backgroundColor(ThemeTokens.BG_WARNING)
             .margin({ bottom: 8 })
         }
 
@@ -256,7 +257,7 @@ struct Detail {
             Text(this.heritage.name)
               .fontSize(26)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#FFFFFF')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
             Row() {
@@ -267,7 +268,7 @@ struct Detail {
             .margin({ top: 12 })
             Text(this.heritage.summary)
               .fontSize(13)
-              .fontColor('#FFFFFF')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
               .lineHeight(21)
               .margin({ top: 12 })
           }
@@ -322,7 +323,7 @@ struct Detail {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#FAF6F0')
+    .backgroundColor(ThemeTokens.BG_PAGE)
   }
 
   /** 横幅徽标（年代/类型/城市）：半透明白底 + 白字（M4.0） */
@@ -330,7 +331,7 @@ struct Detail {
   HeroTag(text: string) {
     Text(text)
       .fontSize(12)
-      .fontColor('#FFFFFF')
+      .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
       .padding({ left: 10, right: 10, top: 4, bottom: 4 })
       .backgroundColor('rgba(62,39,35,0.30)')
       .borderRadius(8)
@@ -347,12 +348,12 @@ struct Detail {
     Text(this.isFav ? '已收藏' : '收藏')
       .fontSize(13)
       .fontWeight(FontWeight.Medium)
-      .fontColor(this.isFav ? '#FFFFFF' : '#6D4C41')
+      .fontColor(this.isFav ? ThemeTokens.TEXT_ON_PRIMARY : ThemeTokens.PRIMARY)
       .constraintSize({ minHeight: 44 })
       .padding({ left: 14, right: 14, top: 6, bottom: 6 })
-      .backgroundColor(this.isFav ? '#6D4C41' : '#FFFFFF')
+      .backgroundColor(this.isFav ? ThemeTokens.PRIMARY : ThemeTokens.BG_CARD)
       .borderRadius(14)
-      .border({ width: 1, color: this.isFav ? '#6D4C41' : '#E0D6CC' })
+      .border({ width: 1, color: this.isFav ? ThemeTokens.PRIMARY : ThemeTokens.BORDER })
       .accessibilityText(this.isFav ? '已收藏，双击取消收藏' : '收藏该遗址')
       .accessibilitySelected(this.isFav)
       .accessibilityLevel('yes')
@@ -392,12 +393,12 @@ struct Detail {
           if (this.heritage.detail.intro.length === 0) {
             Text('暂无内容')
               .fontSize(14)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
               .padding({ top: 40 })
           } else {
             Text(this.heritage.detail.intro)
               .fontSize(15)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
               .lineHeight(26)
               .textAlign(TextAlign.JUSTIFY)
           }
@@ -409,30 +410,30 @@ struct Detail {
             Text('遗址档案')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
               .width('100%')
             ForEach(this.heritage.detail.specs, (spec: SpecItem) => {
               Row() {
                 Text(spec.label)
                   .fontSize(13)
-                  .fontColor('#7A5C52')
+                  .fontColor(ThemeTokens.TEXT_SECONDARY)
                   .width(88)
                 Text(spec.value)
                   .fontSize(13)
-                  .fontColor('#3E2723')
+                  .fontColor(ThemeTokens.TEXT_PRIMARY)
                   .layoutWeight(1)
                   .textAlign(TextAlign.End)
               }
               .width('100%')
               .alignItems(VerticalAlign.Top)
               .padding({ top: 8, bottom: 8 })
-              .border({ width: { bottom: 1 }, color: '#F0EBE5' })
+              .border({ width: { bottom: 1 }, color: ThemeTokens.DIVIDER })
             }, (spec: SpecItem) => spec.label)
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
           .padding(16)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(12)
           .margin({ top: 20 })
         }
@@ -443,7 +444,7 @@ struct Detail {
             Text('相关遗址推荐')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
               .width('100%')
             Scroll() {
               Row() {
@@ -463,7 +464,7 @@ struct Detail {
           .width('100%')
           .alignItems(HorizontalAlign.Start)
           .padding(16)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(12)
           .margin({ top: 20 })
         }
@@ -491,13 +492,13 @@ struct Detail {
       Text(rec.name)
         .fontSize(14)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
       Text(rec.summary)
         .fontSize(12)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .lineHeight(18)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -516,7 +517,7 @@ struct Detail {
     .padding(12)
     .backgroundColor(getEraTheme(rec.era).soft)
     .borderRadius(10)
-    .border({ width: 1, color: '#F0EBE5' })
+    .border({ width: 1, color: ThemeTokens.DIVIDER })
     .margin({ right: 10 })
     .onClick(() => {
       this.openRecommendedDetail(rec.id);
@@ -535,12 +536,12 @@ struct Detail {
           if (this.heritage.detail.discovery.length === 0) {
             Text('暂无内容')
               .fontSize(14)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
               .padding({ top: 40 })
           } else {
             Text(this.heritage.detail.discovery)
               .fontSize(15)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
               .lineHeight(26)
               .textAlign(TextAlign.JUSTIFY)
           }
@@ -552,7 +553,7 @@ struct Detail {
             Text('代表性出土文物')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
               .width('100%')
             ForEach(this.heritage.detail.artifacts, (artifact: Artifact) => {
               Column() {
@@ -562,7 +563,7 @@ struct Detail {
                   .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
                 Text(artifact.desc)
                   .fontSize(13)
-                  .fontColor('#6D4C41')
+                  .fontColor(ThemeTokens.PRIMARY)
                   .lineHeight(21)
                   .margin({ top: 4 })
               }
@@ -577,7 +578,7 @@ struct Detail {
           .width('100%')
           .alignItems(HorizontalAlign.Start)
           .padding(16)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(12)
           .margin({ top: 20 })
         }
@@ -588,7 +589,7 @@ struct Detail {
             Text('遗址图集')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
               .width('100%')
             ImageGallery({ images: this.heritage.detail.images })
               .margin({ top: 12 })
@@ -596,7 +597,7 @@ struct Detail {
           .width('100%')
           .alignItems(HorizontalAlign.Start)
           .padding(16)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(12)
           .margin({ top: 20 })
         }
@@ -631,14 +632,14 @@ struct Detail {
         if (this.tourismEmpty()) {
           Text('暂无内容')
             .fontSize(14)
-            .fontColor('#77635C')
+            .fontColor(ThemeTokens.TEXT_MUTED)
             .padding({ top: 40 })
         } else {
           // 1. 概览正文
           if (this.heritage !== null && this.heritage.detail.tourism.overview.length > 0) {
             Text(this.heritage.detail.tourism.overview)
               .fontSize(15)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
               .lineHeight(26)
               .textAlign(TextAlign.JUSTIFY)
               .width('100%')
@@ -650,7 +651,7 @@ struct Detail {
               Text('参观指引')
                 .fontSize(16)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#3E2723')
+                .fontColor(ThemeTokens.TEXT_PRIMARY)
                 .width('100%')
               if (this.heritage.detail.tourism.guide.hours.length > 0) {
                 this.GuideRow('开放时间', this.heritage.detail.tourism.guide.hours)
@@ -668,7 +669,7 @@ struct Detail {
             .width('100%')
             .alignItems(HorizontalAlign.Start)
             .padding(16)
-            .backgroundColor('#FFFFFF')
+            .backgroundColor(ThemeTokens.BG_CARD)
             .borderRadius(12)
             .margin({ top: 20 })
           }
@@ -679,7 +680,7 @@ struct Detail {
               Text('行程规划')
                 .fontSize(16)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#3E2723')
+                .fontColor(ThemeTokens.TEXT_PRIMARY)
                 .width('100%')
               ForEach(this.heritage.detail.tourism.itinerary.split('\n'),
                 (line: string, idx: number) => {
@@ -691,7 +692,7 @@ struct Detail {
                       .height(18)
                     Text(line)
                       .fontSize(14)
-                      .fontColor('#3E2723')
+                      .fontColor(ThemeTokens.TEXT_PRIMARY)
                       .lineHeight(23)
                       .layoutWeight(1)
                       .margin({ left: 8 })
@@ -704,7 +705,7 @@ struct Detail {
             .width('100%')
             .alignItems(HorizontalAlign.Start)
             .padding(16)
-            .backgroundColor('#FFFFFF')
+            .backgroundColor(ThemeTokens.BG_CARD)
             .borderRadius(12)
             .margin({ top: 20 })
           }
@@ -757,7 +758,7 @@ struct Detail {
         .width(72)
       Text(value)
         .fontSize(13)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
         .lineHeight(21)
         .layoutWeight(1)
         .textAlign(TextAlign.End)
@@ -765,7 +766,7 @@ struct Detail {
     .width('100%')
     .alignItems(VerticalAlign.Top)
     .padding({ top: 9, bottom: 9 })
-    .border({ width: { bottom: 1 }, color: '#F0EBE5' })
+    .border({ width: { bottom: 1 }, color: ThemeTokens.DIVIDER })
   }
 
   /** 文旅内容是否整体为空（任一子块非空即非空） */
@@ -807,7 +808,7 @@ struct Detail {
         if (events.length === 0) {
           Text('暂无内容')
             .fontSize(14)
-            .fontColor('#77635C')
+            .fontColor(ThemeTokens.TEXT_MUTED)
             .padding({ top: 40 })
         } else {
           ForEach(events, (item: HeritageEvent, idx: number) => {
@@ -817,7 +818,7 @@ struct Detail {
                 Text(item.year)
                   .fontSize(13)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#FFFFFF')
+                  .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
                   .padding({ left: 10, right: 10, top: 4, bottom: 4 })
                   .backgroundColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
                   .borderRadius(10)
@@ -825,7 +826,7 @@ struct Detail {
                 // 正文：换行自适应，吃满剩余宽度（设备自适应）
                 Text(item.title)
                   .fontSize(14)
-                  .fontColor('#3E2723')
+                  .fontColor(ThemeTokens.TEXT_PRIMARY)
                   .lineHeight(22)
                   .layoutWeight(1)
                   .margin({ left: 12 })
@@ -833,7 +834,7 @@ struct Detail {
                 // 可点击入口提示（M1.8）
                 Text('›')
                   .fontSize(18)
-                  .fontColor('#7D655B')
+                  .fontColor(ThemeTokens.TEXT_SUBTLE)
                   .margin({ left: 8 })
               }
               .width('100%')
@@ -858,7 +859,7 @@ struct Detail {
         if (events.length > 0 && events.length < 4) {
           Text('更多考古进程正在整理中')
             .fontSize(12)
-            .fontColor('#77635C')
+            .fontColor(ThemeTokens.TEXT_MUTED)
             .margin({ top: 20, bottom: 8 })
         }
       }
@@ -886,15 +887,15 @@ struct Detail {
           Text('我的笔记')
             .fontSize(16)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#3E2723')
+            .fontColor(ThemeTokens.TEXT_PRIMARY)
           Blank()
           Text('+ 写笔记')
             .fontSize(13)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#6D4C41')
+            .fontColor(ThemeTokens.PRIMARY)
             .constraintSize({ minHeight: 44 })
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-            .backgroundColor('#EFEBE9')
+            .backgroundColor(ThemeTokens.BG_SOFT)
             .borderRadius(14)
             .accessibilityText('添加笔记')
             .accessibilityLevel('yes')
@@ -908,26 +909,26 @@ struct Detail {
         if (this.notes.length === 0) {
           Text('还没有笔记，点击「写笔记」记录你的想法')
             .fontSize(13)
-            .fontColor('#77635C')
+            .fontColor(ThemeTokens.TEXT_MUTED)
             .margin({ top: 12 })
         } else {
           ForEach(this.notes, (note: Note) => {
             Column() {
               Text(note.content)
                 .fontSize(14)
-                .fontColor('#3E2723')
+                .fontColor(ThemeTokens.TEXT_PRIMARY)
                 .maxLines(3)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .lineHeight(22)
               Text(`最后编辑 ${formatDateTime(note.updatedAt)}`)
                 .fontSize(11)
-                .fontColor('#77635C')
+                .fontColor(ThemeTokens.TEXT_MUTED)
                 .margin({ top: 6 })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)
             .padding(12)
-            .backgroundColor('#FAF6F0')
+            .backgroundColor(ThemeTokens.BG_PAGE)
             .borderRadius(8)
             .margin({ top: 10 })
             .onClick(() => {

@@ -3,6 +3,7 @@
  */
 
 import { Heritage } from '../../model/Heritage';
+import { ThemeTokens } from '../../utils/ThemeTokens';
 
 @Component
 export struct ManageSheet {
@@ -24,17 +25,17 @@ export struct ManageSheet {
       Text('归类管理')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
       Text(this.themeName)
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 6 })
 
       Text('已归类（点击 ✕ 移除）')
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .margin({ top: 14 })
         .alignSelf(ItemAlign.Start)
       Scroll() {
@@ -42,19 +43,19 @@ export struct ManageSheet {
           if (this.included.length === 0) {
             Text('暂无，从下方收藏中添加')
               .fontSize(12)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
               .padding({ top: 4, bottom: 4 })
           }
           ForEach(this.included, (h: Heritage) => {
             Row() {
               Text(h.name)
                 .fontSize(13)
-                .fontColor('#3E2723')
+                .fontColor(ThemeTokens.TEXT_PRIMARY)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
               Text('✕')
                 .fontSize(12)
-                .fontColor('#C0392B')
+                .fontColor(ThemeTokens.DANGER)
                 .padding({ left: 6, right: 2 })
             }
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
@@ -79,7 +80,7 @@ export struct ManageSheet {
 
       Text('未归类收藏（点击加入）')
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .margin({ top: 14 })
         .alignSelf(ItemAlign.Start)
       Scroll() {
@@ -87,14 +88,14 @@ export struct ManageSheet {
           if (this.available.length === 0) {
             Text('没有可加入的收藏（全部已归类或暂无收藏）')
               .fontSize(12)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
               .padding({ top: 4, bottom: 4 })
           }
           ForEach(this.available, (h: Heritage) => {
             Row() {
               Text(h.name)
                 .fontSize(13)
-                .fontColor('#6D4C41')
+                .fontColor(ThemeTokens.PRIMARY)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
               Text('＋')
@@ -124,8 +125,8 @@ export struct ManageSheet {
 
       Button('完成')
         .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor('#6D4C41')
+        .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+        .backgroundColor(ThemeTokens.PRIMARY)
         .width('100%')
         .height(44)
         .margin({ top: 16 })
@@ -135,7 +136,7 @@ export struct ManageSheet {
     }
     .width('88%')
     .padding(20)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(16)
     .alignItems(HorizontalAlign.Start)
   }

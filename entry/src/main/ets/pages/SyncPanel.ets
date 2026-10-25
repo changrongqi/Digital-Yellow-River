@@ -22,6 +22,7 @@ import { common } from '@kit.AbilityKit';
 import { SyncService, SyncDeviceInfo } from '../service/SyncService';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
 import { formatDateTime } from '../utils/TimeFormat';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 @Component
 export struct SyncPanel {
@@ -135,7 +136,7 @@ export struct SyncPanel {
           Text('同步面板')
             .fontSize(24)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#3E2723')
+            .fontColor(ThemeTokens.TEXT_PRIMARY)
         }
         .width('100%')
         .padding({ left: 20, right: 20, top: 16, bottom: 12 })
@@ -146,37 +147,37 @@ export struct SyncPanel {
           Row() {
             Text('服务状态')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
             Blank()
             Text(this.serviceStateText())
               .fontSize(13)
               .fontWeight(FontWeight.Medium)
-              .fontColor(this.syncAvailable ? '#6D4C41'
-                : (this.permissionGranted ? '#77635C' : '#C0392B'))
+              .fontColor(this.syncAvailable ? ThemeTokens.PRIMARY
+                : (this.permissionGranted ? ThemeTokens.TEXT_MUTED : ThemeTokens.DANGER))
           }
           .width('100%')
           .margin({ top: 12 })
 
           Progress({ value: this.status.progress, total: 100, type: ProgressType.Linear })
-            .color('#8D6E63')
-            .backgroundColor('#EFEBE9')
+            .color(ThemeTokens.ACCENT_FALLBACK)
+            .backgroundColor(ThemeTokens.BG_SOFT)
             .borderRadius(4)
             .height(8)
             .width('100%')
             .margin({ top: 12 })
           Text(`同步进度 ${this.status.progress}%`)
             .fontSize(11)
-            .fontColor('#77635C')
+            .fontColor(ThemeTokens.TEXT_MUTED)
             .margin({ top: 4 })
 
           Row() {
             Text('最后同步')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
             Blank()
             Text(this.status.lastSyncTime > 0 ? formatDateTime(this.status.lastSyncTime) : '从未同步')
               .fontSize(13)
-              .fontColor('#6D4C41')
+              .fontColor(ThemeTokens.PRIMARY)
           }
           .width('100%')
           .margin({ top: 12 })
@@ -184,11 +185,11 @@ export struct SyncPanel {
           Row() {
             Text('在线设备')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
             Blank()
             Text(`${this.devices.length} 台`)
               .fontSize(13)
-              .fontColor('#6D4C41')
+              .fontColor(ThemeTokens.PRIMARY)
           }
           .width('100%')
           .margin({ top: 8 })
@@ -196,11 +197,11 @@ export struct SyncPanel {
           Row() {
             Text('冲突记录')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
             Blank()
             Text(this.status.conflictCount > 0 ? `${this.status.conflictCount} 条` : '无')
               .fontSize(13)
-              .fontColor(this.status.conflictCount > 0 ? '#C0392B' : '#6D4C41')
+              .fontColor(this.status.conflictCount > 0 ? ThemeTokens.DANGER : ThemeTokens.PRIMARY)
           }
           .width('100%')
           .margin({ top: 8 })
@@ -208,7 +209,7 @@ export struct SyncPanel {
         .width('100%')
         .alignItems(HorizontalAlign.Start)
         .padding(16)
-        .backgroundColor('#FFFFFF')
+        .backgroundColor(ThemeTokens.BG_CARD)
         .borderRadius(12)
 
         // ===== 在线设备卡 =====
@@ -217,29 +218,29 @@ export struct SyncPanel {
           if (this.devices.length === 0) {
             Text('暂无在线设备')
               .fontSize(13)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
               .margin({ top: 10 })
             Text('两台设备登录同一华为账号、连接同一 WLAN 并开启蓝牙后，将自动组网出现在这里')
               .fontSize(12)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
               .margin({ top: 6 })
           } else {
             ForEach(this.devices, (device: SyncDeviceInfo) => {
               Row() {
                 Text(device.deviceName)
                   .fontSize(14)
-                  .fontColor('#3E2723')
+                  .fontColor(ThemeTokens.TEXT_PRIMARY)
                   .layoutWeight(1)
                 Text('可信设备')
                   .fontSize(11)
-                  .fontColor('#7A5C52')
+                  .fontColor(ThemeTokens.TEXT_SECONDARY)
                   .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-                  .backgroundColor('#EFEBE9')
+                  .backgroundColor(ThemeTokens.BG_SOFT)
                   .borderRadius(6)
               }
               .width('100%')
               .padding(12)
-              .backgroundColor('#FAF6F0')
+              .backgroundColor(ThemeTokens.BG_PAGE)
               .borderRadius(8)
               .margin({ top: 10 })
             }, (device: SyncDeviceInfo) => device.networkId)
@@ -248,7 +249,7 @@ export struct SyncPanel {
         .width('100%')
         .alignItems(HorizontalAlign.Start)
         .padding(16)
-        .backgroundColor('#FFFFFF')
+        .backgroundColor(ThemeTokens.BG_CARD)
         .borderRadius(12)
         .margin({ top: 12 })
 
@@ -257,18 +258,18 @@ export struct SyncPanel {
           this.SectionTitle('手动同步')
           Text('日常写入后自动同步；也可在此手动发起一次全量推送与拉取（PUSH_PULL）')
             .fontSize(12)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 10 })
           if (!this.permissionGranted) {
             Text('分布式同步需要「多设备数据交换」权限；未授权时收藏与笔记仍只在本地保存。')
               .fontSize(12)
-              .fontColor('#C0392B')
+              .fontColor(ThemeTokens.DANGER)
               .lineHeight(19)
               .margin({ top: 8 })
             Button('授权分布式同步')
               .fontSize(15)
-              .fontColor('#FFFFFF')
-              .backgroundColor('#6D4C41')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+              .backgroundColor(ThemeTokens.PRIMARY)
               .width('100%')
               .height(44)
               .borderRadius(22)
@@ -280,13 +281,13 @@ export struct SyncPanel {
           if (this.permissionGranted && !this.syncAvailable) {
             Text('同步服务尚未就绪，可重试初始化；本地收藏与笔记不受影响。')
               .fontSize(12)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .lineHeight(19)
               .margin({ top: 8 })
             Button('重试初始化')
               .fontSize(15)
-              .fontColor('#6D4C41')
-              .backgroundColor('#EFEBE9')
+              .fontColor(ThemeTokens.PRIMARY)
+              .backgroundColor(ThemeTokens.BG_SOFT)
               .width('100%')
               .height(44)
               .borderRadius(22)
@@ -298,8 +299,8 @@ export struct SyncPanel {
           if (this.permissionGranted && this.syncAvailable) {
             Button('立即同步')
               .fontSize(15)
-              .fontColor('#FFFFFF')
-              .backgroundColor('#6D4C41')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+              .backgroundColor(ThemeTokens.PRIMARY)
               .width('100%')
               .height(44)
               .borderRadius(22)
@@ -311,7 +312,7 @@ export struct SyncPanel {
           if (this.syncTip !== '') {
             Text(this.syncTip)
               .fontSize(12)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 8 })
               .textAlign(TextAlign.Center)
               .width('100%')
@@ -320,7 +321,7 @@ export struct SyncPanel {
         .width('100%')
         .alignItems(HorizontalAlign.Start)
         .padding(16)
-        .backgroundColor('#FFFFFF')
+        .backgroundColor(ThemeTokens.BG_CARD)
         .borderRadius(12)
         .margin({ top: 12 })
 
@@ -330,7 +331,7 @@ export struct SyncPanel {
           if (this.status.conflictLog.length === 0) {
             Text('无冲突记录')
               .fontSize(13)
-              .fontColor('#77635C')
+              .fontColor(ThemeTokens.TEXT_MUTED)
               .margin({ top: 10 })
           } else {
             ForEach(this.status.conflictLog, (item: ConflictLogItem) => {
@@ -339,23 +340,23 @@ export struct SyncPanel {
                   Text(item.itemId)
                     .fontSize(13)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor('#3E2723')
+                    .fontColor(ThemeTokens.TEXT_PRIMARY)
                     .layoutWeight(1)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   Text(formatDateTime(item.time))
                     .fontSize(11)
-                    .fontColor('#77635C')
+                    .fontColor(ThemeTokens.TEXT_MUTED)
                 }
                 .width('100%')
                 Text(item.reason)
                   .fontSize(12)
-                  .fontColor('#7A5C52')
+                  .fontColor(ThemeTokens.TEXT_SECONDARY)
                   .margin({ top: 4 })
                 if (item.deviceId !== '') {
                   Text(`最后写入设备 ${item.deviceId}`)
                     .fontSize(10)
-                    .fontColor('#77635C')
+                    .fontColor(ThemeTokens.TEXT_MUTED)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .margin({ top: 2 })
@@ -364,7 +365,7 @@ export struct SyncPanel {
               .width('100%')
               .alignItems(HorizontalAlign.Start)
               .padding(12)
-              .backgroundColor('#FAF6F0')
+              .backgroundColor(ThemeTokens.BG_PAGE)
               .borderRadius(8)
               .margin({ top: 10 })
             }, (item: ConflictLogItem) => this.conflictKey(item))
@@ -373,7 +374,7 @@ export struct SyncPanel {
         .width('100%')
         .alignItems(HorizontalAlign.Start)
         .padding(16)
-        .backgroundColor('#FFFFFF')
+        .backgroundColor(ThemeTokens.BG_CARD)
         .borderRadius(12)
         .margin({ top: 12 })
       }
@@ -382,7 +383,7 @@ export struct SyncPanel {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#FAF6F0')
+    .backgroundColor(ThemeTokens.BG_PAGE)
     .scrollBar(BarState.Off)
     .align(Alignment.Top)
   }
@@ -395,11 +396,11 @@ export struct SyncPanel {
         .width(4)
         .height(16)
         .borderRadius(2)
-        .backgroundColor('#8D6E63')
+        .backgroundColor(ThemeTokens.ACCENT_FALLBACK)
       Text(title)
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
         .margin({ left: 8 })
     }
     .alignItems(VerticalAlign.Center)

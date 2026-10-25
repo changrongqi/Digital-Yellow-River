@@ -12,6 +12,7 @@
  */
 
 import { GraphNodeKind } from './GraphNode';
+import { ThemeTokens } from '../../utils/ThemeTokens';
 
 @Component
 export struct NodeInfoPanel {
@@ -20,7 +21,7 @@ export struct NodeInfoPanel {
   /** 节点标题 */
   @Prop title: string = '';
   /** 标题前的色点（主题色 / 年代色） */
-  @Prop nodeColor: string = '#8D6E63';
+  @Prop nodeColor: string = ThemeTokens.ACCENT_FALLBACK;
   /** 类型徽标：主题 / 已归类 / 拓展推荐 */
   @Prop kindLabel: string = '';
   /** 主题覆盖统计（仅主题节点） */
@@ -52,21 +53,21 @@ export struct NodeInfoPanel {
         Text(this.title)
           .fontSize(15)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#3E2723')
+          .fontColor(ThemeTokens.TEXT_PRIMARY)
           .margin({ left: 8 })
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(this.kindLabel)
           .fontSize(10)
-          .fontColor('#7A5C52')
+          .fontColor(ThemeTokens.TEXT_SECONDARY)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .backgroundColor('#F5EFE9')
           .borderRadius(6)
           .margin({ left: 6 })
         Text('✕')
           .fontSize(16)
-          .fontColor('#7A5C52')
+          .fontColor(ThemeTokens.TEXT_SECONDARY)
           .width(44)
           .height(44)
           .textAlign(TextAlign.Center)
@@ -81,12 +82,12 @@ export struct NodeInfoPanel {
       if (this.kind === GraphNodeKind.THEME) {
         Text(this.coverage)
           .fontSize(12)
-          .fontColor('#7A5C52')
+          .fontColor(ThemeTokens.TEXT_SECONDARY)
           .margin({ top: 6 })
         Button('归类管理')
           .fontSize(13)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#6D4C41')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+          .backgroundColor(ThemeTokens.PRIMARY)
           .width('100%')
           .height(44)
           .margin({ top: 12 })
@@ -96,12 +97,12 @@ export struct NodeInfoPanel {
       } else {
         Text(this.meta)
           .fontSize(11)
-          .fontColor('#7A5C52')
+          .fontColor(ThemeTokens.TEXT_SECONDARY)
           .margin({ top: 6 })
         if (this.kind === GraphNodeKind.RECOMMEND) {
           Text(this.reason)
             .fontSize(11)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .lineHeight(17)
             .maxLines(3)
             .width('100%')
@@ -112,7 +113,7 @@ export struct NodeInfoPanel {
         }
         Text(this.summary)
           .fontSize(12)
-          .fontColor('#6D4C41')
+          .fontColor(ThemeTokens.PRIMARY)
           .lineHeight(18)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -121,7 +122,7 @@ export struct NodeInfoPanel {
         if (this.highlights !== '') {
           Text(`看点：${this.highlights}`)
             .fontSize(11)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .lineHeight(17)
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -133,8 +134,8 @@ export struct NodeInfoPanel {
             // M9：推荐节点主操作为收藏并归入当前主题（实心），查看详情降为次要（浅底）
             Button('收藏并归类')
               .fontSize(13)
-              .fontColor('#FFFFFF')
-              .backgroundColor('#6D4C41')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+              .backgroundColor(ThemeTokens.PRIMARY)
               .layoutWeight(1)
               .height(44)
               .accessibilityText('收藏并归入当前主题')
@@ -143,8 +144,8 @@ export struct NodeInfoPanel {
               })
             Button('查看详情')
               .fontSize(13)
-              .fontColor('#6D4C41')
-              .backgroundColor('#EFEBE9')
+              .fontColor(ThemeTokens.PRIMARY)
+              .backgroundColor(ThemeTokens.BG_SOFT)
               .layoutWeight(1)
               .height(44)
               .onClick(() => {
@@ -153,8 +154,8 @@ export struct NodeInfoPanel {
           } else {
             Button('查看详情')
               .fontSize(13)
-              .fontColor('#FFFFFF')
-              .backgroundColor('#6D4C41')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+              .backgroundColor(ThemeTokens.PRIMARY)
               .layoutWeight(1)
               .height(44)
               .onClick(() => {
@@ -163,8 +164,8 @@ export struct NodeInfoPanel {
             if (this.kind === GraphNodeKind.HERITAGE) {
               Button('移出主题')
                 .fontSize(13)
-                .fontColor('#6D4C41')
-                .backgroundColor('#EFEBE9')
+                .fontColor(ThemeTokens.PRIMARY)
+                .backgroundColor(ThemeTokens.BG_SOFT)
                 .layoutWeight(1)
                 .height(44)
                 .onClick(() => {
@@ -179,7 +180,7 @@ export struct NodeInfoPanel {
     }
     .width('100%')
     .padding(14)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(14)
     .margin({ top: 10 })
     .shadow({ radius: 6, color: 'rgba(0,0,0,0.05)', offsetX: 0, offsetY: 2 })

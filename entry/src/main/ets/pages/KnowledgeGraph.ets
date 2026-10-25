@@ -30,6 +30,7 @@ import { HeritageCard } from '../components/graph/HeritageCard';
 import { ThemeEditorSheet } from '../components/graph/ThemeEditorSheet';
 import { ManageSheet } from '../components/graph/ManageSheet';
 import { ConfirmDeleteSheet } from '../components/graph/ConfirmDeleteSheet';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 const DOMAIN = 0x0000;
 const TAG = 'KnowledgeGraph';
@@ -310,10 +311,10 @@ export struct KnowledgeGraph {
   private selectedNodeColor(): string {
     if (this.selectedNodeKind === GraphNodeKind.THEME) {
       const theme: Theme | null = this.selectedTheme();
-      return theme === null ? '#8D6E63' : getThemeColor(theme.colorIndex);
+      return theme === null ? ThemeTokens.ACCENT_FALLBACK : getThemeColor(theme.colorIndex);
     }
     const heritage: Heritage | null = this.findSelectedHeritage();
-    return heritage === null ? '#8D6E63' : getEraTheme(heritage.era).deep;
+    return heritage === null ? ThemeTokens.ACCENT_FALLBACK : getEraTheme(heritage.era).deep;
   }
 
   private selectedHeritageMeta(): string {
@@ -589,8 +590,8 @@ export struct KnowledgeGraph {
     Row({ space: 10 }) {
       Button('归类管理')
         .fontSize(13)
-        .fontColor('#FFFFFF')
-        .backgroundColor('#6D4C41')
+        .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+        .backgroundColor(ThemeTokens.PRIMARY)
         .layoutWeight(1)
         .height(44)
         .onClick(() => {
@@ -598,8 +599,8 @@ export struct KnowledgeGraph {
         })
       Button('编辑主题')
         .fontSize(13)
-        .fontColor('#6D4C41')
-        .backgroundColor('#EFEBE9')
+        .fontColor(ThemeTokens.PRIMARY)
+        .backgroundColor(ThemeTokens.BG_SOFT)
         .layoutWeight(1)
         .height(44)
         .onClick(() => {
@@ -607,7 +608,7 @@ export struct KnowledgeGraph {
         })
       Button('删除主题')
         .fontSize(13)
-        .fontColor('#C0392B')
+        .fontColor(ThemeTokens.DANGER)
         .backgroundColor('#FDECEA')
         .layoutWeight(1)
         .height(44)
@@ -627,11 +628,11 @@ export struct KnowledgeGraph {
           Text('知识图谱')
             .fontSize(24)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#3E2723')
+            .fontColor(ThemeTokens.TEXT_PRIMARY)
           Blank()
           Text(`${this.themes.length} 个主题`)
             .fontSize(13)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
         }
         .width('100%')
         .padding({ left: 20, right: 20, top: 16, bottom: 12 })
@@ -641,10 +642,10 @@ export struct KnowledgeGraph {
             LoadingProgress()
               .width(48)
               .height(48)
-              .color('#A1887F')
+              .color(ThemeTokens.ACCENT_MUTED)
             Text('正在构建知识库…')
               .fontSize(14)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 12 })
           }
           .justifyContent(FlexAlign.Center)
@@ -656,16 +657,16 @@ export struct KnowledgeGraph {
             Text('还没有文化主题')
               .fontSize(18)
               .fontWeight(FontWeight.Medium)
-              .fontColor('#6D4C41')
+              .fontColor(ThemeTokens.PRIMARY)
             Text('创建主题（如「彩陶文化」「青铜文明」），再归入收藏的遗址')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 8 })
               .textAlign(TextAlign.Center)
             Button('新建主题')
               .fontSize(14)
-              .fontColor('#FFFFFF')
-              .backgroundColor('#6D4C41')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+              .backgroundColor(ThemeTokens.PRIMARY)
               .height(44)
               .margin({ top: 16 })
               .onClick(() => {
@@ -682,9 +683,9 @@ export struct KnowledgeGraph {
             Row() {
               Text('示例数据 · 预览调试专用（rawfile 加载失败）')
                 .fontSize(12)
-                .fontColor('#7A5C52')
+                .fontColor(ThemeTokens.TEXT_SECONDARY)
                 .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-                .backgroundColor('#FFF3E0')
+                .backgroundColor(ThemeTokens.BG_WARNING)
                 .borderRadius(8)
             }
             .width('100%')
@@ -701,15 +702,15 @@ export struct KnowledgeGraph {
                     Row() {
                       Text(theme.name)
                         .fontSize(13)
-                        .fontColor(this.selectedThemeId === theme.id ? '#FFFFFF' : '#6D4C41')
+                        .fontColor(this.selectedThemeId === theme.id ? ThemeTokens.TEXT_ON_PRIMARY : ThemeTokens.PRIMARY)
                     }
                     .padding({ left: 14, right: 14, top: 7, bottom: 7 })
                     .constraintSize({ minHeight: 44 })
-                    .backgroundColor(this.selectedThemeId === theme.id ? getThemeColor(theme.colorIndex) : '#FFFFFF')
+                    .backgroundColor(this.selectedThemeId === theme.id ? getThemeColor(theme.colorIndex) : ThemeTokens.BG_CARD)
                     .borderRadius(16)
                     .border({
                       width: 1,
-                      color: this.selectedThemeId === theme.id ? getThemeColor(theme.colorIndex) : '#E0D6CC'
+                      color: this.selectedThemeId === theme.id ? getThemeColor(theme.colorIndex) : ThemeTokens.BORDER
                     })
                     .margin({ right: 8 })
                     .accessibilitySelected(this.selectedThemeId === theme.id)
@@ -720,13 +721,13 @@ export struct KnowledgeGraph {
                   Row() {
                     Text('＋ 新建')
                       .fontSize(13)
-                      .fontColor('#C0392B')
+                      .fontColor(ThemeTokens.DANGER)
                   }
                   .padding({ left: 14, right: 14, top: 7, bottom: 7 })
                   .constraintSize({ minHeight: 44 })
-                  .backgroundColor('#FFFFFF')
+                  .backgroundColor(ThemeTokens.BG_CARD)
                   .borderRadius(16)
-                  .border({ width: 1, color: '#E0D6CC' })
+                  .border({ width: 1, color: ThemeTokens.BORDER })
                   .onClick(() => {
                     this.openCreateTheme();
                   })
@@ -744,18 +745,18 @@ export struct KnowledgeGraph {
                   Text('知识网络')
                     .fontSize(15)
                     .fontWeight(FontWeight.Bold)
-                    .fontColor('#3E2723')
+                    .fontColor(ThemeTokens.TEXT_PRIMARY)
                   Blank()
                   Row() {
                     Text('同类关联')
                       .fontSize(12)
-                      .fontColor(this.showAffinity ? '#3E2723' : '#7A5C52')
+                      .fontColor(this.showAffinity ? ThemeTokens.TEXT_PRIMARY : ThemeTokens.TEXT_SECONDARY)
                   }
                   .padding({ left: 10, right: 10, top: 5, bottom: 5 })
                   .constraintSize({ minHeight: 44 })
-                  .backgroundColor(this.showAffinity ? '#EFEBE9' : '#FFFFFF')
+                  .backgroundColor(this.showAffinity ? ThemeTokens.BG_SOFT : ThemeTokens.BG_CARD)
                   .borderRadius(14)
-                  .border({ width: 1, color: this.showAffinity ? '#D7CCC8' : '#E0D6CC' })
+                  .border({ width: 1, color: this.showAffinity ? ThemeTokens.BORDER_STRONG : ThemeTokens.BORDER })
                   .accessibilitySelected(this.showAffinity)
                   .onClick(() => {
                     this.showAffinity = !this.showAffinity;
@@ -764,13 +765,13 @@ export struct KnowledgeGraph {
                     Row() {
                       Text('拓展推荐')
                         .fontSize(12)
-                        .fontColor(this.showRecommendInGraph ? '#3E2723' : '#7A5C52')
+                        .fontColor(this.showRecommendInGraph ? ThemeTokens.TEXT_PRIMARY : ThemeTokens.TEXT_SECONDARY)
                     }
                     .padding({ left: 10, right: 10, top: 5, bottom: 5 })
                     .constraintSize({ minHeight: 44 })
-                    .backgroundColor(this.showRecommendInGraph ? '#EFEBE9' : '#FFFFFF')
+                    .backgroundColor(this.showRecommendInGraph ? ThemeTokens.BG_SOFT : ThemeTokens.BG_CARD)
                     .borderRadius(14)
-                    .border({ width: 1, color: this.showRecommendInGraph ? '#D7CCC8' : '#E0D6CC' })
+                    .border({ width: 1, color: this.showRecommendInGraph ? ThemeTokens.BORDER_STRONG : ThemeTokens.BORDER })
                     .margin({ left: 8 })
                     .accessibilitySelected(this.showRecommendInGraph)
                     .onClick(() => {
@@ -799,7 +800,7 @@ export struct KnowledgeGraph {
               }
               .width('100%')
               .height(this.graphHeight)
-              .backgroundColor('#FDFBF8')
+              .backgroundColor(ThemeTokens.BG_CANVAS)
               .borderRadius(16)
               .clip(true)
               .margin({ top: 10 })
@@ -809,7 +810,7 @@ export struct KnowledgeGraph {
                 ? '实心=已归类 · 空心=拓展推荐 · 双指缩放查看'
                 : '点按节点查看 · 拖动平移 · 双指缩放 · 拖动节点可调整位置')
                 .fontSize(11)
-                .fontColor('#7A5C52')
+                .fontColor(ThemeTokens.TEXT_SECONDARY)
                 .width('100%')
                 .textAlign(TextAlign.Center)
                 .margin({ top: 8 })
@@ -817,7 +818,7 @@ export struct KnowledgeGraph {
               if (this.selectedThemeId === '') {
                 Text('请选择或新建一个主题')
                   .fontSize(13)
-                  .fontColor('#7A5C52')
+                  .fontColor(ThemeTokens.TEXT_SECONDARY)
                   .margin({ top: 24 })
               } else {
                 // 选中节点信息卡（展示值与回调传入独立组件，页面不承载信息卡 UI）
@@ -873,15 +874,15 @@ export struct KnowledgeGraph {
                     Text('该主题下还没有收藏的遗址')
                       .fontSize(16)
                       .fontWeight(FontWeight.Medium)
-                      .fontColor('#6D4C41')
+                      .fontColor(ThemeTokens.PRIMARY)
                     Text('点击「归类管理」把已收藏的遗址归入这个主题')
                       .fontSize(13)
-                      .fontColor('#7A5C52')
+                      .fontColor(ThemeTokens.TEXT_SECONDARY)
                       .margin({ top: 6 })
                   }
                   .width('100%')
                   .padding(20)
-                  .backgroundColor('#FFFFFF')
+                  .backgroundColor(ThemeTokens.BG_CARD)
                   .borderRadius(16)
                   .margin({ top: 12 })
                   .shadow({ radius: 8, color: 'rgba(0,0,0,0.06)', offsetX: 0, offsetY: 2 })
@@ -891,11 +892,11 @@ export struct KnowledgeGraph {
                     Text('主题下已归类')
                       .fontSize(15)
                       .fontWeight(FontWeight.Bold)
-                      .fontColor('#3E2723')
+                      .fontColor(ThemeTokens.TEXT_PRIMARY)
                     Blank()
                     Text(`${this.themedHeritages.length} 处`)
                       .fontSize(12)
-                      .fontColor('#7A5C52')
+                      .fontColor(ThemeTokens.TEXT_SECONDARY)
                   }
                   .width('100%')
                   .margin({ top: 16 })
@@ -923,7 +924,7 @@ export struct KnowledgeGraph {
                       Text('基于此主题的拓展推荐')
                         .fontSize(15)
                         .fontWeight(FontWeight.Bold)
-                        .fontColor('#3E2723')
+                        .fontColor(ThemeTokens.TEXT_PRIMARY)
                     }
                     .width('100%')
                     .margin({ top: 16 })
@@ -965,7 +966,7 @@ export struct KnowledgeGraph {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#FAF6F0')
+      .backgroundColor(ThemeTokens.BG_PAGE)
 
       // 弹层
       if (this.sheetType !== SheetType.None) {

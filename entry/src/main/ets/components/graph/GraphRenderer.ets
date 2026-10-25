@@ -11,11 +11,12 @@
 
 import { GraphNode, GraphEdge, GraphModel, GraphNodeKind, GraphEdgeKind } from './GraphNode';
 import { GraphTransform, findNodeByKey } from './GraphLayout';
+import { ThemeTokens } from '../../utils/ThemeTokens';
 
 /** 标签字号（屏幕坐标 vp，不随缩放变小） */
 const LABEL_FONT_SIZE: number = 11;
 /** 画布底色（比页面米白更亮一档，衬出节点） */
-const CANVAS_BACKGROUND: string = '#FDFBF8';
+const CANVAS_BACKGROUND: string = ThemeTokens.BG_CANVAS;
 
 /** 标签绘制候选（排序后逐个尝试放置） */
 interface LabelCandidate {
@@ -193,7 +194,7 @@ export class GraphRenderer {
       ctx.beginPath();
       ctx.moveTo(source.x, source.y);
       ctx.quadraticCurveTo(midX + normalX * bend, midY + normalY * bend, target.x, target.y);
-      ctx.strokeStyle = '#A1887F';
+      ctx.strokeStyle = ThemeTokens.ACCENT_MUTED;
       ctx.lineWidth = 0.8 + 0.8 * edge.weight;
       ctx.stroke();
     } else {
@@ -238,11 +239,11 @@ export class GraphRenderer {
     if (node.kind === GraphNodeKind.THEME) {
       ctx.fillStyle = node.fill;
       ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
+      ctx.strokeStyle = ThemeTokens.TEXT_ON_PRIMARY;
       ctx.lineWidth = 2.5;
       ctx.stroke();
     } else if (node.kind === GraphNodeKind.RECOMMEND) {
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = ThemeTokens.BG_CARD;
       ctx.fill();
       ctx.setLineDash([4, 3]);
       ctx.strokeStyle = node.stroke;
@@ -294,7 +295,7 @@ export class GraphRenderer {
     ctx.globalAlpha = alpha;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = ThemeTokens.TEXT_ON_PRIMARY;
     const count: number = this.heritageCount;
     const hasCount: boolean = count > 0;
     const titleSize: number = this.clamp(screenRadius * 0.36, 9, 16);
@@ -412,7 +413,7 @@ export class GraphRenderer {
       ctx.strokeStyle = CANVAS_BACKGROUND;
       ctx.lineWidth = 3;
       ctx.strokeText(label, drawX, labelY);
-      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? '#7A5C52' : '#5D4037';
+      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? ThemeTokens.TEXT_SECONDARY : '#5D4037';
       ctx.fillText(label, drawX, labelY);
       ctx.globalAlpha = 1;
     }
@@ -438,10 +439,10 @@ export class GraphRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.font = '11vp sans-serif';
-    ctx.fillStyle = '#7A5C52';
+    ctx.fillStyle = ThemeTokens.TEXT_SECONDARY;
     ctx.fillText('尚未归入遗址', screenX, hintY);
     ctx.font = '11vp sans-serif';
-    ctx.fillStyle = '#7A5C52';
+    ctx.fillStyle = ThemeTokens.TEXT_SECONDARY;
     ctx.fillText('点击下方「归类管理」开始构建知识网络', screenX, hintY + 17);
   }
 

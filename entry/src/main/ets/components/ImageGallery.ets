@@ -23,6 +23,7 @@
 import { image } from '@kit.ImageKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { HeritageImage } from '../model/Heritage';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 const DOMAIN = 0x0000;
 const TAG = 'ImageGallery';
@@ -118,15 +119,15 @@ export struct ImageGallery {
     Column() {
       Text('+')
         .fontSize(22)
-        .fontColor('#7D655B')
+        .fontColor(ThemeTokens.TEXT_SUBTLE)
       Text('图片待补充')
         .fontSize(11)
-        .fontColor('#7D655B')
+        .fontColor(ThemeTokens.TEXT_SUBTLE)
         .margin({ top: 4 })
       if (img.source.length > 0) {
         Text(`建议来源：${img.source}`)
           .fontSize(9)
-          .fontColor('#77635C')
+          .fontColor(ThemeTokens.TEXT_MUTED)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(TextAlign.Center)
@@ -153,7 +154,7 @@ export struct ImageGallery {
       // 只保留此显式关闭入口，避免点箭头/大图被冒泡误关）
       Text('✕')
         .fontSize(16)
-        .fontColor('#FFFFFF')
+        .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
         .width(44)
         .height(44)
         .textAlign(TextAlign.Center)
@@ -176,7 +177,7 @@ export struct ImageGallery {
       } else {
         Text('该图片尚未提供，敬请期待')
           .fontSize(14)
-          .fontColor('#FFFFFF')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
           .position({ x: 0, y: '42%' })
           .width('100%')
           .textAlign(TextAlign.Center)
@@ -186,7 +187,7 @@ export struct ImageGallery {
       if (this.images.length > 1) {
         Text('‹')
           .fontSize(26)
-          .fontColor('#FFFFFF')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
           .width(44)
           .height(44)
           .textAlign(TextAlign.Center)
@@ -200,7 +201,7 @@ export struct ImageGallery {
           })
         Text('›')
           .fontSize(26)
-          .fontColor('#FFFFFF')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
           .width(44)
           .height(44)
           .textAlign(TextAlign.Center)
@@ -214,7 +215,7 @@ export struct ImageGallery {
           })
         Text(`${this.lightboxIndex + 1} / ${this.images.length}`)
           .fontSize(12)
-          .fontColor('#FFFFFF')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
           .position({ x: 0, y: '91%' })
           .width('100%')
           .textAlign(TextAlign.Center)
@@ -226,7 +227,7 @@ export struct ImageGallery {
           if (this.images[this.lightboxIndex].caption.length > 0) {
             Text(this.images[this.lightboxIndex].caption)
               .fontSize(13)
-              .fontColor('#FFFFFF')
+              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
               .textAlign(TextAlign.Center)
               .width('100%')
           }
@@ -262,14 +263,14 @@ export struct ImageGallery {
                   .width('100%')
                   .aspectRatio(1)
                   .borderRadius(8)
-                  .backgroundColor('#F0EBE5')
+                  .backgroundColor(ThemeTokens.DIVIDER)
               } else {
                 this.PlaceholderCard(img)
               }
               if (img.caption.length > 0) {
                 Text(img.caption)
                   .fontSize(11)
-                  .fontColor('#7A5C52')
+                  .fontColor(ThemeTokens.TEXT_SECONDARY)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .width('100%')

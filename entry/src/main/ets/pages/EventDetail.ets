@@ -21,6 +21,7 @@ import { Heritage, HeritageEvent } from '../model/Heritage';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { getEraTheme } from '../utils/EraTheme';
 import { ImageGallery } from '../components/ImageGallery';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 @Entry
 @Component
@@ -76,7 +77,7 @@ struct EventDetail {
     Text(text)
       .fontSize(16)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#3E2723')
+      .fontColor(ThemeTokens.TEXT_PRIMARY)
       .width('100%')
       .margin({ top: 18, bottom: 8 })
   }
@@ -86,7 +87,7 @@ struct EventDetail {
   BodyParagraph(content: string) {
     Text(content)
       .fontSize(15)
-      .fontColor('#3E2723')
+      .fontColor(ThemeTokens.TEXT_PRIMARY)
       .lineHeight(26)
       .textAlign(TextAlign.JUSTIFY)
       .width('100%')
@@ -124,7 +125,7 @@ struct EventDetail {
             .fontColor(getEraTheme(this.heritage === null ? '' : this.heritage.era).deep)
             .width('100%')
             .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-            .backgroundColor('#FAF6F0')
+            .backgroundColor(ThemeTokens.BG_PAGE)
             .borderRadius(8)
             .margin({ top: 8 })
         }, (name: string) => name)
@@ -139,7 +140,7 @@ struct EventDetail {
       Row() {
         Text('‹')
           .fontSize(30)
-          .fontColor('#6D4C41')
+          .fontColor(ThemeTokens.PRIMARY)
           .width(44)
           .height(44)
           .textAlign(TextAlign.Center)
@@ -151,7 +152,7 @@ struct EventDetail {
         Text(this.heritage === null ? '事件专题' : `${this.heritage.name} · 事件专题`)
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#3E2723')
+          .fontColor(ThemeTokens.TEXT_PRIMARY)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
@@ -166,10 +167,10 @@ struct EventDetail {
           LoadingProgress()
             .width(48)
             .height(48)
-            .color('#A1887F')
+            .color(ThemeTokens.ACCENT_MUTED)
           Text('正在加载事件专题…')
             .fontSize(14)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -180,10 +181,10 @@ struct EventDetail {
           Text('未找到该事件')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#6D4C41')
+            .fontColor(ThemeTokens.PRIMARY)
           Text('数据可能已更新，请返回列表重试')
             .fontSize(13)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -194,10 +195,10 @@ struct EventDetail {
         if (this.isMockData) {
           Text('示例数据 · 预览调试专用（rawfile 加载失败）')
             .fontSize(12)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .width('100%')
             .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-            .backgroundColor('#FFF3E0')
+            .backgroundColor(ThemeTokens.BG_WARNING)
             .margin({ bottom: 8 })
         }
 
@@ -208,20 +209,20 @@ struct EventDetail {
               Text(this.event.year)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#FFFFFF')
+                .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
                 .padding({ left: 12, right: 12, top: 5, bottom: 5 })
                 .backgroundColor('rgba(62,39,35,0.30)')
                 .borderRadius(10)
               Text(this.event.title)
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
-                .fontColor('#FFFFFF')
+                .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
                 .lineHeight(30)
                 .margin({ top: 12 })
               if (this.event.summary.length > 0) {
                 Text(this.event.summary)
                   .fontSize(13)
-                  .fontColor('#FFFFFF')
+                  .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
                   .lineHeight(21)
                   .margin({ top: 12 })
               }
@@ -286,7 +287,7 @@ struct EventDetail {
                 Text('图集')
                   .fontSize(16)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#3E2723')
+                  .fontColor(ThemeTokens.TEXT_PRIMARY)
                   .width('100%')
                   .margin({ top: 18, bottom: 8 })
                 ImageGallery({ images: this.event.images })
@@ -297,12 +298,12 @@ struct EventDetail {
                 Text('延伸阅读')
                   .fontSize(16)
                   .fontWeight(FontWeight.Bold)
-                  .fontColor('#3E2723')
+                  .fontColor(ThemeTokens.TEXT_PRIMARY)
                   .width('100%')
                   .margin({ top: 18, bottom: 8 })
                 Text(this.event.furtherReading)
                   .fontSize(12)
-                  .fontColor('#7A5C52')
+                  .fontColor(ThemeTokens.TEXT_SECONDARY)
                   .lineHeight(19)
                   .width('100%')
               }
@@ -323,6 +324,6 @@ struct EventDetail {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#FAF6F0')
+    .backgroundColor(ThemeTokens.BG_PAGE)
   }
 }

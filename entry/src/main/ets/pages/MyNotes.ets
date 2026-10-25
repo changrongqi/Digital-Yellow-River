@@ -26,6 +26,7 @@ import { Note } from '../model/Note';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDateTime } from '../utils/TimeFormat';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 const DOMAIN = 0x0000;
 const TAG = 'MyNotes';
@@ -143,7 +144,7 @@ struct MyNotes {
       Row() {
         Text('‹')
           .fontSize(30)
-          .fontColor('#6D4C41')
+          .fontColor(ThemeTokens.PRIMARY)
           .width(44)
           .height(44)
           .textAlign(TextAlign.Center)
@@ -155,12 +156,12 @@ struct MyNotes {
         Text('我的笔记')
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#3E2723')
+          .fontColor(ThemeTokens.TEXT_PRIMARY)
           .layoutWeight(1)
           .margin({ left: 8 })
         Text(`${this.totalNotes} 条`)
           .fontSize(13)
-          .fontColor('#7A5C52')
+          .fontColor(ThemeTokens.TEXT_SECONDARY)
       }
       .width('100%')
       .padding({ left: 12, right: 20, top: 12, bottom: 12 })
@@ -171,10 +172,10 @@ struct MyNotes {
           LoadingProgress()
             .width(48)
             .height(48)
-            .color('#A1887F')
+            .color(ThemeTokens.ACCENT_MUTED)
           Text('正在加载笔记…')
             .fontSize(14)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -186,10 +187,10 @@ struct MyNotes {
           Text('还没有笔记')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#6D4C41')
+            .fontColor(ThemeTokens.PRIMARY)
           Text('在任意遗址详情页点击「写笔记」，之后可在这里快速找回')
             .fontSize(13)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -201,9 +202,9 @@ struct MyNotes {
           Row() {
             Text('示例数据 · 预览调试专用（rawfile 加载失败）')
               .fontSize(12)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-              .backgroundColor('#FFF3E0')
+              .backgroundColor(ThemeTokens.BG_WARNING)
               .borderRadius(8)
           }
           .width('100%')
@@ -220,28 +221,28 @@ struct MyNotes {
                   Text(`${group.noteCount}`)
                     .fontSize(16)
                     .fontWeight(FontWeight.Bold)
-                    .fontColor('#FFFFFF')
+                    .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
                   Text('笔记')
                     .fontSize(10)
-                    .fontColor('#FFFFFF')
+                    .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
                     .margin({ top: 2 })
                 }
                 .justifyContent(FlexAlign.Center)
                 .width(56)
                 .height(56)
                 .borderRadius(10)
-                .backgroundColor('#8D6E63')
+                .backgroundColor(ThemeTokens.ACCENT_FALLBACK)
 
                 Column() {
                   Text(group.name)
                     .fontSize(16)
                     .fontWeight(FontWeight.Bold)
-                    .fontColor('#3E2723')
+                    .fontColor(ThemeTokens.TEXT_PRIMARY)
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   Text(`最后编辑 ${formatDateTime(group.lastUpdatedAt)}`)
                     .fontSize(12)
-                    .fontColor('#7A5C52')
+                    .fontColor(ThemeTokens.TEXT_SECONDARY)
                     .margin({ top: 6 })
                 }
                 .alignItems(HorizontalAlign.Start)
@@ -250,12 +251,12 @@ struct MyNotes {
 
                 Text('›')
                   .fontSize(22)
-                  .fontColor('#77635C')
+                  .fontColor(ThemeTokens.TEXT_MUTED)
                   .margin({ left: 8 })
               }
               .width('100%')
               .padding(12)
-              .backgroundColor('#FFFFFF')
+              .backgroundColor(ThemeTokens.BG_CARD)
               .borderRadius(12)
               .alignItems(VerticalAlign.Center)
               .onClick(() => {
@@ -272,6 +273,6 @@ struct MyNotes {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#FAF6F0')
+    .backgroundColor(ThemeTokens.BG_PAGE)
   }
 }

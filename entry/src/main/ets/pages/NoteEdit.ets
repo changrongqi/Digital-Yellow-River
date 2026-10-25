@@ -27,6 +27,7 @@ import { Note } from '../model/Note';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDateTime } from '../utils/TimeFormat';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 @Entry
 @Component
@@ -178,7 +179,7 @@ struct NoteEdit {
         Row() {
           Text('‹')
             .fontSize(30)
-            .fontColor('#6D4C41')
+            .fontColor(ThemeTokens.PRIMARY)
             .width(44)
             .height(44)
             .textAlign(TextAlign.Center)
@@ -190,7 +191,7 @@ struct NoteEdit {
           Text(this.noteId === '' ? '新建笔记' : '编辑笔记')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#3E2723')
+            .fontColor(ThemeTokens.TEXT_PRIMARY)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .layoutWeight(1)
@@ -198,7 +199,7 @@ struct NoteEdit {
           if (this.noteId !== '') {
             Text('删除')
               .fontSize(14)
-              .fontColor('#C0392B')
+              .fontColor(ThemeTokens.DANGER)
               .constraintSize({ minHeight: 44 })
               .padding({ left: 10, right: 10, top: 6, bottom: 6 })
               .accessibilityText('删除笔记')
@@ -218,13 +219,13 @@ struct NoteEdit {
             if (this.itemTitle !== '') {
               Text(`关于「${this.itemTitle}」`)
                 .fontSize(13)
-                .fontColor('#7A5C52')
+                .fontColor(ThemeTokens.TEXT_SECONDARY)
                 .margin({ bottom: 8 })
             }
             TextArea({ placeholder: '记录你的想法…', text: this.content })
               .fontSize(15)
-              .fontColor('#3E2723')
-              .backgroundColor('#FAF6F0')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
+              .backgroundColor(ThemeTokens.BG_PAGE)
               .borderRadius(8)
               .constraintSize({ minHeight: 240, maxHeight: 480 })
               .onChange((value: string) => {
@@ -238,10 +239,10 @@ struct NoteEdit {
               Column() {
                 Text(`创建于 ${formatDateTime(this.createdAt)}`)
                   .fontSize(12)
-                  .fontColor('#77635C')
+                  .fontColor(ThemeTokens.TEXT_MUTED)
                 Text(`最后编辑 ${formatDateTime(this.updatedAt)}`)
                   .fontSize(12)
-                  .fontColor('#77635C')
+                  .fontColor(ThemeTokens.TEXT_MUTED)
                   .margin({ top: 4 })
               }
               .width('100%')
@@ -251,7 +252,7 @@ struct NoteEdit {
             if (this.isLoading) {
               Text('正在加载…')
                 .fontSize(12)
-                .fontColor('#77635C')
+                .fontColor(ThemeTokens.TEXT_MUTED)
                 .margin({ top: 10 })
             }
           }
@@ -269,14 +270,14 @@ struct NoteEdit {
           if (this.warnText !== '') {
             Text(this.warnText)
               .fontSize(12)
-              .fontColor('#C0392B')
+              .fontColor(ThemeTokens.DANGER)
               .alignSelf(ItemAlign.Start)
               .margin({ bottom: 6 })
           }
           Button('保存')
             .fontSize(15)
-            .fontColor('#FFFFFF')
-            .backgroundColor('#6D4C41')
+            .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+            .backgroundColor(ThemeTokens.PRIMARY)
             .width('100%')
             .height(44)
             .borderRadius(22)
@@ -289,7 +290,7 @@ struct NoteEdit {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#FAF6F0')
+      .backgroundColor(ThemeTokens.BG_PAGE)
 
       // 删除确认弹层（与收藏页同款模式：遮罩空 onClick 消费点击，一律显式按钮关闭）
       if (this.confirmDeleting) {
@@ -298,16 +299,16 @@ struct NoteEdit {
             Text('确认删除笔记')
               .fontSize(17)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
             Text('删除后不可恢复')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 10 })
             Row({ space: 12 }) {
               Button('再想想')
                 .fontSize(14)
-                .fontColor('#6D4C41')
-                .backgroundColor('#EFEBE9')
+                .fontColor(ThemeTokens.PRIMARY)
+                .backgroundColor(ThemeTokens.BG_SOFT)
                 .layoutWeight(1)
                 .height(44)
                 .onClick(() => {
@@ -315,8 +316,8 @@ struct NoteEdit {
                 })
               Button('删除')
                 .fontSize(14)
-                .fontColor('#FFFFFF')
-                .backgroundColor('#C0392B')
+                .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+                .backgroundColor(ThemeTokens.DANGER)
                 .layoutWeight(1)
                 .height(44)
                 .onClick(() => {
@@ -328,7 +329,7 @@ struct NoteEdit {
           }
           .width('76%')
           .padding(20)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(16)
           .alignItems(HorizontalAlign.Center)
         }
@@ -348,16 +349,16 @@ struct NoteEdit {
             Text('放弃未保存的修改？')
               .fontSize(17)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#3E2723')
+              .fontColor(ThemeTokens.TEXT_PRIMARY)
             Text('返回后本次编辑的内容将丢失')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 10 })
             Row({ space: 12 }) {
               Button('继续编辑')
                 .fontSize(14)
-                .fontColor('#6D4C41')
-                .backgroundColor('#EFEBE9')
+                .fontColor(ThemeTokens.PRIMARY)
+                .backgroundColor(ThemeTokens.BG_SOFT)
                 .layoutWeight(1)
                 .height(44)
                 .onClick(() => {
@@ -365,8 +366,8 @@ struct NoteEdit {
                 })
               Button('放弃修改')
                 .fontSize(14)
-                .fontColor('#FFFFFF')
-                .backgroundColor('#C0392B')
+                .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+                .backgroundColor(ThemeTokens.DANGER)
                 .layoutWeight(1)
                 .height(44)
                 .onClick(() => {
@@ -379,7 +380,7 @@ struct NoteEdit {
           }
           .width('76%')
           .padding(20)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(16)
           .alignItems(HorizontalAlign.Center)
         }

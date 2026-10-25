@@ -16,6 +16,7 @@ import { KnowledgeGraph } from './KnowledgeGraph';
 import { FavoriteService } from '../service/FavoriteService';
 import { ThemeService } from '../service/ThemeService';
 import { SyncService } from '../service/SyncService';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 @Entry
 @Component
@@ -61,13 +62,13 @@ struct Index {
     }
     .barWidth('100%')
     .barHeight(56)
-    .divider({ strokeWidth: 0.5, color: '#E0D6CC' })
+    .divider({ strokeWidth: 0.5, color: ThemeTokens.BORDER })
     .onChange((index: number) => {
       this.currentIndex = index;
     })
     .width('100%')
     .height('100%')
-    .backgroundColor('#FAF6F0')
+    .backgroundColor(ThemeTokens.BG_PAGE)
   }
 
   /**
@@ -85,7 +86,7 @@ struct Index {
       Text(title)
         .fontSize(15)
         .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
-        .fontColor(this.currentIndex === index ? '#6D4C41' : '#77635C')
+        .fontColor(this.currentIndex === index ? ThemeTokens.PRIMARY : ThemeTokens.TEXT_MUTED)
         .accessibilitySelected(this.currentIndex === index)
     }
     .width('100%')

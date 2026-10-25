@@ -1,6 +1,7 @@
 /**
  * 删除主题确认弹层
  */
+import { ThemeTokens } from '../../utils/ThemeTokens';
 
 @Component
 export struct ConfirmDeleteSheet {
@@ -16,17 +17,17 @@ export struct ConfirmDeleteSheet {
       Text('确认删除主题')
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#3E2723')
+        .fontColor(ThemeTokens.TEXT_PRIMARY)
       Text(`「${this.themeName}」删除后仅移除主题归类，收藏与笔记保留`)
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .margin({ top: 10 })
         .textAlign(TextAlign.Center)
       Row({ space: 12 }) {
         Button('再想想')
           .fontSize(14)
-          .fontColor('#6D4C41')
-          .backgroundColor('#EFEBE9')
+          .fontColor(ThemeTokens.PRIMARY)
+          .backgroundColor(ThemeTokens.BG_SOFT)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -34,8 +35,8 @@ export struct ConfirmDeleteSheet {
           })
         Button('删除主题')
           .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#C0392B')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
+          .backgroundColor(ThemeTokens.DANGER)
           .layoutWeight(1)
           .height(44)
           .onClick(() => {
@@ -47,7 +48,7 @@ export struct ConfirmDeleteSheet {
     }
     .width('76%')
     .padding(20)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(16)
     .alignItems(HorizontalAlign.Center)
   }

@@ -20,6 +20,7 @@ import { router } from '@kit.ArkUI';
 import { Heritage } from '../model/Heritage';
 import { HeritageEra, HeritageType, HeritageCity } from '../model/Types';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
+import { ThemeTokens } from '../utils/ThemeTokens';
 
 const DOMAIN = 0x0000;
 const TAG = 'Discovery';
@@ -57,19 +58,19 @@ struct FilterRow {
     Row() {
       Text(this.label)
         .fontSize(13)
-        .fontColor('#7A5C52')
+        .fontColor(ThemeTokens.TEXT_SECONDARY)
         .width(40)
       Scroll() {
         Row() {
           ForEach(this.chipOptions(), (opt: string) => {
             Text(opt === ALL_FILTER ? '全部' : opt)
               .fontSize(13)
-              .fontColor(this.selected === opt ? '#FFFFFF' : '#6D4C41')
-              .backgroundColor(this.selected === opt ? '#6D4C41' : '#FFFFFF')
+              .fontColor(this.selected === opt ? ThemeTokens.TEXT_ON_PRIMARY : ThemeTokens.PRIMARY)
+              .backgroundColor(this.selected === opt ? ThemeTokens.PRIMARY : ThemeTokens.BG_CARD)
               .padding({ left: 12, right: 12, top: 6, bottom: 6 })
               .constraintSize({ minHeight: 44 })
               .borderRadius(14)
-              .border({ width: 1, color: this.selected === opt ? '#6D4C41' : '#E0D6CC' })
+              .border({ width: 1, color: this.selected === opt ? ThemeTokens.PRIMARY : ThemeTokens.BORDER })
               .margin({ right: 8 })
               .accessibilitySelected(this.selected === opt)
               .onClick(() => {
@@ -168,11 +169,11 @@ export struct Discovery {
         Text('黄河记忆')
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#3E2723')
+          .fontColor(ThemeTokens.TEXT_PRIMARY)
         Blank()
         Text(`${this.filterList().length} 处遗产`)
           .fontSize(13)
-          .fontColor('#7A5C52')
+          .fontColor(ThemeTokens.TEXT_SECONDARY)
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 16, bottom: 12 })
@@ -182,7 +183,7 @@ export struct Discovery {
         Search({ placeholder: '搜索遗址名称 / 简介关键词' })
           .width('100%')
           .height(44)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(ThemeTokens.BG_CARD)
           .borderRadius(20)
           .onChange((value: string) => {
             this.keyword = value;
@@ -228,10 +229,10 @@ export struct Discovery {
           LoadingProgress()
             .width(48)
             .height(48)
-            .color('#A1887F')
+            .color(ThemeTokens.ACCENT_MUTED)
           Text('正在加载文化档案…')
             .fontSize(14)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 12 })
         }
         .justifyContent(FlexAlign.Center)
@@ -242,10 +243,10 @@ export struct Discovery {
           Text('暂无数据')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#6D4C41')
+            .fontColor(ThemeTokens.PRIMARY)
           Text(this.loadFailed ? '预置数据解析失败，请检查 rawfile 数据文件' : '预置数据为空')
             .fontSize(13)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .margin({ top: 8 })
         }
         .justifyContent(FlexAlign.Center)
@@ -258,11 +259,11 @@ export struct Discovery {
             Row() {
               Text('示例数据 · 预览调试专用（rawfile 加载失败）')
                 .fontSize(12)
-                .fontColor('#7A5C52')
+                .fontColor(ThemeTokens.TEXT_SECONDARY)
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-            .backgroundColor('#FFF3E0')
+            .backgroundColor(ThemeTokens.BG_WARNING)
             .borderRadius(8)
           }
           .width('100%')
@@ -276,10 +277,10 @@ export struct Discovery {
             Text('没有符合条件的遗产')
               .fontSize(16)
               .fontWeight(FontWeight.Medium)
-              .fontColor('#6D4C41')
+              .fontColor(ThemeTokens.PRIMARY)
             Text('试试调整筛选条件或更换关键词')
               .fontSize(13)
-              .fontColor('#7A5C52')
+              .fontColor(ThemeTokens.TEXT_SECONDARY)
               .margin({ top: 8 })
           }
           .justifyContent(FlexAlign.Center)
@@ -306,7 +307,7 @@ export struct Discovery {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#FAF6F0')
+    .backgroundColor(ThemeTokens.BG_PAGE)
   }
 
   @Builder
@@ -317,37 +318,37 @@ export struct Discovery {
         Text(item.city)
           .fontSize(15)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#FFFFFF')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
         Text(item.era)
           .fontSize(11)
-          .fontColor('#FFFFFF')
+          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
           .margin({ top: 4 })
       }
       .justifyContent(FlexAlign.Center)
       .width(72)
       .height(72)
       .borderRadius(10)
-      .backgroundColor('#8D6E63')
+      .backgroundColor(ThemeTokens.ACCENT_FALLBACK)
 
       Column() {
         Text(item.name)
           .fontSize(17)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#3E2723')
+          .fontColor(ThemeTokens.TEXT_PRIMARY)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(item.summary)
           .fontSize(13)
-          .fontColor('#6D4C41')
+          .fontColor(ThemeTokens.PRIMARY)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 6 })
         Row() {
           Text(item.type)
             .fontSize(11)
-            .fontColor('#7A5C52')
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
             .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .backgroundColor('#EFEBE9')
+            .backgroundColor(ThemeTokens.BG_SOFT)
             .borderRadius(6)
         }
         .margin({ top: 8 })
@@ -358,7 +359,7 @@ export struct Discovery {
     }
     .width('100%')
     .padding(12)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(ThemeTokens.BG_CARD)
     .borderRadius(12)
   }
 }
