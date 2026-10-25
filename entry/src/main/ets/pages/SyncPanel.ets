@@ -377,6 +377,22 @@ export struct SyncPanel {
         .backgroundColor(ThemeTokens.BG_CARD)
         .borderRadius(12)
         .margin({ top: 12 })
+
+        // ===== 隐私与存储说明（L10） =====
+        Column() {
+          this.SectionTitle('隐私与存储说明')
+          Text('收藏与笔记保存在应用私有目录（Preferences），并通过分布式 KV 在同账号设备间同步；当前未开启数据库加密，请勿在笔记中存储密码、证件号等敏感信息。系统备份可能包含这些数据，可在系统设置中关闭本应用备份。')
+            .fontSize(12)
+            .fontColor(ThemeTokens.TEXT_SECONDARY)
+            .lineHeight(19)
+            .margin({ top: 10 })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+        .padding(16)
+        .backgroundColor(ThemeTokens.BG_CARD)
+        .borderRadius(12)
+        .margin({ top: 12 })
       }
       .width('100%')
       .padding({ left: 16, right: 16, bottom: 24 })

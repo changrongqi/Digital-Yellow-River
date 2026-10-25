@@ -168,6 +168,8 @@ export class SyncService {
     }
     const options: distributedKVStore.Options = {
       createIfMissing: true,
+      // L10：保持明文（应用沙箱 + 同账号 P2P 同步）。已创建的 store 不支持直接切换 encrypt，
+      // 需要清库/迁移方案与设备验证，当前先通过 SyncPanel 隐私说明与 O37 威胁模型登记。
       encrypt: false,
       backup: false,
       autoSync: true, // 数据变更自动同步；不等价于初次拉取，需 M6.2 显式 PUSH_PULL 追赶
