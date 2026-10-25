@@ -90,12 +90,19 @@ export struct KnowledgeGraph {
   /** 首次布局测量完成后需要补做一次滚动 */
   private revealPending: boolean = false;
 
+  // ==================== 推荐节点收藏并归类（M9） ====================
+  /** 收藏 + 归类期间暂挂收藏订阅，结束后统一刷新一次（M6.10 单通道约定） */
+  private addingRecommend: boolean = false;
+
   /** 主题变化处理器 */
   private themeChangedHandler: () => void = (): void => {
     this.loadThemes();
   };
-  /** 收藏变化处理器 */
+  /** 收藏变化处理器（M9：推荐节点收藏并归类期间暂挂，见 addRecommendToTheme） */
   private favChangedHandler: () => void = (): void => {
+    if (this.addingRecommend) {
+      return;
+    }
     this.refreshSelected();
   };
 
@@ -407,6 +414,38 @@ export struct KnowledgeGraph {
     }
     this.removeFromTheme(this.selectedNodeId);
     this.clearSelection();
+  }
+
+  /**
+   * M9：拓展推荐节点一键「收藏并归入当前主题」。
+   * 推荐节点按定义不在收藏中；收藏与归类两次服务写入在同一交互内完成，
+   * 期间用 addingRecommend 暂挂收藏订阅，结束后 refreshSelected 整体刷新一次。
+   * 成功后选中项由「拓展推荐」切到「已归类」，信息卡与图谱即时更新（闭环）。
+   */
+  private addRecommendToTheme(): void {
+    if (this.selectedNodeKind !== GraphNodeKind.RECOMMEND || this.selectedNodeId === '' ||
+      this.selectedThemeId === '') {
+      return;
+    }
+    const itemId: string = this.selectedNodeId;
+    const themeId: string = this.selectedThemeId;
+    this.addingRecommend = true;
+    try {
+      if (!FavoriteService.isFavorite(itemId)) {
+        FavoriteService.addFavorite(itemId, []);
+      }
+      const fav: Favorite | null = FavoriteService.getFavorite(itemId);
+      if (fav !== null && fav.themeIds.indexOf(themeId) < 0) {
+        const next: string[] = fav.themeIds.slice();
+        next.push(themeId);
+        FavoriteService.updateFavoriteThemes(itemId, next);
+      }
+    } finally {
+      this.addingRecommend = false;
+    }
+    // 归类成功后该条目已从推荐列表移除并进入当前主题：切换选中种类保持信息卡可见
+    this.selectedNodeKind = GraphNodeKind.HERITAGE;
+    this.refreshSelected();
   }
 
   // ==================== 主题操作 ====================
@@ -806,6 +845,9 @@ export struct KnowledgeGraph {
                       },
                       onRemove: () => {
                         this.removeSelectedFromTheme();
+                      },
+                      onAddToTheme: () => {
+                        this.addRecommendToTheme();
                       }
                     })
                   }

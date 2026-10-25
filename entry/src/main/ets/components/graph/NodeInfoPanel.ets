@@ -4,7 +4,8 @@
  * 只负责展示与回调，不持有业务状态：
  * - 主题节点：覆盖统计 + 归类管理入口；
  * - 已归类遗址：元信息 / 简介 / 核心看点 + 查看详情 / 移出主题；
- * - 拓展推荐：在简介前增加「推荐依据」，解释图上虚线关系。
+ * - 拓展推荐：在简介前增加「推荐依据」，解释图上虚线关系；M9 起提供
+ *   「收藏并归类」主操作（收藏 + 归入当前主题），查看详情降为次要操作。
  *
  * 展示值由页面计算后经 @Prop 传入；页面状态变化会驱动本组件刷新，
  * 避免 @Builder 按值传递导致的局部 UI 不刷新（踩坑 15）。
@@ -37,6 +38,8 @@ export struct NodeInfoPanel {
   onOpenManage: () => void = () => {};
   onOpenDetail: () => void = () => {};
   onRemove: () => void = () => {};
+  /** M9：拓展推荐节点「收藏并归入当前主题」 */
+  onAddToTheme: () => void = () => {};
 
   build() {
     Column() {
@@ -126,25 +129,48 @@ export struct NodeInfoPanel {
             .margin({ top: 6 })
         }
         Row({ space: 10 }) {
-          Button('查看详情')
-            .fontSize(13)
-            .fontColor('#FFFFFF')
-            .backgroundColor('#6D4C41')
-            .layoutWeight(1)
-            .height(44)
-            .onClick(() => {
-              this.onOpenDetail();
-            })
-          if (this.kind === GraphNodeKind.HERITAGE) {
-            Button('移出主题')
+          if (this.kind === GraphNodeKind.RECOMMEND) {
+            // M9：推荐节点主操作为收藏并归入当前主题（实心），查看详情降为次要（浅底）
+            Button('收藏并归类')
+              .fontSize(13)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#6D4C41')
+              .layoutWeight(1)
+              .height(44)
+              .accessibilityText('收藏并归入当前主题')
+              .onClick(() => {
+                this.onAddToTheme();
+              })
+            Button('查看详情')
               .fontSize(13)
               .fontColor('#6D4C41')
               .backgroundColor('#EFEBE9')
               .layoutWeight(1)
               .height(44)
               .onClick(() => {
-                this.onRemove();
+                this.onOpenDetail();
               })
+          } else {
+            Button('查看详情')
+              .fontSize(13)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#6D4C41')
+              .layoutWeight(1)
+              .height(44)
+              .onClick(() => {
+                this.onOpenDetail();
+              })
+            if (this.kind === GraphNodeKind.HERITAGE) {
+              Button('移出主题')
+                .fontSize(13)
+                .fontColor('#6D4C41')
+                .backgroundColor('#EFEBE9')
+                .layoutWeight(1)
+                .height(44)
+                .onClick(() => {
+                  this.onRemove();
+                })
+            }
           }
         }
         .width('100%')
