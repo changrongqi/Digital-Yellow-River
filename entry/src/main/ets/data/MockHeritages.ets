@@ -9,6 +9,7 @@
  * 一旦字段结构漂移会立刻在解析结果（条数、空字段）中暴露，不会出现「预览器能跑、真机不对」（R3）。
  *
  * 注意：JSON 里的 era/type/city 必须使用枚举的中文字面值，否则会被 isValid* 判为非法而丢弃。
+ * L3：id 与 rawfile 正式数据完全一致（不再使用 mock-* 前缀），预览器深链、收藏/笔记与真机使用同一 id。
  */
 
 import { Heritage } from '../model/Heritage';
@@ -17,7 +18,7 @@ import { HeritageDataLoader } from './HeritageDataLoader';
 const MOCK_JSON: string = `
 [
   {
-    "id": "mock-yangshao-01",
+    "id": "smx-yangshao-01",
     "name": "仰韶村遗址",
     "era": "仰韶",
     "type": "窑址",
@@ -80,7 +81,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-guoguo-01",
+    "id": "smx-guoguo-01",
     "name": "虢国墓地",
     "era": "周",
     "type": "墓葬群",
@@ -377,7 +378,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-erlitou-01",
+    "id": "ly-erlitou-01",
     "name": "二里头遗址",
     "era": "夏商",
     "type": "都城遗址",
@@ -642,7 +643,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-longmen-01",
+    "id": "ly-longmen-01",
     "name": "龙门石窟",
     "era": "汉唐",
     "type": "古建筑",
@@ -910,7 +911,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-yinxu-01",
+    "id": "ay-yinxu-01",
     "name": "殷墟",
     "era": "夏商",
     "type": "都城遗址",
@@ -1174,7 +1175,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-shangcheng-01",
+    "id": "zz-shangcheng-01",
     "name": "郑州商城遗址",
     "era": "夏商",
     "type": "都城遗址",
@@ -1435,7 +1436,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-qi-01",
+    "id": "py-qi-01",
     "name": "戚城遗址",
     "era": "周",
     "type": "古建筑",
@@ -1708,7 +1709,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-yanshi-01",
+    "id": "ly-yanshi-01",
     "name": "偃师商城遗址",
     "era": "夏商",
     "type": "都城遗址",
@@ -1964,7 +1965,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-hanwei-01",
+    "id": "ly-hanwei-01",
     "name": "汉魏洛阳故城",
     "era": "汉唐",
     "type": "都城遗址",
@@ -2236,7 +2237,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-    "id": "mock-wangchenggang-01",
+    "id": "zz-wangchenggang-01",
     "name": "王城岗遗址",
     "era": "龙山",
     "type": "都城遗址",
@@ -2501,7 +2502,7 @@ const MOCK_JSON: string = `
     }
   },
   {
-  "id": "mock-shaolin-01",
+  "id": "zz-shaolin-01",
   "name": "少林寺常住院",
   "era": "汉唐",
   "type": "古建筑",
@@ -2765,7 +2766,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-mangshan-01",
+  "id": "ly-mangshan-01",
   "name": "邙山陵墓群",
   "era": "汉唐",
   "type": "墓葬群",
@@ -3025,7 +3026,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-huanye-01",
+  "id": "zz-huanye-01",
   "name": "巩义黄冶三彩窑址",
   "era": "汉唐",
   "type": "窑址",
@@ -3277,7 +3278,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-tieta-01",
+  "id": "kf-tieta-01",
   "name": "开宝寺塔（铁塔）",
   "era": "宋",
   "type": "古建筑",
@@ -3522,7 +3523,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-fanta-01",
+  "id": "kf-fanta-01",
   "name": "繁塔",
   "era": "宋",
   "type": "古建筑",
@@ -3766,7 +3767,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-miaodigou-01",
+  "id": "smx-miaodigou-01",
   "name": "庙底沟遗址",
   "era": "仰韶",
   "type": "窑址",
@@ -4021,7 +4022,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-hangu-01",
+  "id": "smx-hangu-01",
   "name": "函谷关",
   "era": "周",
   "type": "古建筑",
@@ -4278,7 +4279,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-xishuipo-01",
+  "id": "py-xishuipo-01",
   "name": "西水坡遗址",
   "era": "仰韶",
   "type": "墓葬群",
@@ -4522,7 +4523,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-huailuan-01",
+  "id": "py-huailuan-01",
   "name": "回銮碑",
   "era": "宋",
   "type": "古建筑",
@@ -4777,7 +4778,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-xiudingsi-01",
+  "id": "ay-xiudingsi-01",
   "name": "修定寺塔",
   "era": "汉唐",
   "type": "古建筑",
@@ -5024,7 +5025,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-wenfeng-01",
+  "id": "ay-wenfeng-01",
   "name": "安阳文峰塔",
   "era": "宋",
   "type": "古建筑",
@@ -5266,7 +5267,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-  "id": "mock-lingquan-01",
+  "id": "ay-lingquan-01",
   "name": "灵泉寺石窟",
   "era": "汉唐",
   "type": "古建筑",
@@ -5519,7 +5520,7 @@ const MOCK_JSON: string = `
   }
   },
   {
-    "id": "mock-tokyo-01",
+    "id": "kf-bianliang-01",
     "name": "北宋东京城遗址",
     "era": "宋",
     "type": "都城遗址",
