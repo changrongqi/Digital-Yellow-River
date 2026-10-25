@@ -60,6 +60,9 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M10 | M6.15 应用元信息定稿 | 2026-10-25 | `f101015` | 配置 + 构建；桌面名称/正式包名安装待 O32 设备验证 | 已完成（配置/构建） |
 | M11 | M6.16 核心纯函数单测 + 本地 CI 门禁 | 2026-10-25 | `3b721ad` | 代码 + 33 用例通过 + CI 脚本可阻断回归 | 已完成（代码/构建/测试） |
 | L1 | 设计 token 层：背景/正文/次要文字/边框 | 2026-10-25 | `c9ce1dc` | 代码 + 构建；token 化后 UI 回归待 O33 设备验证 | 已完成（代码/构建） |
+| L2 | 死代码清理：HeritageCard isDark / GraphNode 未读字段 | 2026-10-25 | `98ce867` | 代码 + 构建 + 33 用例；无可见行为变化 | 已完成（代码/构建） |
+| L3 | mock id 与正式数据对齐 | 2026-10-25 | `1db80ca` | 数据 + 构建；预览深链待 O34 预览器验证 | 已完成（数据/构建） |
+| L4 | README/计划书口径统一 | 2026-10-25 | `988a841` | 文档；无代码变更 | 已完成（文档） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -229,20 +232,23 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 验收：高频颜色有单一来源；改色不再全库搜。
   - 完成记录（2026-10-25，commit `c9ce1dc`）：① **token 层**——新增 `utils/ThemeTokens.ets`，集中 16 个高频语义色：`BG_PAGE/BG_CARD/BG_CANVAS/BG_SOFT/BG_WARNING`、`TEXT_PRIMARY/TEXT_SECONDARY/TEXT_MUTED/TEXT_SUBTLE/TEXT_ON_PRIMARY`、`PRIMARY/DANGER`、`BORDER/BORDER_STRONG/DIVIDER`、`ACCENT_MUTED/ACCENT_FALLBACK`；色值与此前一致（`TEXT_SUBTLE` 保留原 #7D655B，避免视觉漂移）。② **替换范围**——19 个 UI/入口文件（页面、图谱组件、图集、EntryAbility 系统栏）统一引用 token；`#FFFFFF` 按语义区分：`fontColor/strokeStyle` → `TEXT_ON_PRIMARY`，`backgroundColor/fillStyle` → `BG_CARD`。③ **边界**——`utils/EraTheme`（年代主题色）与 `model/Theme.THEME_PALETTE`（用户可选主题色板）属于**业务数据**，不纳入中性 token，保持各自单一来源；JSON/资源文件不改。④ **验证**——替换后扫描 16 个高频色值在非数据文件中残留均为 0；clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致零新增；本地 33 个用例通过。⑤ **验证范围**——当前无连接设备；token 化后的页面视觉一致性、系统栏颜色、图谱 Canvas 绘制、浅色锁定效果登记 O33，未冒充通过。
 
-- [ ] **L2 少量死代码**
+- [x] **L2 少量死代码**（已完成：代码/构建）
   - 位置：[HeritageCard.ets](entry/src/main/ets/components/graph/HeritageCard.ets#L11)、[GraphNode.ets](entry/src/main/ets/components/graph/GraphNode.ets#L32-L47)
   - 问题：`isDark` 未使用；GraphNode 的 era/city/type/summary 只写不读（coverImage/Poem 属 O1/O12，不计）。
   - 建议：删除 `isDark`；预留字段补注释或移除。
-
-- [ ] **L3 mock id 与正式数据不一致**
+  - 完成记录（2026-10-25，commit `98ce867`）：① 删除 `HeritageCard` 的 `@Prop isDark`（全库无调用方）；② 从 `GraphNode` 接口移除 era/city/type/summary 四个只写字段，并同步清理 `makeThemeNode/makeHeritageNode/makeRecommendNode` 的赋值；③ 布局/绘制/命中逻辑只依赖 key/label/kind/fill/stroke/radius/degree/坐标，删除后 clean 构建 `BUILD SUCCESSFUL`、33 个用例通过；④ 无可见行为变化，无需新增设备验证项。
+  
+- [x] **L3 mock id 与正式数据不一致**（已完成：数据/构建；预览深链待预览器验证）
   - 位置：[MockHeritages.ets](entry/src/main/ets/data/MockHeritages.ets#L22-L25)
   - 问题：`mock-*` vs `smx-*`；预览深链找不到。
   - 建议：mock 使用正式 id 或建立映射。
-
-- [ ] **L4 文档口径漂移**
+  - 完成记录（2026-10-25，commit `1db80ca`）：① 将 mock 的 23 个 id 全部替换为 rawfile 正式 id（按 name 一一对应：如 `mock-yangshao-01 → smx-yangshao-01`、`mock-tokyo-01 → kf-bianliang-01`）；② 替换后脚本核对两边 id 集合完全一致（23/23，无多余、无缺失），mock 与真机共用同一 id，预览器深链、收藏/笔记不再找不到条目；③ clean 构建 `BUILD SUCCESSFUL`、33 个用例通过；④ 预览器深链与详情页跳转登记 O34。
+  
+- [x] **L4 文档口径漂移**（已完成：文档）
   - 位置：[README.md](README.md#L9-L13)、[README.md](README.md#L32-L56)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L228)、[PROJECT_PLAN.md](PROJECT_PLAN.md#L263)
   - 问题：五层级含诗词、目录树缺 graph、C1.1 store 键名、龙山/仰韶计数与实际不符（O 索引已在 M6.2 修正）。
   - 建议：按代码现状统一 README/计划/遗留项。
+  - 完成记录（2026-10-25，commit `988a841`）：① **详情页签**——README 改为「介绍/考古/事件/文旅/笔记」并注明诗词已按 O12 移除；PROJECT_PLAN 当前态描述同步，历史里程碑行保留原文；② **目录树**——README/PROJECT_PLAN 补全 components/graph、data、service、utils 的实际文件结构与职责；③ **数据模型**——PROJECT_PLAN 的 HeritageDetail 更新为结构化 events/tourism/highlights/specs/artifacts/images，标注 poems 字段保留但页签移除；④ **store 键名**——C1.1 从「同一 store，theme_json」更正为独立 store `yellow_river_themes` + `themes_json`/`theme_tombstones_json`；M2.1 改 Preferences 具体键名；⑤ **城市数**——PROJECT_PLAN 由「五市」更正为「六市」（补安阳）；⑥ 文档无代码变更，不影响构建与测试。
 
 - [ ] **L5 微性能**
   - 位置：[Discovery.ets](entry/src/main/ets/pages/Discovery.ets#L184)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L153-L191)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L79-L83)
@@ -285,7 +291,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成（代码/构建/测试；设备验证待 O23~O33/O7）；第三轮 L1 已完成，下一步 L2 死代码清理。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成（代码/构建/测试；设备验证待 O23~O34/O7）；第三轮 L1~L4 已完成，下一步 L5 微性能。
 
 ---
 
@@ -369,3 +375,6 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-25 | 第二轮 M10 完成并记录（commit `f101015`，M6.15）：应用名改为「黄河记忆」，bundleName 改为 `com.huanghe.memory`，vendor/模块描述/Ability 标签同步，`SyncService.BUNDLE_NAME` 保持一致；桌面名称与正式包名安装待 O32 | `com.example.first` 与 `first/label` 是模板占位，交付前必须定稿；bundleName 同时决定 KVManager/DeviceManager 的调用参数，必须与 app.json5 一致 |
 | 2026-10-25 | 第二轮 M11 完成并记录（commit `3b721ad`，M6.16）：删除模板断言，新增 LWW/JsonField/时间格式化/推荐/主题推荐/图谱布局 33 个本地用例；新增 `scripts/ci-check.ps1` 做规则检查 + clean 构建 + 单测 + 告警基线门禁，并解析 test_result.txt | 核心纯函数此前零测试，回归只能靠人工；`hvigorw test` 在用例失败时仍可能 BUILD SUCCESSFUL，必须解析测试结果文件；脚本经 PowerShell 5 实跑验证 |
 | 2026-10-25 | 第三轮 L1 完成并记录（commit `c9ce1dc`）：新增 `utils/ThemeTokens.ets` 16 个语义 token，19 个 UI/入口文件替换高频背景/文字/边框色；EraTheme 与 Theme 色板保持数据源；替换后残留为 0，构建与 33 用例通过；UI 回归待 O33 | 402 处硬编码颜色导致改色需全库搜索；token 仅收敛高频中性色，年代/主题色属于业务数据不能混入，`#FFFFFF` 必须按文字/背景语义区分 |
+| 2026-10-25 | 第三轮 L2 完成并记录（commit `98ce867`）：删除 HeritageCard 未使用的 `isDark`，移除 GraphNode 的 era/city/type/summary 只写字段并清理三处节点构造；构建与 33 用例通过 | 死字段增加内存与阅读成本且容易误导后续实现；图谱逻辑只依赖 key/label/kind/样式/坐标，删除无行为变化 |
+| 2026-10-25 | 第三轮 L3 完成并记录（commit `1db80ca`）：mock 的 23 个 id 全部改为 rawfile 正式 id（按 name 一一对应，`mock-tokyo-01 → kf-bianliang-01`），两边 id 集合核对一致；预览深链待 O34 | `mock-*` 与正式 id 不一致导致预览器深链/收藏/笔记找不到条目；统一 id 后 mock 与真机共用同一数据身份 |
+| 2026-10-25 | 第三轮 L4 完成并记录（commit `988a841`）：README/PROJECT_PLAN 统一当前口径——详情页签去除诗词、目录树补全 graph/data/service/utils、C1.1 store 键名更正为 `yellow_river_themes`、城市数改六市、HeritageDetail 改为结构化描述 | 文档与代码现状漂移会误导验收与交接；历史里程碑行保留原文，只修正「当前态」描述 |

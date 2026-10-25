@@ -32,6 +32,7 @@
 - 元信息：bundleName 为 `com.huanghe.memory`，与 `SyncService.BUNDLE_NAME` 必须一致；应用名「黄河记忆」
 - 本地门禁：提交前跑 `scripts/ci-check.ps1`（规则检查 + clean 构建 + 33 个本地单测 + 告警基线）；`hvigorw test` 失败不改退出码，必须解析 test_result.txt
 - 预置数据加载统一走 `HeritageRepository`（`{list,byId,isMock}`）；JSON 字段统一 `JsonField`；`detail` 缺失/null/非对象降级为空 detail，不得丢整条
+- mock 数据 id 必须与 rawfile 正式 id 完全一致（禁 `mock-*` 前缀）；图谱节点只保留 key/label/kind/样式/坐标，未读字段及时删除
 - API 口径以 `build-profile.json5` 为准：最低 API16（任务书要求 ≥12），文档禁写死 12；下调最低版本必须配套 SDK 与安装回归
 - 零网络；图片只能放 `resources/rawfile/images/` 并由 `path` 引用
 - 同文件禁并行改；改完回读；一次一个子任务 → build 成功 → commit `[M?.?] 摘要`
