@@ -63,6 +63,9 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | L2 | 死代码清理：HeritageCard isDark / GraphNode 未读字段 | 2026-10-25 | `98ce867` | 代码 + 构建 + 33 用例；无可见行为变化 | 已完成（代码/构建） |
 | L3 | mock id 与正式数据对齐 | 2026-10-25 | `1db80ca` | 数据 + 构建；预览深链待 O34 预览器验证 | 已完成（数据/构建） |
 | L4 | README/计划书口径统一 | 2026-10-25 | `988a841` | 文档；无代码变更 | 已完成（文档） |
+| L5 | 微性能：筛选缓存/笔记计数聚合/推荐按收藏签名重算 | 2026-10-25 | `52b9f37` | 代码 + 33 用例；设备性能手感待 O36 | 已完成（代码/构建） |
+| L6 | 路由异常处理统一为 RouterUtil | 2026-10-25 | `4c0ae86` | 代码 + 构建；告警基线 16→4；全路由回归待 O36 | 已完成（代码/构建） |
+| L7 | 内容字段缺口口径与兜底 | 2026-10-25 | `43e38d1` | 文档/口径；不虚构内容，缺口登记 O35 | 已完成（文档/口径） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -250,19 +253,22 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 建议：按代码现状统一 README/计划/遗留项。
   - 完成记录（2026-10-25，commit `988a841`）：① **详情页签**——README 改为「介绍/考古/事件/文旅/笔记」并注明诗词已按 O12 移除；PROJECT_PLAN 当前态描述同步，历史里程碑行保留原文；② **目录树**——README/PROJECT_PLAN 补全 components/graph、data、service、utils 的实际文件结构与职责；③ **数据模型**——PROJECT_PLAN 的 HeritageDetail 更新为结构化 events/tourism/highlights/specs/artifacts/images，标注 poems 字段保留但页签移除；④ **store 键名**——C1.1 从「同一 store，theme_json」更正为独立 store `yellow_river_themes` + `themes_json`/`theme_tombstones_json`；M2.1 改 Preferences 具体键名；⑤ **城市数**——PROJECT_PLAN 由「五市」更正为「六市」（补安阳）；⑥ 文档无代码变更，不影响构建与测试。
 
-- [ ] **L5 微性能**
+- [x] **L5 微性能**（已完成：代码/构建；设备性能手感待回归）
   - 位置：[Discovery.ets](entry/src/main/ets/pages/Discovery.ets#L184)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L153-L191)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L79-L83)
   - 问题：filterList 每次 build ×3；Favorites O(F×N) 笔记计数；笔记变化触发详情推荐重算；Mock 615KB 进包。
   - 建议：缓存 filtered/noteCount；按数据类型拆分监听；mock 裁剪或按 debug 引入。
-
-- [ ] **L6 路由异常处理不一致**
+  - 完成记录（2026-10-25，commit `52b9f37`）：① **筛选缓存**——Discovery 新增 `@State filteredList`，关键词/年代/类型/城市变化时由 `applyFilters()` 重算一次；build 内 3 处 `filterList()` 调用改为读取缓存，列表/计数/空态同源。② **笔记计数聚合**——Favorites `refreshGroups` 先遍历一次 `getAllNotes()` 生成 `itemId→count` Map，`makeCard` 直接查表，消除 O(F×标签×N) 的重复扫描。③ **推荐降噪**——Detail 新增已收藏 itemId 签名（排序拼接），`dataChangedHandler`/`onPageShow` 仅在收藏集合变化时重算推荐；笔记增删、标签编辑不再触发推荐重算。④ **Mock 体积评估**——HAP 约 2.5MB，MockHeritages 约 615KB；它是预览器/rawfile 失败时的兜底与 R3 同构校验基准，裁掉会牺牲预览与数据一致性，当前保留并在 L7 口径中登记，不做 release 裁剪。⑤ **验证**——clean 构建 `BUILD SUCCESSFUL`，告警基线（当时 16 条）无新增；33 用例通过；交互性能与筛选即时性登记 O36。
+  
+- [x] **L6 路由异常处理不一致**（已完成：代码/构建；告警基线 16→4）
   - 位置：[Discovery.ets](entry/src/main/ets/pages/Discovery.ets#L307)、[Favorites.ets](entry/src/main/ets/pages/Favorites.ets#L566)
   - 建议：统一 `RouterUtil` 包 try/catch。
-
-- [ ] **L7 内容字段填充率不均**
+  - 完成记录（2026-10-25，commit `4c0ae86`）：① **工具**——新增 `utils/RouterUtil.ets`，统一 `push(url, RouteParams?)` / `back()` / `getParams()`，全部包 try/catch 并记日志；push 参数用显式 `RouteParams` 接口（id/noteId/heritageId/eventIndex），取参返回 `Record<string, Object>` 供页面下标读取（规避 ArkTS `arkts-no-props-by-index`）。② **迁移**——Discovery/Favorites/Detail/EventDetail/KnowledgeGraph/MyNotes/NoteEdit 共 7 页全部改用 RouterUtil，删除各自的 try/catch 与 router import；页面不再直接依赖 `@kit.ArkUI` 的 router。③ **告警基线**——页面级 router deprecate 告警由 15 条合并为 RouterUtil 内 3 条，构建告警从 16 条降至 4 条（另 1 条为 HeritageDataLoader 的 may-throw）；O3 基线与 CI 门禁同步改为 4。④ **验证**——clean 构建 `BUILD SUCCESSFUL`、33 用例通过；全路由跳转/返回/深链回归登记 O36。
+  
+- [x] **L7 内容字段填充率不均**（已完成：文档/口径；缺口登记 O35）
   - 位置：`heritage_data.json`
   - 现状：64/184 事件无 figures，73/184 无 artifacts；事件图仅 8 张；龙山仅 1 条。
   - 建议：按事件补人物/文物/图集；龙山补充或调整筛选预期。
+  - 完成记录（2026-10-25，commit `43e38d1`）：① **口径决策**——按内容方法论「禁止凭记忆写精简数据」，缺失字段没有可靠官方来源时不虚构；L7 从「补齐内容」调整为「口径与兜底」：能核证才补，不能核证保持为空。② **UI 核查**——EventDetail 对 figures/artifacts/images 均 `if (length > 0)` 条件渲染，空字段自动隐藏整块，无空标题/空卡。③ **README**——明确「事件专题人物/文物/图片按可核证资料填充，缺失不虚构，页面隐藏对应区块」，并登记缺口清单 O35。④ **数据统计**——复核 184 事件、64 无 figures、73 无 artifacts、8 条图片条目（path 均为空，属 O1 占位）；龙山仅王城岗遗址 1 条，筛选结果按实际显示，不人为补数据。⑤ **后续**——内容补全列为 O35 独立 backlog，按批次联网搜证后补入并同步 mock。
 
 - [ ] **L8 `TimelineTab` 仍接收状态派生参数**
   - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L312)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L809-L810)
@@ -291,7 +297,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成（代码/构建/测试；设备验证待 O23~O34/O7）；第三轮 L1~L4 已完成，下一步 L5 微性能。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成（代码/构建/测试；设备验证待 O23~O36/O7）；第三轮 L1~L7 已完成，下一步 L8 TimelineTab 参数。
 
 ---
 
@@ -378,3 +384,6 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-25 | 第三轮 L2 完成并记录（commit `98ce867`）：删除 HeritageCard 未使用的 `isDark`，移除 GraphNode 的 era/city/type/summary 只写字段并清理三处节点构造；构建与 33 用例通过 | 死字段增加内存与阅读成本且容易误导后续实现；图谱逻辑只依赖 key/label/kind/样式/坐标，删除无行为变化 |
 | 2026-10-25 | 第三轮 L3 完成并记录（commit `1db80ca`）：mock 的 23 个 id 全部改为 rawfile 正式 id（按 name 一一对应，`mock-tokyo-01 → kf-bianliang-01`），两边 id 集合核对一致；预览深链待 O34 | `mock-*` 与正式 id 不一致导致预览器深链/收藏/笔记找不到条目；统一 id 后 mock 与真机共用同一数据身份 |
 | 2026-10-25 | 第三轮 L4 完成并记录（commit `988a841`）：README/PROJECT_PLAN 统一当前口径——详情页签去除诗词、目录树补全 graph/data/service/utils、C1.1 store 键名更正为 `yellow_river_themes`、城市数改六市、HeritageDetail 改为结构化描述 | 文档与代码现状漂移会误导验收与交接；历史里程碑行保留原文，只修正「当前态」描述 |
+| 2026-10-25 | 第三轮 L5 完成并记录（commit `52b9f37`）：Discovery 筛选结果缓存到 `filteredList`（变化时重算一次）；Favorites 笔记计数一次聚合为 Map；Detail 推荐按已收藏签名重算，笔记/标签变化不再触发；Mock 体积评估后保留 | build 内重复计算与 O(F×标签×N) 扫描会造成无谓开销；推荐依赖收藏集合而非笔记，签名可精准降噪；Mock 是预览兜底与同构基准，裁掉收益低于损失 |
+| 2026-10-25 | 第三轮 L6 完成并记录（commit `4c0ae86`）：新增 `utils/RouterUtil` 统一 push/back/getParams 与异常处理，7 个页面全部迁移；router 告警由 15 条合并为 3 条，构建基线 16→4；CI 门禁同步 | 各页 try/catch 口径不一致（Discovery/Favorites 未包），且 router deprecated 调用分散；集中封装便于日后迁移 Navigation，同时降低告警噪声；取参需用 Record 规避 ArkTS 下标限制 |
+| 2026-10-25 | 第三轮 L7 完成并记录（commit `43e38d1`）：内容缺口从「补齐」调整为「口径与兜底」——无可靠来源的人物/文物/图片不虚构，EventDetail 自动隐藏空块；登记 O35 内容补全 backlog；README 说明 | 内容方法论禁止凭记忆写数据，64/73 条缺口需要逐条联网搜证，不能在优化任务中批量臆造；先保证 UI 兜底与口径透明，内容补全另立 backlog |

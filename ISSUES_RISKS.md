@@ -20,24 +20,12 @@
 
 - O1 `coverImage` 全为空且 rawfile 中无任何图片资源，列表用文字徽标占位，详情页「图文介绍」实际只有文 —— 待确定是否引入图片资源。
 - O2 详情页仅认 `id` 入参；M2 收藏页 / M4 推荐入口跳转必须统一带 id，否则落「未找到该遗产」。
-- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线已固化（2026-09-27 C1.2 收口更新，仅允许以下 16 条 + 1 条签名提示；其中 M1.8 期间已存在但基线漏记的 3 条——Detail openEventDetail pushUrl、EventDetail getParams/back——于 M4.2 补齐登记；本次新增仅 KnowledgeGraph openDetail pushUrl 1 条同类型告警）**：
-  `data/HeritageDataLoader.ets:39 Function may throw exceptions`（getRawFileContent）、
-  `pages/Discovery.ets:307 'pushUrl' has been deprecated`、
-  `pages/Favorites.ets:226 'pushUrl' has been deprecated`（M2.5 新增，openMyNotes 入口，router deprecate 同类型）、
-  `pages/Favorites.ets:566 'pushUrl' has been deprecated`（M2.2 新增，与发现页 pushUrl 同类型的既有技术债，无新增告警类型）、
-  `pages/Detail.ets:62 'getParams' has been deprecated`、
-  `pages/Detail.ets:215 'back' has been deprecated`、
-  `pages/Detail.ets:198 'pushUrl' has been deprecated`（M2.4 新增，router deprecate 同类型；openNoteEditor 且包 try/catch）、
-  `pages/Detail.ets:163 'pushUrl' has been deprecated`（M1.8 新增，openEventDetail，M4.2 补齐登记）、
-  `pages/Detail.ets:148 'pushUrl' has been deprecated`（M4.2 新增，openRecommendedDetail 推荐卡跳详情，router deprecate 同类型且包 try/catch）、
-  `pages/NoteEdit.ets:55 'getParams' has been deprecated`（M2.3 新增，router deprecate 同类型）、
-  `pages/NoteEdit.ets:140 'back' has been deprecated`（M2.3 新增，back 已收敛为唯一调用点 goBack()）、
-  `pages/MyNotes.ets:125 'pushUrl' has been deprecated`（M2.5 新增，openDetail 收敛唯一调用点）、
-  `pages/MyNotes.ets:133 'back' has been deprecated`（M2.5 新增，goBack 收敛唯一调用点）、
-  `pages/EventDetail.ets:42 'getParams' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
-  `pages/EventDetail.ets:171 'back' has been deprecated`（M1.8 新增，M4.2 补齐登记）、
-  `pages/KnowledgeGraph.ets:521 'pushUrl' has been deprecated`（C1.2 新增，openDetail 图谱节点/卡片跳详情，router deprecate 同类型且包 try/catch；行号随 C1.7 改动由 512 漂移至 521），外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
-  行号随代码增删会漂移，比对以「文件 + 告警类型」为准。
+- O3 `hilog` DOMAIN 统一用 0x0000（测试域）。**构建告警基线（2026-10-25 L6 集中路由后由 16 条降为 4 条 + 1 条签名提示）**：
+  `data/HeritageDataLoader.ets:40 Function may throw exceptions`（getRawFileContent）、
+  `utils/RouterUtil.ets:32 'pushUrl' has been deprecated`、
+  `utils/RouterUtil.ets:41 'back' has been deprecated`、
+  `utils/RouterUtil.ets:50 'getParams' has been deprecated`，外加 `SignHap: skip sign 'hos_hap'（未配置 signingConfigs，命令行验证可忽略）`。
+  说明：L6 将 7 个页面的 router 调用统一收敛到 `utils/RouterUtil`，原有的 15 条页面级 router deprecate 告警合并为 3 条；行号随代码增删漂移，比对以「文件 + 告警类型」为准。历史完成记录中的「16 条 WARN」是当时基线，不回改。
   超出基线的告警一律视为新增问题，处理掉再提交。
 - O4 Tabs 切走再切回发现页时筛选条件是否复位，待真机验证一次。
 - O5 **预览器/模拟器的中文输入限制（环境问题，非代码问题）**：预览器软键盘是 DevEco 模拟的英文键盘，不支持中文输入法；模拟器物理键盘不支持中文（华为官方 FAQ），中文只能用鼠标点软键盘输入，且需在模拟器「设置 → 系统和更新 → 语言和输入法」把默认输入法设为小艺输入法。真机不受影响。已核对代码：Search/TextInput 未设置 type/inputFilter，无强制英文约束。检索功能的中文验证一律以模拟器（设好输入法）或真机为准。
@@ -71,3 +59,5 @@
 - O32 **【中】应用元信息仍为模板占位（2026-10-25 审计发现，M6.15 已修，设备验证待执行）**：`bundleName=com.example.first`、`app_name=first`、`EntryAbility_label=label`、`module_desc` 等均为模板值，交付时桌面名称不正确，且包名需与交接/联调文档一致。**M6.15 修复（commit `f101015`）**：`bundleName` 改为 `com.huanghe.memory`、`vendor` 改为 `huanghe`；`app_name`/模块描述/Ability 标签改为「黄河记忆」体系；`SyncService.BUNDLE_NAME` 同步为同一值（KVManager 与 DeviceManager 都依赖它）；构建 BUILD SUCCESSFUL，16 条 WARN 与 O3 一致。需设备验证：桌面图标名称与设置页应用名显示「黄河记忆」；正式包名可安装、同签名双端可组网；从旧包名升级/共存行为符合预期（包名变更视为新应用，旧数据不迁移属预期，需在联调文档说明）。
 - O33 **【低】设计 token 化后的视觉与平台回归（2026-10-25 审计发现，L1 已修，设备验证待执行）**：原有 402 处硬编码颜色改为 `ThemeTokens` 引用，虽然色值保持不变，但仍需确认替换过程中无双语义误用（白字/白底）与 Canvas 绘制回归。**L1 修复（commit `c9ce1dc`）**：新增 16 个语义 token，19 个文件替换；`#FFFFFF` 按 `fontColor/strokeStyle` 与 `backgroundColor/fillStyle` 分流；EraTheme/Theme 色板保持业务数据；残留色值扫描为 0，构建与 33 用例通过。需设备验证：7 页主要背景/卡片/文字/边框视觉与此前一致；系统栏仍为浅底深字；图谱 Canvas 空心推荐节点、中心主题白字描边、标签与空态颜色正常；主题编辑/切换后无异常；浅色锁定下无闪变。
 - O34 **【低】mock 深链与图谱卡片回归（2026-10-25，L3 已修，预览器验证待执行）**：M6.9 后 mock 仅在 rawfile 加载失败/预览器环境启用，原 `mock-*` id 与正式 id 不一致，预览器深链/收藏/笔记找不到条目。**L3 修复（commit `1db80ca`）**：23 个 mock id 全部按 name 对应替换为正式 id（含 `mock-tokyo-01 → kf-bianliang-01`），脚本核对两边 id 集合 23/23 完全一致；构建与 33 用例通过。需预览器/设备验证：故意触发 mock 兜底后，列表→详情、详情深链、收藏→详情、图谱卡片→详情均能按 id 命中；同时回归 L2 删除 GraphNode 未读字段后图谱节点/信息卡/推荐锚点无变化。
+- O35 **【低】事件内容字段缺口（2026-10-25 审计发现，L7 口径已定，内容补全待分批）**：rawfile 184 条事件中 64 条无 `figures`、73 条无 `artifacts`；事件 `images` 仅 8 条且 `path` 全为空（属 O1 图片占位）；龙山年代仅王城岗遗址 1 条。**L7 决策（commit `43e38d1`）**：按内容方法论禁止凭记忆补数据，缺失字段无可靠官方来源时保持为空；EventDetail 已按 `length > 0` 隐藏对应区块；README 明确「不虚构、缺失隐藏」。**后续 backlog**：按批次联网搜证（官网/博物馆/文物局/学术报道）逐条补 figures/artifacts/事件图片，补入时 rawfile 与 MockHeritages 双份同步并跑同构校验；龙山是否增补遗址按「真实可核证」原则另行评估，不强行凑数。
+- O36 **【中】L5/L6 行为回归（2026-10-25，代码已完成，设备验证待执行）**：L5 引入了筛选结果缓存、笔记计数聚合与推荐签名；L6 将 7 个页面的 router 调用集中到 `RouterUtil`。需设备/预览器验证：① Discovery 关键词与三维度筛选即时更新，计数/列表/空态同步，切换 Tab 返回后状态正确；② Favorites 卡片笔记数与顶部总数一致，标签增删后分组刷新正常；③ Detail 收藏/取消后推荐立即重排，新增/编辑/删除笔记不再触发推荐闪烁；④ 全部路由（发现→详情、收藏→笔记列表/详情、详情→笔记编辑/事件详情/推荐详情、图谱→详情、各页返回/系统返回）无异常、无白屏；⑤ 深链参数（id/noteId/heritageId/eventIndex）解析正确，缺参时落到兜底页。构建与 33 个本地用例已通过。

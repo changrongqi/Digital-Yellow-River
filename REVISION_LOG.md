@@ -5,6 +5,9 @@
 
 | 日期 | 修订内容 |
 |---|---|
+| 2026-10-25 | **L7 内容缺口口径（全项目优化第三轮；仅文档/口径；commit `43e38d1`）**：184 事件中 64 无 figures、73 无 artifacts、8 条事件图片 path 全空（O1），龙山仅王城岗 1 条。按内容方法论不虚构数据：L7 从「补齐」调整为「口径与兜底」，EventDetail 空块隐藏已核查，README 明确「可核证才补、缺失隐藏」，内容补全登记 O35 backlog。 |
+| 2026-10-25 | **L6 路由统一封装（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `4c0ae86`）**：新增 `utils/RouterUtil` 统一 push/back/getParams + try/catch，push 参数用 `RouteParams` 接口、取参返回 `Record<string, Object>`（规避 arkts-no-props-by-index）；7 个页面迁移，页面不再直接调用 router。页面级 router 告警 15→3，构建基线 16→4，O3 与 CI 阈值同步；全路由回归登记 O36。 |
+| 2026-10-25 | **L5 微性能（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `52b9f37`）**：Discovery 筛选结果缓存到 `filteredList`（关键词/三筛选/加载时重算）；Favorites 笔记计数一次聚合 Map（消除 O(F×标签×N)）；Detail 推荐按收藏 id 签名重算，笔记/标签变化不再触发；Mock 615KB 评估后保留（预览兜底与同构基准），交互回归登记 O36。 |
 | 2026-10-25 | **L4 文档口径统一（全项目优化第三轮；仅文档；commit `988a841`）**：① **详情页签**——README 移除「五层级含诗词」，改为介绍/考古/事件/文旅/笔记并注明 O12；PROJECT_PLAN 当前态同步，历史里程碑保留。② **目录树**——README/PROJECT_PLAN 补全 components/graph、data、service、utils 实际文件。③ **模型**——HeritageDetail 更新为结构化 events/tourism/highlights/specs/artifacts/images。④ **store 键**——C1.1 更正为独立 store `yellow_river_themes` + `themes_json`/`theme_tombstones_json`；M2.1 补具体键名。⑤ **城市**——「五市」改「六市」（补安阳）。 |
 | 2026-10-25 | **L3 mock id 与正式数据对齐（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `1db80ca`）**：mock 的 23 个 id 全部按 name 对应替换为 rawfile 正式 id（`mock-tokyo-01 → kf-bianliang-01` 等），脚本核对两边 id 集合 23/23 完全一致；预览器深链、收藏/笔记与真机共用同一身份；预览深链与 L2 图谱回归登记 O34。 |
 | 2026-10-25 | **L2 死代码清理（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `98ce867`）**：删除 HeritageCard 未使用的 `@Prop isDark`；从 GraphNode 移除 era/city/type/summary 四个只写字段并清理三处节点构造；图谱只依赖 key/label/kind/样式/坐标，删除后无可见行为变化。 |
