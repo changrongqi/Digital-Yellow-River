@@ -5,6 +5,7 @@
 
 | 日期 | 修订内容 |
 |---|---|
+| 2026-10-25 | **L13 合并判定抽纯函数并补单测（构建 BUILD SUCCESSFUL，WARN 4 条，本地用例 33→42 全通过）**：`lwwRemoteWins`（版本大者胜、平局 deviceId 字典序小者胜，同一函数用于实体 updatedAt vs 墓碑 deletedAt）从 `SyncService` 移入 `utils/LwwVersion`，`SyncService.lwwRemoteWins` 改为委托（import 别名 `resolveLwwRemoteWins`），FavoriteService/ThemeService 的 8 处调用与合并流程零改动。新增 9 个本地用例：远端更新/更旧、平局双向、同版本同设备不采纳、编辑晚于删除（采纳）、编辑早于删除（维持删除）、墓碑平局、双向互斥。首次运行 `bothDirectionsNeverDisagree` 断言方向写反被门禁拦下并修正。端到端合并（写回/冲突台账/主题校验）仍需双端真机（O7/O20/O23）。 |
 | 2026-10-25 | **L12 路由注释同步（纯注释；构建 BUILD SUCCESSFUL，WARN 4 条，33 用例通过）**：Detail 头部与 `openRecommendedDetail`、EventDetail、NoteEdit（含 `leaving` 字段）的注释由 `router.pushUrl/back` 改为 `utils/RouterUtil.push/back`，删除「deprecate 告警 +1 / 更新 O3 基线」等过时说明；同段「诗词页签」「古风卡」按 O12 标注已移除。无代码行为变化。 |
 | 2026-10-25 | **L11 补齐 L1 漏扫色值并修正口径（全项目优化第三轮；构建 BUILD SUCCESSFUL，WARN 4 条，33 用例通过）**：L1 的「残留为 0」只覆盖已纳 token 的色值，实际仍有 **20 处字面量、10 个文件**（图谱缩放分隔线/关联虚线边/节点标签、归类弹层增删 chip、信息卡徽标与理由底、图集占位、系统栏内容色、文旅解读与事件评述正文、收藏卡缺失徽标与选中标签 ✕、删除主题按钮浅底）；且 token 实际 17 个而文档记 16 个。本轮新增 17 个语义 token（总数 34），20 处全部改为引用，**色值一律不变**；非数据文件 hex 字面量扫描归零，`rgba()` 半透明叠层登记为边界；文档 L1 记录与 O33 同步更正。UI 视觉回归并入 O33。 |
 | 2026-10-25 | **L10 KV 明文威胁模型与隐私提示（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `b764af2`）**：保持 `distributedKVStore` `encrypt:false`（仅建库时生效，已有 store 不能直接切换；Preferences 仍明文），登记威胁模型 O37（资产/存储面/攻击面/缓解/剩余风险）。SyncPanel 新增「隐私与存储说明」：私有目录 + 同账号 P2P 同步、未开启数据库加密、勿存密码/证件号、系统备份可在设置关闭；SyncService 注释迁移前提。UI 与备份行为回归登记 O38。 |

@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，44 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，45 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN_V1.md`；查决策史 → `REVISION_LOG.md`
 
@@ -30,7 +30,7 @@
 - 推荐转收藏：推荐节点转主题藏品必须「判重 `isFavorite` → `addFavorite` → 取记录追加 themeId → `updateFavoriteThemes`」，禁用 `toggleFavorite`；两次通知用暂挂标志合并为一次刷新；成功后把选中种类从 `RECOMMEND` 切为 `HERITAGE` 再刷新，否则信息卡会被清空
 - 设计 token：中性色统一用 `utils/ThemeTokens`（背景/文字/边框/操作/状态）；`#FFFFFF` 按「文字/描边」与「卡片/表面」语义分流；EraTheme 与 Theme 色板是业务数据，禁止并入 token；「残留为 0」必须扫全部 `#RRGGBB` 字面量反向核对（豁免仅限业务色板与 rgba 叠层，见踩坑 44）
 - 元信息：bundleName 为 `com.huanghe.memory`，与 `SyncService.BUNDLE_NAME` 必须一致；应用名「黄河记忆」
-- 本地门禁：提交前跑 `scripts/ci-check.ps1`（规则检查 + clean 构建 + 33 个本地单测 + 告警基线 4）；`hvigorw test` 失败不改退出码，必须解析 test_result.txt
+- 本地门禁：提交前跑 `scripts/ci-check.ps1`（规则检查 + clean 构建 + 42 个本地单测 + 告警基线 4）；`hvigorw test` 失败不改退出码，必须解析 test_result.txt
 - 派生数据：筛选/排序结果缓存到 `@State`（变化入口重算，build 内不调用原函数）；关联计数用一次 Map 聚合；服务通知无法分类型时用签名判断是否重算
 - 路由：页面禁止直接调用 `router`，统一走 `utils/RouterUtil`；push 参数用 `RouteParams`，getParams 返回 `Record<string, Object>`（对 interface 下标访问会触发 arkts-no-props-by-index）
 - 内容缺口：人物/文物/图片无可靠来源时保持为空，页面隐藏对应区块，禁止虚构；缺口见 ISSUES_RISKS O35

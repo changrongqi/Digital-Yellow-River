@@ -70,7 +70,8 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | L9 | ImageGallery PixelMap 释放与解码上限 | 2026-10-25 | `812ec8d` | 代码 + 33 用例；内存/图集回归待 O38 | 已完成（代码/构建） |
 | L10 | KV 明文存储威胁模型与隐私提示 | 2026-10-25 | `b764af2` | 代码/文档 + 33 用例；隐私说明回归待 O38 | 已完成（代码/文档） |
 | L11 | token 收口：补齐 L1 漏扫的 20 处色值字面量 | 2026-10-25 | `ae65705` | 代码 + 构建 + 33 用例；token 34 个，hex 字面量清零；UI 回归归入 O33 | 已完成（代码/构建） |
-| L12 | 路由注释同步：页面头注释改指 RouterUtil | 2026-10-25 | 本轮 | 纯注释；构建 + 33 用例通过；无行为变化 | 已完成（注释/构建） |
+| L12 | 路由注释同步：页面头注释改指 RouterUtil | 2026-10-25 | `29642e6` | 纯注释；构建 + 33 用例通过；无行为变化 | 已完成（注释/构建） |
+| L13 | 合并判定抽纯函数 + 单测 | 2026-10-25 | 本轮 | 代码 + 42 用例通过；端到端双端合并仍待 O7/O20 | 已完成（代码/测试） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -311,6 +312,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 验收：页面内不再出现 `router.` 字面描述；构建与 33 用例通过。
   - 完成记录（2026-10-25，L12）：① Detail 头部与 `openRecommendedDetail` 注释改为 `RouterUtil.push`，删除 deprecated 告警的过时说明；② EventDetail、NoteEdit 的路由注释同步；NoteEdit 的 `leaving` 字段注释改为 `RouterUtil.back`；③ 同段注释中「诗词页签」「古风卡」按 O12 标注为已移除（仅注释，不改代码）；④ 纯注释改动，clean 构建 `BUILD SUCCESSFUL`、WARN 4 条与基线一致、33 用例通过，无可见行为变化。
 
+- [x] **L13 合并判定逻辑无法本地测试**（已完成：代码/测试；端到端合并仍待真机）
+  - 位置：[SyncService.ets](entry/src/main/ets/service/SyncService.ets#L303-L315)、[LwwVersion.ets](entry/src/main/ets/utils/LwwVersion.ets#L12-L26)、[CoreLogic.test.ets](entry/src/test/CoreLogic.test.ets#L28-L67)
+  - 问题：H2 的三路 LWW 合并（实体 vs 实体、实体 vs 墓碑、墓碑 vs 墓碑）此前只有一个内联比较式，写在 `SyncService` 里；该类依赖 `distributedKVStore` / `distributedDeviceManager` 等 kit，无法进入 Local Test，导致最关键的数据收敛规则零覆盖，只能等真机。
+  - 建议：把判定原语抽到纯 util（`utils/LwwVersion`），服务保留静态入口委托；为比较规则（含平局兜底与墓碑语义）补本地用例。
+  - 验收：纯函数位于 `utils`，本地用例覆盖「远端更新/更旧/平局双向/同版本同设备/编辑晚于删除/编辑早于删除」；构建与全部用例通过。
+  - 完成记录（2026-10-25，L13）：① **抽出纯函数**——`lwwRemoteWins(localUpdatedAt, localDeviceId, remoteUpdatedAt, remoteDeviceId)` 移入 `utils/LwwVersion`（与 `nextUpdatedAt` 同文件），注释写明「版本大者胜、平局 deviceId 字典序小者胜」，并说明同一函数用于「实体 updatedAt vs 墓碑 deletedAt」；② **服务保留入口**——`SyncService.lwwRemoteWins` 改为委托（import 用 `as resolveLwwRemoteWins` 避免与静态方法同名混淆），FavoriteService/ThemeService 的 8 处调用点与合并流程一行未改，零行为变化；③ **补 9 个用例**——远端更新/更旧、平局双向、同版本同设备不采纳、编辑晚于删除（采纳）、编辑早于删除（维持删除）、墓碑平局、双向互斥；④ **验证**——clean 构建 `BUILD SUCCESSFUL`、WARN 4 条与基线一致，本地用例 33→42 全部通过（首轮 `bothDirectionsNeverDisagree` 断言方向写反被门禁拦下并修正）；⑤ **边界**——本步只覆盖判定原语，`mergeRemoteChanges` 的写回/冲突台账/主题校验仍需双端真机（O7/O20/O23）。
+
 ---
 
 ## 4. 第一轮执行顺序
@@ -325,7 +333,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成；第三轮 L1~L12 全部完成（代码/构建/测试均通过；所有设备相关验收统一待 O7/O18~O38 真机/预览器验证）。L13（合并纯函数单测）为当前进行项，设备项与内容 backlog（O35）另列。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成；第三轮 L1~L13 全部完成（代码/构建/测试均通过；所有设备相关验收统一待 O7/O18~O38 真机/预览器验证）。优化总表本轮条目已收口，剩余为设备验证、内容 backlog（O35）与图片接入（O1）。
 
 ---
 
@@ -420,3 +428,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-25 | 第三轮 L10 完成并记录（commit `b764af2`）：保持 KV encrypt:false，登记威胁模型 O37；SyncPanel 新增隐私与存储说明；SyncService 注释迁移前提 | KV encrypt 仅创建时生效，直接切换需清库/迁移与设备验证，且 Preferences 仍为明文；先明确威胁模型与用户提示，避免未经验证的加密迁移 |
 | 2026-10-25 | 第三轮 L11 完成并记录：补齐 L1 漏扫的 20 处色值字面量，新增 17 个语义 token（总数 34），色值全部不变；非数据文件 hex 字面量扫描归零；构建 WARN 4 条与 33 用例通过；更正 L1「16 个 token / 残留为 0」口径 | L1 的「残留 0」只扫了已纳 token，漏掉图谱子组件/图集占位/系统栏等 20 处；文档统计与代码不一致会掩盖遗漏，token 收敛必须按「全量 hex + 业务色板豁免」双向核对 |
 | 2026-10-25 | 第三轮 L12 完成并记录：Detail/EventDetail/NoteEdit 的路由注释改为 `RouterUtil.push/back`，删除 deprecated 告警过时说明；同段「诗词页签/古风卡」按 O12 标注已移除；纯注释，构建与 33 用例通过 | L6 集中路由后页面注释仍指向 router，会诱导后续维护者重新引入直连调用；注释与代码口径必须同批修正 |
+| 2026-10-25 | 第三轮 L13 完成并记录：`lwwRemoteWins` 从 SyncService 抽到 `utils/LwwVersion` 纯函数，服务静态入口改为委托（8 处调用零改动）；新增 9 个用例覆盖远端新旧、平局双向、同版本同设备、编辑 vs 墓碑语义；本地用例 33→42 通过 | 合并判定写在依赖 distributedKVStore/DeviceManager 的服务类里，无法进 Local Test，H2 最关键的收敛规则零覆盖；抽到纯 util 才能在无设备环境验证，服务保留入口避免三处服务改签名 |

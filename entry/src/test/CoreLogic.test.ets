@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from '@ohos/hypium';
-import { nextUpdatedAt } from '../main/ets/utils/LwwVersion';
+import { nextUpdatedAt, lwwRemoteWins } from '../main/ets/utils/LwwVersion';
 import { JsonField } from '../main/ets/utils/JsonField';
 import { formatDate, formatDateTime } from '../main/ets/utils/TimeFormat';
 import { getThemeColor, THEME_PALETTE } from '../main/ets/model/Theme';
@@ -22,6 +22,47 @@ export default function coreLogicTest() {
     });
     it('zeroPreviousUsesNow', 0, () => {
       expect(nextUpdatedAt(0, 88)).assertEqual(88);
+    });
+  });
+
+  describe('LwwRemoteWins', () => {
+    it('remoteNewerWins', 0, () => {
+      expect(lwwRemoteWins(100, 'dev-a', 200, 'dev-b')).assertTrue();
+    });
+    it('remoteOlderLoses', 0, () => {
+      expect(lwwRemoteWins(200, 'dev-a', 100, 'dev-b')).assertFalse();
+    });
+    it('tieSmallerDeviceIdWins', 0, () => {
+      // 时间完全相同 → deviceId 字典序小者胜（确定性兜底）
+      expect(lwwRemoteWins(200, 'dev-b', 200, 'dev-a')).assertTrue();
+    });
+    it('tieLargerDeviceIdLoses', 0, () => {
+      expect(lwwRemoteWins(200, 'dev-a', 200, 'dev-b')).assertFalse();
+    });
+    it('identicalVersionAndDeviceLoses', 0, () => {
+      // 完全同版本同设备：不是「更新」，不采纳远端，避免无意义覆盖
+      expect(lwwRemoteWins(200, 'dev-a', 200, 'dev-a')).assertFalse();
+    });
+    it('remoteEditNewerThanLocalTombstoneWins', 0, () => {
+      // 实体 updatedAt vs 墓碑 deletedAt：编辑晚于删除 → 采纳远端实体，不静默丢失
+      expect(lwwRemoteWins(200, 'tomb-dev', 300, 'edit-dev')).assertTrue();
+    });
+    it('remoteEditOlderThanLocalTombstoneKeepsDeleted', 0, () => {
+      // 远端记录早于本地删除 → 维持删除，离线旧记录不复活
+      expect(lwwRemoteWins(300, 'tomb-dev', 200, 'old-dev')).assertFalse();
+    });
+    it('tombstoneTieFallsBackToDeviceId', 0, () => {
+      expect(lwwRemoteWins(300, 'dev-b', 300, 'dev-a')).assertTrue();
+      expect(lwwRemoteWins(300, 'dev-a', 300, 'dev-b')).assertFalse();
+    });
+    it('bothDirectionsNeverDisagree', 0, () => {
+      // 同一对版本最多只有一方胜出，保证双端收敛而不是来回覆盖
+      // 本机 dev-a / 远端 dev-b：远端 id 更大，平局时远端不赢
+      const forward: boolean = lwwRemoteWins(100, 'dev-a', 100, 'dev-b');
+      // 本机 dev-b / 远端 dev-a：远端 id 更小，平局时远端赢
+      const backward: boolean = lwwRemoteWins(100, 'dev-b', 100, 'dev-a');
+      expect(forward).assertFalse();
+      expect(backward).assertTrue();
     });
   });
 

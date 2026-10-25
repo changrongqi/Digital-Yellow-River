@@ -37,6 +37,7 @@ import { Tombstone } from '../model/Tombstone';
 import { SyncStatus, ConflictLogItem } from '../model/SyncStatus';
 import { PermissionService } from './PermissionService';
 import { JsonField } from '../utils/JsonField';
+import { lwwRemoteWins as resolveLwwRemoteWins } from '../utils/LwwVersion';
 
 const DOMAIN = 0x0000;
 const TAG = 'SyncService';
@@ -304,15 +305,12 @@ export class SyncService {
 
   /**
    * LWW 判定：远端版本是否胜出。
-   * updatedAt 大者胜（谁新谁赢）；完全相等时 deviceId 字典序小者胜
-   * （确定性兜底：两端同时写入也收敛到同一条，不来回覆盖）。
+   * 实现已抽到 utils/LwwVersion（纯函数，L13），此处保留静态入口给各服务调用，
+   * 避免三处服务改签名；规则见 lwwRemoteWins 注释。
    */
   static lwwRemoteWins(localUpdatedAt: number, localDeviceId: string,
     remoteUpdatedAt: number, remoteDeviceId: string): boolean {
-    if (remoteUpdatedAt !== localUpdatedAt) {
-      return remoteUpdatedAt > localUpdatedAt;
-    }
-    return remoteDeviceId < localDeviceId;
+    return resolveLwwRemoteWins(localUpdatedAt, localDeviceId, remoteUpdatedAt, remoteDeviceId);
   }
 
   /** 冲突台账登记（M3.2 合并冲突时调用；M1 记录胜出版本的最后写入设备，供面板定位） */
