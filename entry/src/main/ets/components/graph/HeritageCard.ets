@@ -9,7 +9,6 @@ import { ThemeTokens } from '../../utils/ThemeTokens';
 @Component
 export struct HeritageCard {
   @Prop heritage: Heritage;
-  @Prop isDark: boolean = false;
   onTap: () => void = () => {};
 
   build() {

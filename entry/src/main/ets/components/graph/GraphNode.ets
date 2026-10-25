@@ -34,10 +34,6 @@ export interface GraphNode {
   itemId: string;     // 业务 id（主题 id 或遗址 id）
   label: string;      // 展示名称
   kind: GraphNodeKind;
-  era: string;        // 年代（遗址节点，主题为空串）
-  city: string;       // 城市（遗址节点，主题为空串）
-  type: string;       // 类型（遗址节点，主题为空串）
-  summary: string;    // 一句话简介（选中信息卡兜底用）
   fill: string;       // 节点填充色
   stroke: string;     // 节点描边色
   radius: number;     // 绘制半径（世界坐标 vp）
