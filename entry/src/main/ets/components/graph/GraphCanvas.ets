@@ -433,13 +433,13 @@ export struct GraphCanvas {
         })
         Divider()
           .width(16)
-          .color('#EFE7E0')
+          .color(ThemeTokens.DIVIDER_SOFT)
         this.controlButton('－', 15, () => {
           this.zoomBy(0.8);
         })
         Divider()
           .width(16)
-          .color('#EFE7E0')
+          .color(ThemeTokens.DIVIDER_SOFT)
         this.controlButton('⟲', 14, () => {
           // 恢复默认布局 + 适配视口（含撤销手动拖动的节点位置）
           this.relayout();

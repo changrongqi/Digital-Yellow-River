@@ -62,7 +62,7 @@ export struct NodeInfoPanel {
           .fontSize(10)
           .fontColor(ThemeTokens.TEXT_SECONDARY)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-          .backgroundColor('#F5EFE9')
+          .backgroundColor(ThemeTokens.BG_BADGE)
           .borderRadius(6)
           .margin({ left: 6 })
         Text('✕')
@@ -107,7 +107,7 @@ export struct NodeInfoPanel {
             .maxLines(3)
             .width('100%')
             .padding({ left: 8, right: 8, top: 6, bottom: 6 })
-            .backgroundColor('#FBF7F2')
+            .backgroundColor(ThemeTokens.BG_NOTE)
             .borderRadius(6)
             .margin({ top: 8 })
         }

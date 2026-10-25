@@ -69,6 +69,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | L8 | TimelineTab 改为无参 Builder | 2026-10-25 | `6c965c2` | 代码 + 33 用例；无可见行为变化 | 已完成（代码/构建） |
 | L9 | ImageGallery PixelMap 释放与解码上限 | 2026-10-25 | `812ec8d` | 代码 + 33 用例；内存/图集回归待 O38 | 已完成（代码/构建） |
 | L10 | KV 明文存储威胁模型与隐私提示 | 2026-10-25 | `b764af2` | 代码/文档 + 33 用例；隐私说明回归待 O38 | 已完成（代码/文档） |
+| L11 | token 收口：补齐 L1 漏扫的 20 处色值字面量 | 2026-10-25 | 本轮 | 代码 + 构建 + 33 用例；token 34 个，hex 字面量清零；UI 回归归入 O33 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -236,7 +237,8 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 位置：[EraTheme.ets](entry/src/main/ets/utils/EraTheme.ets#L29-L64)、[Theme.ets](entry/src/main/ets/model/Theme.ets#L27)
   - 建议：抽 `ThemeTokens`/资源；先覆盖背景、正文、次要文字、边框。
   - 验收：高频颜色有单一来源；改色不再全库搜。
-  - 完成记录（2026-10-25，commit `c9ce1dc`）：① **token 层**——新增 `utils/ThemeTokens.ets`，集中 16 个高频语义色：`BG_PAGE/BG_CARD/BG_CANVAS/BG_SOFT/BG_WARNING`、`TEXT_PRIMARY/TEXT_SECONDARY/TEXT_MUTED/TEXT_SUBTLE/TEXT_ON_PRIMARY`、`PRIMARY/DANGER`、`BORDER/BORDER_STRONG/DIVIDER`、`ACCENT_MUTED/ACCENT_FALLBACK`；色值与此前一致（`TEXT_SUBTLE` 保留原 #7D655B，避免视觉漂移）。② **替换范围**——19 个 UI/入口文件（页面、图谱组件、图集、EntryAbility 系统栏）统一引用 token；`#FFFFFF` 按语义区分：`fontColor/strokeStyle` → `TEXT_ON_PRIMARY`，`backgroundColor/fillStyle` → `BG_CARD`。③ **边界**——`utils/EraTheme`（年代主题色）与 `model/Theme.THEME_PALETTE`（用户可选主题色板）属于**业务数据**，不纳入中性 token，保持各自单一来源；JSON/资源文件不改。④ **验证**——替换后扫描 16 个高频色值在非数据文件中残留均为 0；clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致零新增；本地 33 个用例通过。⑤ **验证范围**——当前无连接设备；token 化后的页面视觉一致性、系统栏颜色、图谱 Canvas 绘制、浅色锁定效果登记 O33，未冒充通过。
+  - 完成记录（2026-10-25，commit `c9ce1dc`）：① **token 层**——新增 `utils/ThemeTokens.ets`，集中 17 个高频语义色：`BG_PAGE/BG_CARD/BG_CANVAS/BG_SOFT/BG_WARNING`、`TEXT_PRIMARY/TEXT_SECONDARY/TEXT_MUTED/TEXT_SUBTLE/TEXT_ON_PRIMARY`、`PRIMARY/DANGER`、`BORDER/BORDER_STRONG/DIVIDER`、`ACCENT_MUTED/ACCENT_FALLBACK`；色值与此前一致（`TEXT_SUBTLE` 保留原 #7D655B，避免视觉漂移）。② **替换范围**——19 个 UI/入口文件（页面、图谱组件、图集、EntryAbility 系统栏）统一引用 token；`#FFFFFF` 按语义区分：`fontColor/strokeStyle` → `TEXT_ON_PRIMARY`，`backgroundColor/fillStyle` → `BG_CARD`。③ **边界**——`utils/EraTheme`（年代主题色）与 `model/Theme.THEME_PALETTE`（用户可选主题色板）属于**业务数据**，不纳入中性 token，保持各自单一来源；JSON/资源文件不改。④ **验证**——替换后扫描这 17 个 token 对应色值在非数据文件中残留为 0；clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致零新增；本地 33 个用例通过。⑤ **验证范围**——当前无连接设备；token 化后的页面视觉一致性、系统栏颜色、图谱 Canvas 绘制、浅色锁定效果登记 O33，未冒充通过。
+  - 复核修正（2026-10-25，L11）：当时「残留为 0」只覆盖已纳 token 的色值，**漏扫了未纳 token 的 20 处字面量**（图谱子组件、图集占位、系统栏、正文强调色等）；token 实际为 17 个而非 16 个。已在 L11 补齐，见下条。
 
 - [x] **L2 少量死代码**（已完成：代码/构建）
   - 位置：[HeritageCard.ets](entry/src/main/ets/components/graph/HeritageCard.ets#L11)、[GraphNode.ets](entry/src/main/ets/components/graph/GraphNode.ets#L32-L47)
@@ -294,6 +296,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 建议：评估 `encrypt:true` 或登记威胁模型；敏感内容提示。
   - 完成记录（2026-10-25，commit `b764af2`）：① **决策**——KV 的 `encrypt` 只在创建时生效，已存在的 store 不支持直接切换，强行开启需要清库/迁移与设备验证；且本地 Preferences 本身仍为明文，单独加密 KV 不能覆盖完整资产。当前保持 `encrypt:false`，登记威胁模型（O37），不采用未经验证的迁移。② **用户提示**——SyncPanel 新增「隐私与存储说明」卡：说明收藏/笔记存于应用私有目录并通过同账号设备同步、当前未开启数据库加密、勿存密码/证件号等敏感信息、系统备份可能包含数据并可在系统设置关闭。③ **代码注释**——`SyncService` 的 `encrypt:false` 旁注明决策与迁移前提，避免后续误改。④ **威胁模型**（O37）——资产=收藏/笔记/主题；攻击面=物理接触/root、系统备份提取、同账号设备；缓解=应用沙箱、同账号 P2P、无公网传输、用户提示；剩余风险=明文落盘与备份。⑤ 构建与 33 用例通过；隐私说明 UI 与备份行为登记 O38。
 
+- [x] **L11 L1 漏扫的 20 处色值字面量**（已完成：代码/构建；UI 回归归入 O33）
+  - 位置：`GraphCanvas`、`GraphRenderer`、`ManageSheet`、`NodeInfoPanel`、`ImageGallery`、`EntryAbility`、`Detail`、`EventDetail`、`Favorites`、`KnowledgeGraph` 共 10 个文件 20 处（不含 `EraTheme`/`Theme` 业务色板）
+  - 问题：L1 只扫描了已纳 token 的高频色值，其它字面量（图谱子组件、图集占位、系统栏、正文强调色等）仍硬编码，且文档记「残留为 0」造成口径失真；token 实际 17 个，文档却记 16 个。
+  - 建议：按「用途语义」补 token，色值一律不变；同时修正 L1 记录口径。
+  - 验收：非数据文件 hex 字面量清零；构建与 33 用例通过；文档与统计一致。
+  - 完成记录（2026-10-25，L11）：① **新增 17 个 token**（`BG_MISSING/TEXT_SUCCESS`、`BG_BADGE/BG_NOTE/BG_PLACEHOLDER/BORDER_PLACEHOLDER/DIVIDER_SOFT/TEXT_BODY`、`BG_ADD_CHIP/BORDER_ADD_CHIP/BG_REMOVE_CHIP/BORDER_REMOVE_CHIP/TEXT_ON_SELECTED/BG_DANGER_SOFT`、`SYSTEM_BAR_CONTENT/GRAPH_AFFINITY/GRAPH_LABEL`），token 总数 17→34；② **20 处替换**——图谱缩放控件分隔线、关联虚线边、节点标签文字；归类弹层增/删 chip 底与边框、绿色加号；节点信息卡徽标底与推荐理由底；图集占位底与虚线框；系统栏内容色；文旅解读/事件评述正文色；收藏卡缺失徽标底与选中标签 ✕；删除主题按钮浅底；③ **色值全部保持不变**，仅从字面量改为语义引用，无可见视觉变化；④ **验证**——非数据文件 hex 字面量扫描 0；clean 构建 `BUILD SUCCESSFUL`、WARN 4 条与基线一致、33 用例通过；⑤ **口径修正**——L1 的「16 个 token / 残留为 0」已更正为「17 个 token / 已纳 token 色值残留为 0」，并注明漏扫范围；`rgba()` 半透明叠层保留（alpha 无法用 6 位 hex token 表达，暂不纳入）；⑥ UI 视觉回归并入 O33。
+
 ---
 
 ## 4. 第一轮执行顺序
@@ -308,7 +317,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成；第三轮 L1~L10 全部完成（代码/构建/测试均通过；所有设备相关验收统一待 O7/O18~O38 真机/预览器验证）。优化总表条目全部收口，后续按 O 项做验证与内容 backlog（O35）。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成；第三轮 L1~L11 全部完成（代码/构建/测试均通过；所有设备相关验收统一待 O7/O18~O38 真机/预览器验证）。优化总表除本文件后续追加的 L12/L13 外已收口，设备项与内容 backlog（O35）另列。
 
 ---
 
@@ -391,7 +400,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-25 | 第二轮 M9 完成并记录（commit `2eff641`，M6.14）：推荐节点信息卡新增「收藏并归类」主操作（查看详情降为次要），`addFavorite` + `updateFavoriteThemes` 组合完成收藏与归入当前主题，期间暂挂订阅并只刷新一次；成功后选中由 RECOMMEND 切 HERITAGE，信息卡原地显示已归类；一键闭环待 O31 | 推荐节点此前只能查看详情，无法把「拓展」直接转化为主题藏品，闭环断裂；用 isFavorite 判重 + addFavorite 而非 toggleFavorite，避免远端已收藏时反向取消；两次写入合并刷新符合 M6.10 单通道约定 |
 | 2026-10-25 | 第二轮 M10 完成并记录（commit `f101015`，M6.15）：应用名改为「黄河记忆」，bundleName 改为 `com.huanghe.memory`，vendor/模块描述/Ability 标签同步，`SyncService.BUNDLE_NAME` 保持一致；桌面名称与正式包名安装待 O32 | `com.example.first` 与 `first/label` 是模板占位，交付前必须定稿；bundleName 同时决定 KVManager/DeviceManager 的调用参数，必须与 app.json5 一致 |
 | 2026-10-25 | 第二轮 M11 完成并记录（commit `3b721ad`，M6.16）：删除模板断言，新增 LWW/JsonField/时间格式化/推荐/主题推荐/图谱布局 33 个本地用例；新增 `scripts/ci-check.ps1` 做规则检查 + clean 构建 + 单测 + 告警基线门禁，并解析 test_result.txt | 核心纯函数此前零测试，回归只能靠人工；`hvigorw test` 在用例失败时仍可能 BUILD SUCCESSFUL，必须解析测试结果文件；脚本经 PowerShell 5 实跑验证 |
-| 2026-10-25 | 第三轮 L1 完成并记录（commit `c9ce1dc`）：新增 `utils/ThemeTokens.ets` 16 个语义 token，19 个 UI/入口文件替换高频背景/文字/边框色；EraTheme 与 Theme 色板保持数据源；替换后残留为 0，构建与 33 用例通过；UI 回归待 O33 | 402 处硬编码颜色导致改色需全库搜索；token 仅收敛高频中性色，年代/主题色属于业务数据不能混入，`#FFFFFF` 必须按文字/背景语义区分 |
+| 2026-10-25 | 第三轮 L1 完成并记录（commit `c9ce1dc`）：新增 `utils/ThemeTokens.ets` 17 个语义 token，19 个 UI/入口文件替换高频背景/文字/边框色；EraTheme 与 Theme 色板保持数据源；已纳 token 的色值残留为 0，构建与 33 用例通过；UI 回归待 O33（**L11 复核：当时只扫已纳 token，漏扫 20 处其它字面量，文档误记 16 个 token，均已修正**） | 402 处硬编码颜色导致改色需全库搜索；token 仅收敛高频中性色，年代/主题色属于业务数据不能混入，`#FFFFFF` 必须按文字/背景语义区分 |
 | 2026-10-25 | 第三轮 L2 完成并记录（commit `98ce867`）：删除 HeritageCard 未使用的 `isDark`，移除 GraphNode 的 era/city/type/summary 只写字段并清理三处节点构造；构建与 33 用例通过 | 死字段增加内存与阅读成本且容易误导后续实现；图谱逻辑只依赖 key/label/kind/样式/坐标，删除无行为变化 |
 | 2026-10-25 | 第三轮 L3 完成并记录（commit `1db80ca`）：mock 的 23 个 id 全部改为 rawfile 正式 id（按 name 一一对应，`mock-tokyo-01 → kf-bianliang-01`），两边 id 集合核对一致；预览深链待 O34 | `mock-*` 与正式 id 不一致导致预览器深链/收藏/笔记找不到条目；统一 id 后 mock 与真机共用同一数据身份 |
 | 2026-10-25 | 第三轮 L4 完成并记录（commit `988a841`）：README/PROJECT_PLAN 统一当前口径——详情页签去除诗词、目录树补全 graph/data/service/utils、C1.1 store 键名更正为 `yellow_river_themes`、城市数改六市、HeritageDetail 改为结构化描述 | 文档与代码现状漂移会误导验收与交接；历史里程碑行保留原文，只修正「当前态」描述 |
@@ -401,3 +410,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-25 | 第三轮 L8 完成并记录（commit `6c965c2`）：TimelineTab 改为无参 Builder，新增 timelineEvents() 直读 heritage；顺带把 #EFE9E2 分隔线并入 ThemeTokens.DIVIDER | 状态派生参数经 @Builder 按值传递，状态变化后存在不刷新风险；无参直读页面状态与其它页签保持一致 |
 | 2026-10-25 | 第三轮 L9 完成并记录（commit `812ec8d`）：ImageGallery 卸载/迟到/失败三路释放 PixelMap 与 ImageSource，长边 >1600px 按比例 desiredSize 解码 | PixelMap 占用原生内存且 Image 组件不会代为释放；当前图片 path 全空（O1），先补齐生命周期与解码上限，待真实图片接入后验证 |
 | 2026-10-25 | 第三轮 L10 完成并记录（commit `b764af2`）：保持 KV encrypt:false，登记威胁模型 O37；SyncPanel 新增隐私与存储说明；SyncService 注释迁移前提 | KV encrypt 仅创建时生效，直接切换需清库/迁移与设备验证，且 Preferences 仍为明文；先明确威胁模型与用户提示，避免未经验证的加密迁移 |
+| 2026-10-25 | 第三轮 L11 完成并记录：补齐 L1 漏扫的 20 处色值字面量，新增 17 个语义 token（总数 34），色值全部不变；非数据文件 hex 字面量扫描归零；构建 WARN 4 条与 33 用例通过；更正 L1「16 个 token / 残留为 0」口径 | L1 的「残留 0」只扫了已纳 token，漏掉图谱子组件/图集占位/系统栏等 20 处；文档统计与代码不一致会掩盖遗漏，token 收敛必须按「全量 hex + 业务色板豁免」双向核对 |

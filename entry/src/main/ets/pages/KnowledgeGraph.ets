@@ -606,7 +606,7 @@ export struct KnowledgeGraph {
       Button('删除主题')
         .fontSize(13)
         .fontColor(ThemeTokens.DANGER)
-        .backgroundColor('#FDECEA')
+        .backgroundColor(ThemeTokens.BG_DANGER_SOFT)
         .layoutWeight(1)
         .height(44)
         .onClick(() => {

@@ -192,9 +192,9 @@ export struct ImageGallery {
     .aspectRatio(1)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor('#FBEFE5')
+    .backgroundColor(ThemeTokens.BG_PLACEHOLDER)
     .borderRadius(8)
-    .border({ width: 1, color: '#D8C7B8', style: BorderStyle.Dashed })
+    .border({ width: 1, color: ThemeTokens.BORDER_PLACEHOLDER, style: BorderStyle.Dashed })
   }
 
   /**

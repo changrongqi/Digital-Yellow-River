@@ -539,7 +539,7 @@ export struct Favorites {
         .width(72)
         .height(72)
         .borderRadius(10)
-        .backgroundColor(card.heritage === null ? '#757575' : ThemeTokens.ACCENT_FALLBACK)
+        .backgroundColor(card.heritage === null ? ThemeTokens.BG_MISSING : ThemeTokens.ACCENT_FALLBACK)
 
         Column() {
           Text(this.cardName(card))
@@ -690,7 +690,7 @@ export struct Favorites {
               if (!this.isBuiltInTag(tag)) {
                 Text('✕')
                   .fontSize(12)
-                  .fontColor(this.editorSelected.indexOf(tag) >= 0 ? '#FFCCBC' : ThemeTokens.TEXT_MUTED)
+                  .fontColor(this.editorSelected.indexOf(tag) >= 0 ? ThemeTokens.TEXT_ON_SELECTED : ThemeTokens.TEXT_MUTED)
                   .width(32)
                   .height(44)
                   .textAlign(TextAlign.Center)

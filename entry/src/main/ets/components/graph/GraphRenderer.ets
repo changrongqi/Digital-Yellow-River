@@ -213,7 +213,7 @@ export class GraphRenderer {
       const endY: number = target.y - unitY * (target.radius + 2);
       if (edge.kind === GraphEdgeKind.RECOMMEND) {
         ctx.setLineDash([5, 4]);
-        ctx.strokeStyle = '#B08D7A';
+        ctx.strokeStyle = ThemeTokens.GRAPH_AFFINITY;
         ctx.lineWidth = 1.2;
       } else {
         ctx.strokeStyle = source.fill;
@@ -413,7 +413,7 @@ export class GraphRenderer {
       ctx.strokeStyle = CANVAS_BACKGROUND;
       ctx.lineWidth = 3;
       ctx.strokeText(label, drawX, labelY);
-      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? ThemeTokens.TEXT_SECONDARY : '#5D4037';
+      ctx.fillStyle = node.kind === GraphNodeKind.RECOMMEND ? ThemeTokens.TEXT_SECONDARY : ThemeTokens.GRAPH_LABEL;
       ctx.fillText(label, drawX, labelY);
       ctx.globalAlpha = 1;
     }

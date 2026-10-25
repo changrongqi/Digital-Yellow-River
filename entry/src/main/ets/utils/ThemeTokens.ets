@@ -56,4 +56,44 @@ export class ThemeTokens {
   static readonly ACCENT_MUTED = '#A1887F';
   /** 主题/数据缺失时的兜底强调色 */
   static readonly ACCENT_FALLBACK = '#8D6E63';
+  /** 数据缺失徽标底（Favorites 卡片封面占位） */
+  static readonly BG_MISSING = '#757575';
+  /** 成功操作文字/符号（绿色，加入主题） */
+  static readonly TEXT_SUCCESS = '#2E7D32';
+
+  // ==================== 浅底卡片 / 徽标 ====================
+  /** 小徽标底（图谱节点类型标签） */
+  static readonly BG_BADGE = '#F5EFE9';
+  /** 说明块底（图谱推荐理由） */
+  static readonly BG_NOTE = '#FBF7F2';
+  /** 图片占位底（图集无图时的浅橘底） */
+  static readonly BG_PLACEHOLDER = '#FBEFE5';
+  /** 图片占位虚线边框 */
+  static readonly BORDER_PLACEHOLDER = '#D8C7B8';
+  /** 浮层内分隔线（图谱缩放控件） */
+  static readonly DIVIDER_SOFT = '#EFE7E0';
+  /** 正文强调文字（文旅解读、事件评述，比 TEXT_PRIMARY 略浅） */
+  static readonly TEXT_BODY = '#4E342E';
+
+  // ==================== 增删语义（chip / 按钮） ====================
+  /** 「加入」chip 底色 */
+  static readonly BG_ADD_CHIP = '#E8F5E9';
+  /** 「加入」chip 边框 */
+  static readonly BORDER_ADD_CHIP = '#A5D6A7';
+  /** 「移出」chip 底色 */
+  static readonly BG_REMOVE_CHIP = '#FBE9E7';
+  /** 「移出」chip 边框 */
+  static readonly BORDER_REMOVE_CHIP = '#FFCCBC';
+  /** 选中 chip 上的图标文字（浅橙） */
+  static readonly TEXT_ON_SELECTED = '#FFCCBC';
+  /** 危险操作浅底（删除主题按钮） */
+  static readonly BG_DANGER_SOFT = '#FDECEA';
+
+  // ==================== 系统 / 画布 ====================
+  /** 系统栏图标与文字（浅底上的深色内容） */
+  static readonly SYSTEM_BAR_CONTENT = '#000000';
+  /** 图谱关联/推荐虚线边 */
+  static readonly GRAPH_AFFINITY = '#B08D7A';
+  /** 图谱节点标签文字（压在连线上，配浅色描边） */
+  static readonly GRAPH_LABEL = '#5D4037';
 }

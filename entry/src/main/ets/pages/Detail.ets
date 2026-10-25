@@ -730,7 +730,7 @@ struct Detail {
                 .width('100%')
               Text(this.heritage.detail.tourism.interpretation)
                 .fontSize(14)
-                .fontColor('#4E342E')
+                .fontColor(ThemeTokens.TEXT_BODY)
                 .lineHeight(25)
                 .textAlign(TextAlign.JUSTIFY)
                 .width('100%')

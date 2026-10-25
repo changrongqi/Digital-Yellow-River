@@ -48,9 +48,9 @@ export default class EntryAbility extends UIAbility {
       const mainWindow: window.Window = windowStage.getMainWindowSync();
       await mainWindow.setWindowSystemBarProperties({
         statusBarColor: ThemeTokens.BG_PAGE,
-        statusBarContentColor: '#000000',
+        statusBarContentColor: ThemeTokens.SYSTEM_BAR_CONTENT,
         navigationBarColor: ThemeTokens.BG_PAGE,
-        navigationBarContentColor: '#000000'
+        navigationBarContentColor: ThemeTokens.SYSTEM_BAR_CONTENT
       });
       hilog.info(DOMAIN, 'testTag', 'Applied light color mode and system bar colors');
     } catch (err) {

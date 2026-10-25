@@ -261,7 +261,7 @@ struct EventDetail {
                   .margin({ top: 18, bottom: 8 })
                 Text(this.event.commentary)
                   .fontSize(14)
-                  .fontColor('#4E342E')
+                  .fontColor(ThemeTokens.TEXT_BODY)
                   .lineHeight(25)
                   .textAlign(TextAlign.JUSTIFY)
                   .width('100%')
