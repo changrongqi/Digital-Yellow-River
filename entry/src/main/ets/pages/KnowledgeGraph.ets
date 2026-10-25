@@ -80,6 +80,16 @@ export struct KnowledgeGraph {
   private heritageMap: Map<string, Heritage> = new Map();
   private allHeritage: Heritage[] = [];
 
+  // ==================== 信息卡滚动定位（M8） ====================
+  /** 页面纵向滚动控制器 */
+  private pageScroller: Scroller = new Scroller();
+  /** 信息卡在滚动内容中的纵向位置（vp，父容器坐标系；0 = 尚未测量） */
+  private infoCardTop: number = 0;
+  /** 滚动视口高度（vp；0 = 尚未测量） */
+  private scrollViewportHeight: number = 0;
+  /** 首次布局测量完成后需要补做一次滚动 */
+  private revealPending: boolean = false;
+
   /** 主题变化处理器 */
   private themeChangedHandler: () => void = (): void => {
     this.loadThemes();
@@ -208,6 +218,35 @@ export struct KnowledgeGraph {
     }
     this.selectedNodeId = itemId;
     this.selectedNodeKind = kind;
+    this.revealInfoCard();
+  }
+
+  /**
+   * M8：把选中节点的信息卡滚入视野（手机首屏下方卡片此前需要手动下滑）。
+   * 信息卡已在视口内时不滚动，避免连续点选节点时画布被反复推走；
+   * 首次渲染尚未测量到位置时挂起，等 onAreaChange 回调后再滚。
+   */
+  private revealInfoCard(): void {
+    if (this.infoCardTop <= 0) {
+      this.revealPending = true;
+      return;
+    }
+    try {
+      const offset: OffsetResult = this.pageScroller.currentOffset();
+      const visibleTop: number = offset.yOffset + 8;
+      const visibleBottom: number = offset.yOffset + this.scrollViewportHeight - 48;
+      if (this.scrollViewportHeight > 0 && this.infoCardTop >= visibleTop &&
+        this.infoCardTop <= visibleBottom) {
+        return;
+      }
+      this.pageScroller.scrollTo({
+        xOffset: 0,
+        yOffset: Math.max(0, this.infoCardTop - 12),
+        animation: { duration: 240, curve: Curve.EaseOut }
+      });
+    } catch (err) {
+      hilog.error(DOMAIN, TAG, 'reveal info card failed: %{public}s', JSON.stringify(err));
+    }
   }
 
   private clearSelection(): void {
@@ -614,7 +653,7 @@ export struct KnowledgeGraph {
             .margin({ bottom: 10 })
           }
 
-          Scroll() {
+          Scroll(this.pageScroller) {
             Column() {
               // 主题 chips
               Scroll() {
@@ -744,27 +783,41 @@ export struct KnowledgeGraph {
               } else {
                 // 选中节点信息卡（展示值与回调传入独立组件，页面不承载信息卡 UI）
                 if (this.selectedNodeKind !== GraphNodeKind.NONE) {
-                  NodeInfoPanel({
-                    kind: this.selectedNodeKind,
-                    title: this.selectedNodeTitle(),
-                    nodeColor: this.selectedNodeColor(),
-                    kindLabel: this.selectedNodeKindLabel(),
-                    coverage: this.themeCoverageText(),
-                    meta: this.selectedHeritageMeta(),
-                    summary: this.selectedHeritageSummary(),
-                    highlights: this.selectedHeritageHighlights(),
-                    reason: this.selectedRecommendationReason(),
-                    onClose: () => {
-                      this.clearSelection();
-                    },
-                    onOpenManage: () => {
-                      this.openManage();
-                    },
-                    onOpenDetail: () => {
-                      this.openDetail(this.selectedNodeId);
-                    },
-                    onRemove: () => {
-                      this.removeSelectedFromTheme();
+                  // M8：外层包裹仅用于测量信息卡在滚动内容中的位置，不改变卡片视觉
+                  Column() {
+                    NodeInfoPanel({
+                      kind: this.selectedNodeKind,
+                      title: this.selectedNodeTitle(),
+                      nodeColor: this.selectedNodeColor(),
+                      kindLabel: this.selectedNodeKindLabel(),
+                      coverage: this.themeCoverageText(),
+                      meta: this.selectedHeritageMeta(),
+                      summary: this.selectedHeritageSummary(),
+                      highlights: this.selectedHeritageHighlights(),
+                      reason: this.selectedRecommendationReason(),
+                      onClose: () => {
+                        this.clearSelection();
+                      },
+                      onOpenManage: () => {
+                        this.openManage();
+                      },
+                      onOpenDetail: () => {
+                        this.openDetail(this.selectedNodeId);
+                      },
+                      onRemove: () => {
+                        this.removeSelectedFromTheme();
+                      }
+                    })
+                  }
+                  .width('100%')
+                  .onAreaChange((_oldArea: Area, newArea: Area) => {
+                    const cardTop: Length | undefined = newArea.position.y;
+                    if (typeof cardTop === 'number') {
+                      this.infoCardTop = cardTop;
+                    }
+                    if (this.revealPending) {
+                      this.revealPending = false;
+                      this.revealInfoCard();
                     }
                   })
                 }
@@ -860,6 +913,12 @@ export struct KnowledgeGraph {
           .layoutWeight(1)
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring)
+          .onAreaChange((_oldArea: Area, newArea: Area) => {
+            const height: Length = newArea.height;
+            if (typeof height === 'number') {
+              this.scrollViewportHeight = height;
+            }
+          })
         }
       }
       .width('100%')

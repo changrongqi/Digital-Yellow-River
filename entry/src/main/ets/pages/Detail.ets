@@ -38,6 +38,8 @@ import { ImageGallery } from '../components/ImageGallery';
 
 const DOMAIN = 0x0000;
 const TAG = 'Detail';
+/** 大屏正文最大宽度（M8）：限制 15vp 正文的单行字数，避免平板/折叠展开后横跨整屏 */
+const CONTENT_MAX_WIDTH: number = 680;
 
 @Entry
 @Component
@@ -248,28 +250,33 @@ struct Detail {
             .margin({ bottom: 8 })
         }
 
-        // 英雄横幅：年代主题色渐变 + 名称 + 徽标 + 简介（M4.0）
+        // 英雄横幅：年代主题色渐变 + 名称 + 徽标 + 简介（M4.0；M8 大屏正文限宽）
         Column() {
-          Text(this.heritage.name)
-            .fontSize(26)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Row() {
-            this.HeroTag(this.heritage.era)
-            this.HeroTag(this.heritage.type)
-            this.HeroTag(this.heritage.city)
-          }
-          .margin({ top: 12 })
-          Text(this.heritage.summary)
-            .fontSize(13)
-            .fontColor('#FFFFFF')
-            .lineHeight(21)
+          Column() {
+            Text(this.heritage.name)
+              .fontSize(26)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#FFFFFF')
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Row() {
+              this.HeroTag(this.heritage.era)
+              this.HeroTag(this.heritage.type)
+              this.HeroTag(this.heritage.city)
+            }
             .margin({ top: 12 })
+            Text(this.heritage.summary)
+              .fontSize(13)
+              .fontColor('#FFFFFF')
+              .lineHeight(21)
+              .margin({ top: 12 })
+          }
+          .width('100%')
+          .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
+          .alignItems(HorizontalAlign.Start)
         }
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
+        .alignItems(HorizontalAlign.Center)
         .padding({ left: 20, right: 20, top: 20, bottom: 20 })
         .linearGradient({
           angle: 135,
@@ -462,6 +469,7 @@ struct Detail {
         }
       }
       .width('100%')
+      .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       .alignItems(HorizontalAlign.Start)
       .padding(16)
     }
@@ -594,6 +602,7 @@ struct Detail {
         }
       }
       .width('100%')
+      .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       .alignItems(HorizontalAlign.Start)
       .padding(16)
     }
@@ -726,6 +735,7 @@ struct Detail {
         }
       }
       .width('100%')
+      .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       .alignItems(HorizontalAlign.Start)
       .padding(16)
     }
@@ -853,6 +863,7 @@ struct Detail {
         }
       }
       .width('100%')
+      .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       .alignItems(HorizontalAlign.Start)
       .padding(16)
     }
@@ -926,6 +937,7 @@ struct Detail {
         }
       }
       .width('100%')
+      .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       .alignItems(HorizontalAlign.Start)
       .padding(16)
     }
