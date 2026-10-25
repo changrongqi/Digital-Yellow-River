@@ -48,6 +48,23 @@ export struct ImageGallery {
 
   aboutToDisappear(): void {
     this.disposed = true;
+    // L9：组件卸载时释放全部 PixelMap（Image 组件不再需要，及时归还原生内存）
+    this.releaseAll();
+  }
+
+  /** 释放当前持有的 PixelMap（整体摘除后逐个 release，异常只记日志） */
+  private releaseAll(): void {
+    const maps: (image.PixelMap | null)[] = this.pixelMaps;
+    this.pixelMaps = [];
+    for (let i = 0; i < maps.length; i++) {
+      const pm: image.PixelMap | null = maps[i];
+      if (pm === null) {
+        continue;
+      }
+      pm.release().catch((err: Object) => {
+        hilog.error(DOMAIN, TAG, 'release pixelMap failed: %{public}s', JSON.stringify(err));
+      });
+    }
   }
 
   /** 初始全 null 数组（与 images 对齐，逐项异步替换） */
@@ -57,6 +74,19 @@ export struct ImageGallery {
       arr.push(null);
     }
     return arr;
+  }
+
+  /** L9：解码尺寸上限（长边 1600px），兼顾缩略图内存与 Lightbox 清晰度 */
+  private decodeOptions(width: number, height: number): image.DecodingOptions | undefined {
+    const longest: number = Math.max(width, height);
+    if (longest <= 1600) {
+      return undefined;
+    }
+    const ratio: number = 1600 / longest;
+    const options: image.DecodingOptions = {
+      desiredSize: { width: Math.round(width * ratio), height: Math.round(height * ratio) }
+    };
+    return options;
   }
 
   /** 逐张动态加载 rawfile 图片 → PixelMap（整体赋值触发刷新，踩坑 5） */
@@ -71,19 +101,43 @@ export struct ImageGallery {
       if (path === '') {
         continue; // 待填充占位，跳过加载
       }
+      let source: image.ImageSource | null = null;
+      let pixelMap: image.PixelMap | null = null;
       try {
         const data: Uint8Array = await rm.getRawFileContent(path);
-        const source: image.ImageSource = image.createImageSource(data.buffer as ArrayBuffer);
-        const pm: image.PixelMap = await source.createPixelMap();
+        source = image.createImageSource(data.buffer as ArrayBuffer);
+        const info: image.ImageInfo = await source.getImageInfo();
+        const options: image.DecodingOptions | undefined =
+          this.decodeOptions(info.size.width, info.size.height);
+        pixelMap = options === undefined ? await source.createPixelMap() : await source.createPixelMap(options);
         if (this.disposed) {
+          // 卸载后才完成：立即释放，避免泄漏
+          await pixelMap.release();
+          pixelMap = null;
           return;
         }
         const next: (image.PixelMap | null)[] = this.pixelMaps.slice();
-        next[i] = pm;
+        next[i] = pixelMap;
         this.pixelMaps = next;
+        pixelMap = null; // 所有权转移给 @State 数组，由卸载统一释放
       } catch (err) {
+        if (pixelMap !== null) {
+          try {
+            await pixelMap.release();
+          } catch (releaseErr) {
+            hilog.error(DOMAIN, TAG, 'release failed pixelMap: %{public}s', JSON.stringify(releaseErr));
+          }
+        }
         hilog.error(DOMAIN, TAG, 'load image %{public}s failed: %{public}s', path, JSON.stringify(err));
         // 保持 null → 显示占位卡
+      } finally {
+        if (source !== null) {
+          try {
+            await source.release();
+          } catch (releaseErr) {
+            hilog.error(DOMAIN, TAG, 'release imageSource failed: %{public}s', JSON.stringify(releaseErr));
+          }
+        }
       }
     }
   }
