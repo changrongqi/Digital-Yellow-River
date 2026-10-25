@@ -43,7 +43,7 @@
 
 ## 1. 项目概述
 
-基于 OpenHarmony 的黄河文化数字档案应用「黄河记忆」，整合黄河河南段（三门峡、洛阳、郑州、开封、濮阳五市）文化遗产资源（仰韶文化、二里头遗址、殷墟、商城遗址、汴梁文化等），提供沉浸式文化探索；利用鸿蒙分布式数据能力，实现收藏与笔记多设备自动同步，打造个人文化记忆库。
+基于 OpenHarmony 的黄河文化数字档案应用「黄河记忆」，整合黄河河南段（三门峡、洛阳、郑州、开封、濮阳、安阳六市）文化遗产资源（仰韶文化、二里头遗址、殷墟、商城遗址、汴梁文化等），提供沉浸式文化探索；利用鸿蒙分布式数据能力，实现收藏与笔记多设备自动同步，打造个人文化记忆库。
 
 > **产品定位（2026-09-27 用户明确，最高优先级）**：本应用是**沉浸式文化遗产体验**产品，不是精简数据知识库。
 > 三大硬性要求：
@@ -81,7 +81,7 @@ entry/src/main/
 │   ├── pages/                 # 页面层（UI）
 │   │   ├── Index.ets          # 主页：Tabs（发现/收藏/同步面板）
 │   │   ├── Discovery.ets      # 发现页：检索 + 三维度筛选 + 列表
-│   │   ├── Detail.ets         # 详情页：五层级内容 + 收藏 + 笔记 + 推荐
+│   │   ├── Detail.ets         # 详情页：内容页签 + 收藏 + 笔记 + 推荐
 │   │   ├── NoteEdit.ets       # 笔记编辑页
 │   │   ├── Favorites.ets      # 收藏页（按标签分组）
 │   │   ├── SyncPanel.ets      # 同步状态面板
@@ -100,7 +100,7 @@ entry/src/main/
 │   │       └── ConfirmDeleteSheet.ets # 删除主题确认弹层
 │   ├── model/                 # 数据模型层（类型定义，无逻辑）
 │   │   ├── Types.ets          # 三个枚举（年代/类型/城市）
-│   │   ├── Heritage.ets       # 文化条目 + 详情（五层级）
+│   │   ├── Heritage.ets       # 文化条目 + 详情（介绍/考古/事件/文旅）
 │   │   ├── Favorite.ets       # 收藏
 │   │   ├── Note.ets           # 笔记
 │   │   └── SyncStatus.ets     # 同步状态
@@ -131,9 +131,9 @@ entry/src/main/
 | city | HeritageCity | 城市 |
 | coverImage | string | rawfile 封面图相对路径 |
 | summary | string | 一句话简介（列表页用） |
-| detail | HeritageDetail | 五层级详情 |
+| detail | HeritageDetail | 详情内容（页签：介绍/考古/事件/文旅/笔记） |
 
-HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `events: string[]`（历史事件）/ `poems: Poem[]`（相关诗词，title+author+content）/ `tourism`（现代文旅）。
+HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `events: HeritageEvent[]`（结构化历史事件：year/title/summary/background/process/impact/figures/artifacts/furtherReading/commentary/images）/ `poems: Poem[]`（字段保留，产品已移除诗词页签，O12）/ `tourism: TourismInfo`（概览/参观指引/行程规划/深度解说）/ `highlights` / `specs` / `artifacts` / `images`。
 
 ### 4.3 用户数据（Favorite / Note）
 **必须携带 `deviceId` + `updatedAt`（冲突判定 LWW 的前提），即使 M2 单机阶段也用不到，M3 直接复用，避免返工。**
@@ -167,7 +167,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 | 编号 | 子任务 | 内容 | 状态 |
 |---|---|---|---|
-| M2.1 | FavoriteService + 本地持久化 | Preferences/RDB 存储收藏与笔记 | ✅ |
+| M2.1 | FavoriteService + 本地持久化 | Preferences 存储收藏与笔记（store `yellow_river_user_data`，键 `favorites_json` / `notes_json`） | ✅ |
 | M2.2 | 收藏页 | 按标签分组列表 + 自定义标签 | ✅ |
 | M2.3 | 笔记编辑页 | 文字 + 自动时间戳（标签归收藏维度，见 REVISION_LOG.md） | ✅ |
 | M2.4 | 详情页接入收藏/笔记 | 收藏按钮、笔记入口、列表联动 | ✅ |
@@ -226,7 +226,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 
 | 编号 | 子任务 | 内容 | 状态 |
 |---|---|---|---|
-| C1.1 | 主题数据模型 + 主题服务 | 新增 model/Theme.ets（id/name/colorIndex/createdAt/updatedAt/deviceId，LWW 兼容）；Favorite 增 themeIds[]（只增字段，旧数据缺省空数组）；service/ThemeService.ets：主题 CRUD（增/改名/删，删除主题仅清关联引用不删收藏）+ 收藏归类 setFavoriteThemes（走 FavoriteService 双写）+ Preferences 持久化（同一 store，theme_json 键）+ 订阅 SyncService.onRemoteChange 做主题远端 LWW 合并 | ✅ |
+| C1.1 | 主题数据模型 + 主题服务 | 新增 model/Theme.ets（id/name/colorIndex/createdAt/updatedAt/deviceId，LWW 兼容）；Favorite 增 themeIds[]（只增字段，旧数据缺省空数组）；service/ThemeService.ets：主题 CRUD（增/改名/删，删除主题仅清关联引用不删收藏）+ 收藏归类 setFavoriteThemes（走 FavoriteService 双写）+ Preferences 持久化（独立 store `yellow_river_themes`，键 `themes_json` / `theme_tombstones_json`）+ 订阅 SyncService.onRemoteChange 做主题远端 LWW 合并 | ✅ |
 | C1.2 | 知识图谱页 + 首页入口 | pages/KnowledgeGraph.ets（Index 第 4 个 Tab「图谱」）：主题 chips 选择/新建/重命名/删除 → Canvas 知识节点网络（中心=主题、环绕节点=已归类遗址，点击带 id 跳详情，O2）+ 归类操作（已归类列表移除 / 弹层从未归类收藏中选取加入）+ 拓展推荐（该主题已收藏遗址的相似推荐，排除已收藏，复用 utils/Recommendation）+ 空态兜底（无主题引导新建 / 有主题无收藏引导归类） | ✅ |
 | C1.3 | 分布式同步扩展 | SyncService 增 theme_ 前缀通道：syncTheme/removeThemeSync、RemoteChanges 增 upsertThemes/deletedThemeIds、远端解析 parseThemeFromWire；FavoriteService 增 updateFavoriteThemes（双写 syncFavorite，themeIds 随收藏走 LWW）；主题同步经 autoSync + 面板「立即同步」一并覆盖；真机联调并入 O7 清单 | ✅ |
 | C1.4 | 知识图谱交互与呈现重构（2026-10-22，用户要求参考 relation-graph / Trilium Notes / Obsidian） | ① 分层：新增 GraphLayout.ets（图模型 + 确定性力导向布局 + 视口适配，纯函数），GraphNode.ets 扩展节点/边/图模型，GraphCanvas.ets 只做渲染与手势；② 视觉：中心主题 + 环形种子力导向布局，节点大小按连接度编码，同类关联（同年代/同城市）二次曲线 + top-3 防毛球，拓展推荐空心节点挂在最相似遗址旁（虚线关系），标签屏幕坐标固定字号 + 缩小时淡出；③ 交互：Tap 选中并出信息卡、Pan 平移/拖拽节点、Pinch 缩放、右上角 ＋/－/⟲，邻接高亮其余淡出，点击空白取消；④ 逻辑：推荐改为多锚点聚合、排除全部已收藏；选中信息卡可直达详情/移出主题/归类管理；空主题补重命名/删除入口（修 O10）；@Watch + 数据签名修复 Canvas 不随数据重绘（修 O9），内容未变时保留用户视口 | ✅ |
@@ -301,7 +301,7 @@ HeritageDetail：`intro`（图文介绍）/ `discovery`（考古发现）/ `even
 2. 数据模型类型完整、字段与任务书对齐（含 deviceId/updatedAt）。
 3. 预置数据可被解析并在发现页列表展示。
 4. 三维度筛选 + 关键词检索结果准确。
-5. 详情页五层级内容完整，返回/跳转正常。
+5. 详情页各内容页签完整，返回/跳转正常。
 
 ## 8. 开发工作流与 Git 规范
 
@@ -326,5 +326,5 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 
 ## 9. 修订记录（已拆分至 REVISION_LOG.md）
 
-> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 78 条，以分册为准）。
+> 全部修订历史（自 2026-09-23 建立计划书起，按时间倒序、最新在前）见独立分册 **[REVISION_LOG.md](REVISION_LOG.md)**，内容原样迁移、无删改（当前 81 条，以分册为准）。
 > 维护规则：新增/调整子任务、范围、顺序、数据结构或踩坑条目时，先在 REVISION_LOG.md 表格顶部插入一行（`| 日期 | 修订内容 |`）写明理由，再同步更新本计划书状态、PITFALLS.md / ISSUES_RISKS.md / CONTENT_METHODOLOGY.md 等受影响分册。

@@ -7,7 +7,7 @@
 ## 核心特性
 
 - **发现与检索**：23 条真实遗址数据，支持关键词检索与「年代 / 类型 / 城市」三维度组合筛选。
-- **五层级详情页**：图文介绍、考古发现、历史事件、相关诗词、现代文旅，配合年代主题色视觉呈现。
+- **详情页内容页签**：介绍 / 考古 / 事件 / 文旅 / 笔记（诗词板块已按产品决定移除，见 O12），配合年代主题色视觉呈现。
 - **事件子详情页**：每条历史事件可点击进入专题讲解（背景 / 经过 / 影响 / 相关人物与文物 / 延伸阅读 / 深度解说）。
 - **文旅深度信息**：行程规划（推荐路线、时长、交通、串联景点）、参观指引（开放时间 / 票务）与深度解说。
 - **图集组件**：缩略图网格 + 点击 Lightbox 放大 + 动态响应式布局。
@@ -25,6 +25,7 @@
 | API 版本 | 最低 API 16（`compatibleSdkVersion: 5.0.4(16)`；任务书要求 ≥ 12） |
 | IDE | DevEco Studio |
 | 设备类型 | phone / tablet |
+| 包名 | `com.huanghe.memory`（与 `SyncService.BUNDLE_NAME` 一致） |
 | 网络 | 零网络依赖，文化资源全部离线预置 |
 | 存储 | 本地 Preferences 为基线 + 分布式 KV 同步 |
 | 权限 | `ohos.permission.DISTRIBUTED_DATASYNC` |
@@ -39,7 +40,7 @@ entry/src/main/
 │   ├── pages/                 # 页面层（UI）
 │   │   ├── Index.ets          # 主页 Tabs（发现 / 收藏 / 同步 / 图谱）
 │   │   ├── Discovery.ets      # 发现页：检索 + 三维度筛选 + 列表
-│   │   ├── Detail.ets         # 详情页：五层级内容 + 收藏 + 笔记 + 推荐
+│   │   ├── Detail.ets         # 详情页：内容页签 + 收藏 + 笔记 + 推荐
 │   │   ├── EventDetail.ets    # 事件子详情页
 │   │   ├── Favorites.ets      # 收藏页（按标签分组）
 │   │   ├── MyNotes.ets        # 我的笔记聚合页
@@ -47,12 +48,37 @@ entry/src/main/
 │   │   ├── SyncPanel.ets      # 同步状态面板
 │   │   └── KnowledgeGraph.ets # 知识图谱页
 │   ├── components/            # 可复用 UI 组件
-│   │   └── ImageGallery.ets   # 图集组件：缩略图 + Lightbox 放大
+│   │   ├── ImageGallery.ets   # 图集组件：缩略图 + Lightbox 放大
+│   │   └── graph/             # 知识图谱组件
+│   │       ├── GraphCanvas.ets        # Canvas 渲染、视口与手势
+│   │       ├── GraphRenderer.ets      # 节点/边/标签纯绘制
+│   │       ├── GraphLayout.ets        # 图模型 + 确定性力导向布局（纯函数）
+│   │       ├── GraphNode.ets          # 节点/边/图模型类型
+│   │       ├── NodeInfoPanel.ets      # 节点信息卡（主题/已归类/拓展推荐）
+│   │       ├── HeritageCard.ets       # 主题下遗址卡片
+│   │       ├── ThemeEditorSheet.ets   # 主题新建/重命名弹层
+│   │       ├── ManageSheet.ets        # 归类管理弹层
+│   │       └── ConfirmDeleteSheet.ets # 删除确认弹层
 │   ├── model/                 # 数据模型层（类型定义，无逻辑）
-│   ├── data/                  # 预置数据层：rawfile JSON 解析
-│   ├── service/               # 业务服务层（收藏 / 笔记 / 主题 / 同步）
-│   └── utils/                 # 工具函数（推荐算法、年代主题色、时间格式化）
-└── resources/rawfile/         # 预置数据集：heritage_data.json（离线基线）
+│   ├── data/                  # 预置数据层
+│   │   ├── HeritageDataLoader.ets     # rawfile JSON 唯一解析入口
+│   │   ├── HeritageRepository.ets     # 页面唯一数据入口（rawfile/mock + id 映射）
+│   │   └── MockHeritages.ets          # 预览器兜底数据（id 与正式数据一致）
+│   ├── service/               # 业务服务层
+│   │   ├── FavoriteService.ets        # 收藏/笔记/标签 + 本地持久化 + LWW
+│   │   ├── ThemeService.ets           # 文化主题 CRUD + LWW
+│   │   ├── SyncService.ets            # distributedKVStore / autoSync / 追赶同步
+│   │   ├── DeviceIdentity.ets         # 设备标识（ODID 优先，cache UUID 回退）
+│   │   └── PermissionService.ets      # DISTRIBUTED_DATASYNC 运行时权限
+│   └── utils/                 # 工具函数
+│       ├── Recommendation.ets         # 相似度推荐
+│       ├── ThemeRecommendation.ets    # 主题拓展推荐
+│       ├── EraTheme.ets               # 年代主题色
+│       ├── ThemeTokens.ets            # 设计 token（中性语义色）
+│       ├── JsonField.ets              # JSON 字段类型校验
+│       ├── LwwVersion.ets             # LWW 版本严格递增
+│       └── TimeFormat.ets             # 时间格式化
+└── resources/rawfile/         # heritage_data.json + images/（离线基线）
 ```
 
 分层原则：`pages` 只做 UI 与状态；数据读写一律走 `service`；`model` 只有类型。
