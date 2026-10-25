@@ -307,7 +307,7 @@ struct Detail {
           .tabBar(SubTabBarStyle.of('考古'))
 
           TabContent() {
-            this.TimelineTab(this.heritage.detail.events)
+            this.TimelineTab()
           }
           .tabBar(SubTabBarStyle.of('事件'))
 
@@ -811,17 +811,22 @@ struct Detail {
    * - 宽度全部自适应（年份列固定 64，正文 layoutWeight 吃掉剩余），平板/手机自动适配；
    * - 条目末尾显示「整理中」引导，把数据稀疏的底部变成有语义的收尾而非纯空白。
    */
+  /** L8：当前条目的事件列表（Builder 无参直读页面状态，避免参数按值传递失联） */
+  private timelineEvents(): HeritageEvent[] {
+    return this.heritage === null ? [] : this.heritage.detail.events;
+  }
+
   @Builder
-  TimelineTab(events: HeritageEvent[]) {
+  TimelineTab() {
     Scroll() {
       Column() {
-        if (events.length === 0) {
+        if (this.timelineEvents().length === 0) {
           Text('暂无内容')
             .fontSize(14)
             .fontColor(ThemeTokens.TEXT_MUTED)
             .padding({ top: 40 })
         } else {
-          ForEach(events, (item: HeritageEvent, idx: number) => {
+          ForEach(this.timelineEvents(), (item: HeritageEvent, idx: number) => {
             Column() {
               Row() {
                 // 年份徽标：主题色底圆角胶囊，宽度固定、内容驱动
@@ -854,9 +859,9 @@ struct Detail {
               })
 
               // 条目间分隔线（最后一条不加，避免多余空行）
-              if (idx < events.length - 1) {
+              if (idx < this.timelineEvents().length - 1) {
                 Divider()
-                  .color('#EFE9E2')
+                  .color(ThemeTokens.DIVIDER)
                   .strokeWidth(1)
                   .margin({ top: 14, bottom: 14 })
               }
@@ -866,7 +871,7 @@ struct Detail {
         }
 
         // 数据稀疏时的语义收尾：把底部留白变成「整理中」说明
-        if (events.length > 0 && events.length < 4) {
+        if (this.timelineEvents().length > 0 && this.timelineEvents().length < 4) {
           Text('更多考古进程正在整理中')
             .fontSize(12)
             .fontColor(ThemeTokens.TEXT_MUTED)
