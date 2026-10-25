@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，45 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，46 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN_V1.md`；查决策史 → `REVISION_LOG.md`
 
@@ -39,7 +39,7 @@
 - 预置数据加载统一走 `HeritageRepository`（`{list,byId,isMock}`）；JSON 字段统一 `JsonField`；`detail` 缺失/null/非对象降级为空 detail，不得丢整条
 - mock 数据 id 必须与 rawfile 正式 id 完全一致（禁 `mock-*` 前缀）；图谱节点只保留 key/label/kind/样式/坐标，未读字段及时删除
 - API 口径以 `build-profile.json5` 为准：最低 API16（任务书要求 ≥12），文档禁写死 12；下调最低版本必须配套 SDK 与安装回归
-- 零网络；图片只能放 `resources/rawfile/images/` 并由 `path` 引用
+- 零网络；图片只放 `resources/rawfile/images/<site-id>/`（`cover.jpg`、`01~04.jpg`、`eNN-MM.jpg`），rawfile 与 Mock 双份填 `path`；列表封面用 `CoverImage` 按长边 320px 缩略解码、卸载释放，禁止原图直进列表；HAP 约 21MB（123 张）
 - 同文件禁并行改；改完回读；一次一个子任务 → build 成功 → commit `[M?.?] 摘要`
 - 计划书可改，但理由必须写进 `REVISION_LOG.md`；「改计划」优先于「绕过计划」
 

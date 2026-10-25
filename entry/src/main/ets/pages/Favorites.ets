@@ -37,6 +37,7 @@ import { FavoriteService } from '../service/FavoriteService';
 import { formatDate } from '../utils/TimeFormat';
 import { ThemeTokens } from '../utils/ThemeTokens';
 import { RouterUtil } from '../utils/RouterUtil';
+import { CoverImage } from '../components/CoverImage';
 
 const DOMAIN = 0x0000;
 const TAG = 'Favorites';
@@ -523,23 +524,13 @@ export struct Favorites {
       // 主内容区域（点击跳详情，统一带 id，O2 约定）
       Row() {
         // 文字徽标（城市/年代；数据源缺失时灰色 + '?'）
-        Column() {
-          Text(card.heritage === null ? '?' : card.heritage.city)
-            .fontSize(15)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
-          if (card.heritage !== null) {
-            Text(card.heritage.era)
-              .fontSize(11)
-              .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
-              .margin({ top: 4 })
-          }
-        }
-        .justifyContent(FlexAlign.Center)
-        .width(72)
-        .height(72)
-        .borderRadius(10)
-        .backgroundColor(card.heritage === null ? ThemeTokens.BG_MISSING : ThemeTokens.ACCENT_FALLBACK)
+        // O1 图片接入：有封面显示缩略图；条目已下架时保持「?」灰底徽标
+        CoverImage({
+          path: card.heritage === null ? '' : card.heritage.coverImage,
+          label: card.heritage === null ? '?' : card.heritage.city,
+          subLabel: card.heritage === null ? '' : card.heritage.era,
+          fallbackColor: card.heritage === null ? ThemeTokens.BG_MISSING : ThemeTokens.ACCENT_FALLBACK
+        })
 
         Column() {
           Text(this.cardName(card))

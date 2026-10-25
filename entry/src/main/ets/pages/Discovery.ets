@@ -20,6 +20,7 @@ import { Heritage } from '../model/Heritage';
 import { HeritageEra, HeritageType, HeritageCity } from '../model/Types';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { CoverImage } from '../components/CoverImage';
 import { RouterUtil } from '../utils/RouterUtil';
 
 const DOMAIN = 0x0000;
@@ -325,22 +326,8 @@ export struct Discovery {
   @Builder
   HeritageCard(item: Heritage) {
     Row() {
-      // 封面占位（coverImage 当前全为空，用文字徽标占位；后续接入 rawfile 图片）
-      Column() {
-        Text(item.city)
-          .fontSize(15)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
-        Text(item.era)
-          .fontSize(11)
-          .fontColor(ThemeTokens.TEXT_ON_PRIMARY)
-          .margin({ top: 4 })
-      }
-      .justifyContent(FlexAlign.Center)
-      .width(72)
-      .height(72)
-      .borderRadius(10)
-      .backgroundColor(ThemeTokens.ACCENT_FALLBACK)
+      // O1 图片接入：有 rawfile 封面显示缩略图，缺失/失败回落城市文字徽标
+      CoverImage({ path: item.coverImage, label: item.city, subLabel: item.era })
 
       Column() {
         Text(item.name)
