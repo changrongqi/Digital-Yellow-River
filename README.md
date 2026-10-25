@@ -97,7 +97,8 @@ entry/src/main/
 ## 数据说明
 
 - 预置数据集位于 [heritage_data.json](file:///e:/HarmonyOS_coding/entry/src/main/resources/rawfile/heritage_data.json)，共 23 条真实遗址，覆盖 6 市、4 类型、6 个年代段。
-- 为便于预览器调试，[MockHeritages.ets](file:///e:/HarmonyOS_coding/entry/src/main/ets/data/MockHeritages.ets) 提供同结构 mock 数据，与 rawfile 共用同一解析入口，避免字段漂移。
+- 为便于预览器调试，[MockHeritages.ets](file:///e:/HarmonyOS_coding/entry/src/main/ets/data/MockHeritages.ets) 提供同结构 mock 数据，与 rawfile 共用同一解析入口，避免字段漂移；mock id 与正式数据完全一致。
+- 事件专题中的人物/文物/图片按可核证的官方/权威资料填充；暂无可靠来源的字段保持为空，页面自动隐藏对应区块，不虚构内容（缺口清单见 ISSUES_RISKS O35）。
 - 图集图片按相对路径从 `resources/rawfile/` 加载；缺失或加载失败时显示占位卡。
 - 内容深写与搜证方法论详见 [CONTENT_METHODOLOGY.md](file:///e:/HarmonyOS_coding/CONTENT_METHODOLOGY.md)（原 [PROJECT_PLAN.md](file:///e:/HarmonyOS_coding/PROJECT_PLAN.md) 第 1.1 节）。
 
@@ -109,7 +110,8 @@ entry/src/main/
 - **M2 收藏与笔记全流程 + 本地持久化** ✅
 - **M3 分布式数据同步** ✅
 - **M4 智能关联推荐 + 详情页信息架构改版** ✅
-- **M5 创新扩展（知识图谱等）** 🚧
+- **M5 创新扩展（知识图谱等）** ✅
+- **M6 全项目优化（两轮优化 + 第三轮收尾）** 🚧
 
 ## 许可证
 
