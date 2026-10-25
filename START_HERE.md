@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，37 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，39 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN_V1.md`；查决策史 → `REVISION_LOG.md`
 
@@ -28,6 +28,9 @@
 - 滚动定位：滚动容器内让指定内容进入视野时，用 `onAreaChange` 的 `position`（父坐标系=滚动内容坐标，不用 globalPosition 换算）作为 `scrollTo` 目标；已可见不滚，首次渲染未测量时由回调补滚
 - 大屏限宽：正文内容列用 `.width('100%') + constraintSize({ maxWidth: 680 })`，靠 Scroll `.align(Alignment.Top)` 居中；禁止写死 `.width(680)`（手机窄屏溢出）
 - 推荐转收藏：推荐节点转主题藏品必须「判重 `isFavorite` → `addFavorite` → 取记录追加 themeId → `updateFavoriteThemes`」，禁用 `toggleFavorite`；两次通知用暂挂标志合并为一次刷新；成功后把选中种类从 `RECOMMEND` 切为 `HERITAGE` 再刷新，否则信息卡会被清空
+- 设计 token：中性色统一用 `utils/ThemeTokens`（背景/文字/边框/操作/状态）；`#FFFFFF` 按「文字/描边」与「卡片/表面」语义分流；EraTheme 与 Theme 色板是业务数据，禁止并入 token
+- 元信息：bundleName 为 `com.huanghe.memory`，与 `SyncService.BUNDLE_NAME` 必须一致；应用名「黄河记忆」
+- 本地门禁：提交前跑 `scripts/ci-check.ps1`（规则检查 + clean 构建 + 33 个本地单测 + 告警基线）；`hvigorw test` 失败不改退出码，必须解析 test_result.txt
 - 预置数据加载统一走 `HeritageRepository`（`{list,byId,isMock}`）；JSON 字段统一 `JsonField`；`detail` 缺失/null/非对象降级为空 detail，不得丢整条
 - API 口径以 `build-profile.json5` 为准：最低 API16（任务书要求 ≥12），文档禁写死 12；下调最低版本必须配套 SDK 与安装回归
 - 零网络；图片只能放 `resources/rawfile/images/` 并由 `path` 引用
@@ -42,6 +45,7 @@ $env:Path='E:\DevEco Studio\jbr\bin;'+$env:Path
 & 'E:\DevEco Studio\tools\hvigor\bin\hvigorw.bat' assembleHap --mode module -p product=default -p buildMode=debug --no-daemon
 ```
 判据：`BUILD SUCCESSFUL`；WARN 按 `ISSUES_RISKS.md` O3 基线以「文件+类型」比对，行号漂移不算新增。
+一键门禁：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci-check.ps1`（规则检查 + clean 构建 + 本地单测 + 告警/测试结果校验）。
 
 ## 当前状态去哪查（每次接手都现场核实，勿信文档声称）
 - 进度：`PROJECT_PLAN.md` §5 状态表 + 实际代码，两者不一致时以代码为准

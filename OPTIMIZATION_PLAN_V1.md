@@ -57,6 +57,9 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M7 | M6.12 深色模式口径：锁定浅色 + 系统栏内容色 | 2026-10-23 | `0f3fcc6` | 代码 + 构建；系统深浅切换/状态栏可读性待 O29 设备验证 | 已完成（代码/构建） |
 | M8 | M6.13 节点信息卡自动滚入视野 + 大屏正文限宽 | 2026-10-25 | `1326225` | 代码 + 构建；手机点选滚动与平板行宽待 O30 设备验证 | 已完成（代码/构建） |
 | M9 | M6.14 拓展推荐节点收藏并归入主题闭环 | 2026-10-25 | `2eff641` | 代码 + 构建；一键收藏/归类即时刷新待 O31 设备验证 | 已完成（代码/构建） |
+| M10 | M6.15 应用元信息定稿 | 2026-10-25 | `f101015` | 配置 + 构建；桌面名称/正式包名安装待 O32 设备验证 | 已完成（配置/构建） |
+| M11 | M6.16 核心纯函数单测 + 本地 CI 门禁 | 2026-10-25 | `3b721ad` | 代码 + 33 用例通过 + CI 脚本可阻断回归 | 已完成（代码/构建/测试） |
+| L1 | 设计 token 层：背景/正文/次要文字/边框 | 2026-10-25 | `c9ce1dc` | 代码 + 构建；token 化后 UI 回归待 O33 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -202,26 +205,29 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-25，commit `2eff641`，执行编号 M6.14）：① **入口**——推荐节点信息卡按钮区新增主操作「收藏并归类」（实心棕底，`accessibilityText('收藏并归入当前主题')`），「查看详情」在同节点降为浅底次要操作；HERITAGE/THEME 节点按钮层级不变。② **闭环**——`KnowledgeGraph.addRecommendToTheme`：先用 `FavoriteService.isFavorite` 判重、`addFavorite` 新增收藏，再用 `getFavorite` 取记录追加当前 `themeId` 并 `updateFavoriteThemes` 提交；不调用 `toggleFavorite`，避免远端合并已收藏时反向取消。③ **一次刷新**——两次服务写入期间用 `addingRecommend` 暂挂 `favChangedHandler`，结束后 `refreshSelected()` 整体重算（themedHeritages / recommendations / graphVersion）一次；成功后选中种类由 `RECOMMEND` 切为 `HERITAGE`，信息卡原地变为「已归类」并显示查看详情/移出主题，推荐节点转实心。④ **构建**——clean + 增量均 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（KnowledgeGraph pushUrl 539→579 行号漂移）。⑤ **验证范围**——当前无连接设备；一键收藏后图谱节点实心化、当前主题计数与归类列表即时更新、收藏页/详情页同步可见、重复点击不产生重复收藏登记 O31，未冒充通过。
   - 依赖：H2/M1（已完成）。
 
-- [ ] **M10 应用元信息仍为模板占位**
+- [x] **M10 应用元信息仍为模板占位**（已完成：配置/构建；桌面名称与正式包名安装待设备验证）
   - 位置：[app.json5](AppScope/app.json5#L3-L9)、[string.json](AppScope/resources/base/element/string.json#L1-L8)、[entry string.json](entry/src/main/resources/base/element/string.json#L1-L20)
   - 问题：`app_name=first`、`bundleName=com.example.first`、`label=label`。
   - 建议：改为“黄河记忆”、正式 bundleName、标签/描述/版本；同步 `SyncService.BUNDLE_NAME`。
   - 验收：桌面显示“黄河记忆”；包名与文档一致；真机联调前定稿。
-  - 依赖：H4（API/交付口径）。
+  - 完成记录（2026-10-25，commit `f101015`，执行编号 M6.15）：① **包名**——`bundleName` 改为 `com.huanghe.memory`、`vendor` 改为 `huanghe`；`SyncService.BUNDLE_NAME` 同步改为同一值（`createKVManager` 与 `createDeviceManager` 依赖它，两处必须一致）。② **名称**——`AppScope` 的 `app_name` 改为「黄河记忆」；entry 的 `module_desc` / `EntryAbility_desc` / `EntryAbility_label` 分别改为「黄河文化分布式数字档案」「黄河记忆 · 黄河文化分布式数字档案」「黄河记忆」；版本沿用 `versionCode 1000000` / `versionName 1.0.0`。③ **文档**——PROJECT_PLAN 真机联调安装说明的 bundleName 同步为 `com.huanghe.memory`。④ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致零新增。⑤ **验证范围**——当前无连接设备；桌面/设置页名称、正式包名安装与升级行为登记 O32，未冒充通过。
+  - 依赖：H4（已完成）。
 
-- [ ] **M11 无业务单元测试与 CI 门禁**
+- [x] **M11 无业务单元测试与 CI 门禁**（已完成：代码/构建；33 个本地用例通过，CI 脚本可阻断回归）
   - 位置：[LocalUnit.test.ets](entry/src/test/LocalUnit.test.ets#L24-L31)、[Ability.test.ets](entry/src/ohosTest/ets/test/Ability.test.ets#L25-L32)
   - 问题：仅模板断言；LWW/推荐/布局/解析无测试；无 CI。
   - 建议：补 Hypium 单测；CI 执行 build+lint+test。
   - 验收：核心纯函数有测试；CI 可阻断回归。
-  - 依赖：M1/M4（被测逻辑稳定后）。
+  - 完成记录（2026-10-25，commit `3b721ad`，执行编号 M6.16）：① **单测**——删除模板 `LocalUnit.test.ets`，新增 `TestFixtures.ets` 与三组业务用例：`CoreLogic.test`（LWW 严格递增、JsonField 类型降级、时间格式化、主题色兜底）、`Recommendation.test`（one-hot 特征、余弦相似度、Top-N 排序与兜底、收藏加成、主题推荐排除）、`GraphLayout.test`（节点/边构建、推荐锚点与文案、布局确定性、视口适配）。② **结果**——`hvigorw test -p module=entry` 共 33 个用例全部通过（Failure 0 / Error 0）；测试数据用显式 interface 或 `JSON.parse` 构造，规避 ArkTS「禁止无类型对象字面量」。③ **CI 门禁**——新增 `scripts/ci-check.ps1`：项目规则检查（禁 any / 禁解构）→ clean 构建 → 本地单测 → 告警基线（≤16）与 `test_result.txt` 解析，任一步失败非 0 退出；脚本使用 UTF-8 BOM 以兼容 PowerShell 5 中文解析。④ **关键发现**——`hvigorw test` 在用例失败时仍可能返回 `BUILD SUCCESSFUL`，因此 CI 必须解析 `entry/.test/default/intermediates/test/coverage_data/test_result.txt` 的 Failure/Error，不能只看退出码。⑤ **验证范围**——本地测试与脚本实跑通过；设备侧 Instrument Test 仍为模板，按需另立任务。
+  - 依赖：M1/M4（已完成）。
 
 ### 3.4 低
 
-- [ ] **L1 402 处硬编码颜色，无设计 token 层**
+- [x] **L1 402 处硬编码颜色，无设计 token 层**（已完成：代码/构建；token 化后 UI 回归待设备验证）
   - 位置：[EraTheme.ets](entry/src/main/ets/utils/EraTheme.ets#L29-L64)、[Theme.ets](entry/src/main/ets/model/Theme.ets#L27)
   - 建议：抽 `ThemeTokens`/资源；先覆盖背景、正文、次要文字、边框。
   - 验收：高频颜色有单一来源；改色不再全库搜。
+  - 完成记录（2026-10-25，commit `c9ce1dc`）：① **token 层**——新增 `utils/ThemeTokens.ets`，集中 16 个高频语义色：`BG_PAGE/BG_CARD/BG_CANVAS/BG_SOFT/BG_WARNING`、`TEXT_PRIMARY/TEXT_SECONDARY/TEXT_MUTED/TEXT_SUBTLE/TEXT_ON_PRIMARY`、`PRIMARY/DANGER`、`BORDER/BORDER_STRONG/DIVIDER`、`ACCENT_MUTED/ACCENT_FALLBACK`；色值与此前一致（`TEXT_SUBTLE` 保留原 #7D655B，避免视觉漂移）。② **替换范围**——19 个 UI/入口文件（页面、图谱组件、图集、EntryAbility 系统栏）统一引用 token；`#FFFFFF` 按语义区分：`fontColor/strokeStyle` → `TEXT_ON_PRIMARY`，`backgroundColor/fillStyle` → `BG_CARD`。③ **边界**——`utils/EraTheme`（年代主题色）与 `model/Theme.THEME_PALETTE`（用户可选主题色板）属于**业务数据**，不纳入中性 token，保持各自单一来源；JSON/资源文件不改。④ **验证**——替换后扫描 16 个高频色值在非数据文件中残留均为 0；clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致零新增；本地 33 个用例通过。⑤ **验证范围**——当前无连接设备；token 化后的页面视觉一致性、系统栏颜色、图谱 Canvas 绘制、浅色锁定效果登记 O33，未冒充通过。
 
 - [ ] **L2 少量死代码**
   - 位置：[HeritageCard.ets](entry/src/main/ets/components/graph/HeritageCard.ets#L11)、[GraphNode.ets](entry/src/main/ets/components/graph/GraphNode.ets#L32-L47)
@@ -279,7 +285,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M9 已完成（代码/构建；设备验证待 O23~O31/O7），下一步 M10 应用元信息定稿。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成（代码/构建/测试；设备验证待 O23~O33/O7）；第三轮 L1 已完成，下一步 L2 死代码清理。
 
 ---
 
@@ -360,3 +366,6 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-23 | 第二轮 M7 完成并记录（commit `0f3fcc6`，M6.12）：明确只支持浅色，`setColorMode(COLOR_MODE_LIGHT)` 移到 loadContent 成功回调；系统栏设置浅底深字（#FAF6F0/#000000）；dark 启动底保留；系统深浅切换待 O29 | UI 全为浅色硬编码，跟随系统深色会出现启动窗深、页面浅的割裂且状态栏图标可能不可读；L1 token 未完成，选择浅色分支成本最低、可读性最稳 |
 | 2026-10-25 | 第二轮 M8 完成并记录（commit `1326225`，M6.13）：知识图谱外层 Scroll 绑定 Scroller，信息卡测量容器记录滚动内容坐标，点选节点后仅在卡片不可见时自动滚入视野；详情页 5 个页签与英雄横幅文字列限宽 680vp 居中，手机布局不变；手机滚动落点与平板行宽待 O30 | 信息卡固定在画布下方，手机首屏常看不到；平板 15vp 正文横跨整屏导致单行过长。选择自动滚动而非改浮层，保持现有信息架构与 O16 图谱结构不变；限宽用 constraintSize（优先级高于 width）与 Scroll 顶部居中，避免固定宽度在手机上溢出 |
 | 2026-10-25 | 第二轮 M9 完成并记录（commit `2eff641`，M6.14）：推荐节点信息卡新增「收藏并归类」主操作（查看详情降为次要），`addFavorite` + `updateFavoriteThemes` 组合完成收藏与归入当前主题，期间暂挂订阅并只刷新一次；成功后选中由 RECOMMEND 切 HERITAGE，信息卡原地显示已归类；一键闭环待 O31 | 推荐节点此前只能查看详情，无法把「拓展」直接转化为主题藏品，闭环断裂；用 isFavorite 判重 + addFavorite 而非 toggleFavorite，避免远端已收藏时反向取消；两次写入合并刷新符合 M6.10 单通道约定 |
+| 2026-10-25 | 第二轮 M10 完成并记录（commit `f101015`，M6.15）：应用名改为「黄河记忆」，bundleName 改为 `com.huanghe.memory`，vendor/模块描述/Ability 标签同步，`SyncService.BUNDLE_NAME` 保持一致；桌面名称与正式包名安装待 O32 | `com.example.first` 与 `first/label` 是模板占位，交付前必须定稿；bundleName 同时决定 KVManager/DeviceManager 的调用参数，必须与 app.json5 一致 |
+| 2026-10-25 | 第二轮 M11 完成并记录（commit `3b721ad`，M6.16）：删除模板断言，新增 LWW/JsonField/时间格式化/推荐/主题推荐/图谱布局 33 个本地用例；新增 `scripts/ci-check.ps1` 做规则检查 + clean 构建 + 单测 + 告警基线门禁，并解析 test_result.txt | 核心纯函数此前零测试，回归只能靠人工；`hvigorw test` 在用例失败时仍可能 BUILD SUCCESSFUL，必须解析测试结果文件；脚本经 PowerShell 5 实跑验证 |
+| 2026-10-25 | 第三轮 L1 完成并记录（commit `c9ce1dc`）：新增 `utils/ThemeTokens.ets` 16 个语义 token，19 个 UI/入口文件替换高频背景/文字/边框色；EraTheme 与 Theme 色板保持数据源；替换后残留为 0，构建与 33 用例通过；UI 回归待 O33 | 402 处硬编码颜色导致改色需全库搜索；token 仅收敛高频中性色，年代/主题色属于业务数据不能混入，`#FFFFFF` 必须按文字/背景语义区分 |
