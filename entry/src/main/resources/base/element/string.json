@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "黄河文化分布式数字档案"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "黄河记忆 · 黄河文化分布式数字档案"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "黄河记忆"
     },
     {
       "name": "distributed_datasync_reason",

@@ -1,7 +1,7 @@
 {
   "app": {
-    "bundleName": "com.example.first",
-    "vendor": "example",
+    "bundleName": "com.huanghe.memory",
+    "vendor": "huanghe",
     "versionCode": 1000000,
     "versionName": "1.0.0",
     "buildVersion": "1",

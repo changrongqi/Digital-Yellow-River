@@ -44,7 +44,7 @@ const TAG = 'SyncService';
 /** 分布式 KV store id（两端设备一致才能互通） */
 const STORE_ID = 'yellow_river_user_data';
 /** 应用 bundleName（与 AppScope/app.json5 保持一致，createKVManager 要求） */
-const BUNDLE_NAME = 'com.example.first';
+const BUNDLE_NAME = 'com.huanghe.memory';
 /** 收藏存储键前缀：fav_{itemId} */
 const KEY_FAV_PREFIX = 'fav_';
 /** 笔记存储键前缀：note_{noteId} */
