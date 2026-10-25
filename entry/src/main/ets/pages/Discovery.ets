@@ -16,11 +16,11 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { router } from '@kit.ArkUI';
 import { Heritage } from '../model/Heritage';
 import { HeritageEra, HeritageType, HeritageCity } from '../model/Types';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { RouterUtil } from '../utils/RouterUtil';
 
 const DOMAIN = 0x0000;
 const TAG = 'Discovery';
@@ -306,7 +306,7 @@ export struct Discovery {
               }
               .onClick(() => {
                 // M1.5：点击跳转详情页，传遗址 id，详情页按 id 重新取数
-                router.pushUrl({ url: 'pages/Detail', params: { id: item.id } });
+                RouterUtil.push('pages/Detail', { id: item.id });
               })
             }, (item: Heritage) => item.id)
           }

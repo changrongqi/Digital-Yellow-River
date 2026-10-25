@@ -12,7 +12,7 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { display, router } from '@kit.ArkUI';
+import { display } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
@@ -31,6 +31,7 @@ import { ThemeEditorSheet } from '../components/graph/ThemeEditorSheet';
 import { ManageSheet } from '../components/graph/ManageSheet';
 import { ConfirmDeleteSheet } from '../components/graph/ConfirmDeleteSheet';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { RouterUtil } from '../utils/RouterUtil';
 
 const DOMAIN = 0x0000;
 const TAG = 'KnowledgeGraph';
@@ -575,11 +576,7 @@ export struct KnowledgeGraph {
   // ==================== 跳转 ====================
 
   private openDetail(heritageId: string): void {
-    try {
-      router.pushUrl({ url: 'pages/Detail', params: { id: heritageId } });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'open detail failed: %{public}s', JSON.stringify(err));
-    }
+    RouterUtil.push('pages/Detail', { id: heritageId });
   }
 
   // ==================== UI ====================

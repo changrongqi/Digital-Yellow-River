@@ -24,7 +24,6 @@
  * - onPageShow / onDataChanged 刷新收藏状态与笔记列表；aboutToDisappear 注销监听防泄漏。
  */
 
-import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Heritage, HeritageEvent, SpecItem, Artifact } from '../model/Heritage';
 import { Note } from '../model/Note';
@@ -36,6 +35,7 @@ import { formatDateTime } from '../utils/TimeFormat';
 import { recommendHeritages } from '../utils/Recommendation';
 import { ImageGallery } from '../components/ImageGallery';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { RouterUtil } from '../utils/RouterUtil';
 
 const DOMAIN = 0x0000;
 const TAG = 'Detail';
@@ -63,7 +63,7 @@ struct Detail {
   private favSignature: string = '';
 
   aboutToAppear(): void {
-    const params = router.getParams() as Record<string, Object> | undefined;
+    const params = RouterUtil.getParams();
     if (params !== undefined) {
       const idObj: Object | undefined = params['id'];
       if (idObj !== undefined && idObj !== null) {
@@ -143,18 +143,14 @@ struct Detail {
   }
 
   /**
-   * 打开笔记编辑页（router.pushUrl 唯一调用点，收敛 deprecate 告警）。
+   * 打开笔记编辑页（统一走 RouterUtil，收敛 deprecated 调用与异常处理）。
    * @param noteId 空串 = 新建；携带 = 编辑对应笔记
    */
   private openNoteEditor(noteId: string): void {
     if (this.heritage === null) {
       return;
     }
-    try {
-      router.pushUrl({ url: 'pages/NoteEdit', params: { id: this.heritage.id, noteId: noteId } });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'open note editor failed: %{public}s', JSON.stringify(err));
-    }
+    RouterUtil.push('pages/NoteEdit', { id: this.heritage.id, noteId: noteId });
   }
 
   /**
@@ -165,14 +161,7 @@ struct Detail {
     if (this.heritage === null) {
       return;
     }
-    try {
-      router.pushUrl({
-        url: 'pages/EventDetail',
-        params: { heritageId: this.heritage.id, eventIndex: index }
-      });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'open event detail failed: %{public}s', JSON.stringify(err));
-    }
+    RouterUtil.push('pages/EventDetail', { heritageId: this.heritage.id, eventIndex: index });
   }
 
   /**
@@ -200,11 +189,7 @@ struct Detail {
    * 告警 +1，收尾同步更新 O3 基线）。
    */
   private openRecommendedDetail(heritageId: string): void {
-    try {
-      router.pushUrl({ url: 'pages/Detail', params: { id: heritageId } });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'open recommended detail failed: %{public}s', JSON.stringify(err));
-    }
+    RouterUtil.push('pages/Detail', { id: heritageId });
   }
 
   build() {
@@ -220,7 +205,7 @@ struct Detail {
           .accessibilityText('返回')
           .accessibilityLevel('yes')
           .onClick(() => {
-            router.back();
+            RouterUtil.back();
           })
         Text(this.heritage === null ? '遗产详情' : this.heritage.name)
           .fontSize(18)

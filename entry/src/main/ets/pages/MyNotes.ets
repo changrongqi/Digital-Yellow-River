@@ -18,7 +18,6 @@
  * 顶部提示条与收藏页行为一致；本页无路由入参，直接预览可看空态/数据态。
  */
 
-import { router } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
@@ -27,6 +26,7 @@ import { HeritageRepository, HeritageLoadResult } from '../data/HeritageReposito
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDateTime } from '../utils/TimeFormat';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { RouterUtil } from '../utils/RouterUtil';
 
 const DOMAIN = 0x0000;
 const TAG = 'MyNotes';
@@ -124,18 +124,14 @@ struct MyNotes {
     this.totalNotes = all.length;
   }
 
-  /** 打开详情页（router.pushUrl 唯一调用点，收敛 deprecate 告警；统一带 id，O2） */
+  /** 打开详情页（统一走 RouterUtil；统一带 id，O2） */
   private openDetail(itemId: string): void {
-    try {
-      router.pushUrl({ url: 'pages/Detail', params: { id: itemId } });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'open detail failed: %{public}s', JSON.stringify(err));
-    }
+    RouterUtil.push('pages/Detail', { id: itemId });
   }
 
-  /** 返回上一页（router.back 唯一调用点，收敛 deprecate 告警） */
+  /** 返回上一页（统一走 RouterUtil） */
   private goBack(): void {
-    router.back();
+    RouterUtil.back();
   }
 
   build() {

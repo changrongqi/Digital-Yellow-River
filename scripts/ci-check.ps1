@@ -100,15 +100,15 @@ if (-not $SkipClean) {
 $buildLog = Join-Path $logDir 'ci-build.log'
 Invoke-Hvigor 'assembleHap --mode module -p product=default -p buildMode=debug --no-daemon' $buildLog
 
-# 告警基线（O3）：16 条，按「文件 + 类型」比对；此处只做数量上限门禁，行号漂移不阻塞
+# 告警基线（O3）：L6 路由集中后为 4 条，按「文件 + 类型」比对；此处只做数量上限门禁，行号漂移不阻塞
 $raw = Get-Content $buildLog -Raw
 $clean = $raw -replace "$([char]27)\[[0-9;]*m", ''
 $warnCount = ([regex]::Matches($clean, 'ArkTS:WARN File:')).Count
-if ($warnCount -gt 16) {
-  Write-Error "构建告警超出基线：$warnCount > 16（日志 $buildLog）"
+if ($warnCount -gt 4) {
+  Write-Error "构建告警超出基线：$warnCount > 4（日志 $buildLog）"
   exit 1
 }
-Write-Host "  通过：BUILD SUCCESSFUL，ArkTS WARN $warnCount 条（基线上限 16）"
+Write-Host "  通过：BUILD SUCCESSFUL，ArkTS WARN $warnCount 条（基线上限 4）"
 
 # ==================== 3. 本地单元测试 ====================
 Write-Host '== 3/4 本地单元测试 =='

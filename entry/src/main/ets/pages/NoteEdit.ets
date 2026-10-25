@@ -21,13 +21,13 @@
  * 完整数据流验证需 M2.4 详情页笔记入口接入后进行。
  */
 
-import { router } from '@kit.ArkUI';
 import { Heritage } from '../model/Heritage';
 import { Note } from '../model/Note';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDateTime } from '../utils/TimeFormat';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { RouterUtil } from '../utils/RouterUtil';
 
 @Entry
 @Component
@@ -57,7 +57,7 @@ struct NoteEdit {
   private leaving: boolean = false;
 
   aboutToAppear(): void {
-    const params = router.getParams() as Record<string, Object> | undefined;
+    const params = RouterUtil.getParams();
     if (params !== undefined) {
       const idObj: Object | undefined = params['id'];
       if (idObj !== undefined && idObj !== null) {
@@ -166,10 +166,10 @@ struct NoteEdit {
     return this.handleBack();
   }
 
-  /** 返回上一页（router.back 唯一调用点，收敛 deprecate 告警） */
+  /** 返回上一页（统一走 RouterUtil） */
   private goBack(): void {
     this.leaving = true;
-    router.back();
+    RouterUtil.back();
   }
 
   build() {

@@ -16,12 +16,12 @@
  * 找不到条目 / 事件越界 / 无详情字段 → 对应占位，不崩溃。
  */
 
-import { router } from '@kit.ArkUI';
 import { Heritage, HeritageEvent } from '../model/Heritage';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { getEraTheme } from '../utils/EraTheme';
 import { ImageGallery } from '../components/ImageGallery';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { RouterUtil } from '../utils/RouterUtil';
 
 @Entry
 @Component
@@ -35,7 +35,7 @@ struct EventDetail {
   private eventIndex: number = 0;
 
   aboutToAppear(): void {
-    const params = router.getParams() as Record<string, Object> | undefined;
+    const params = RouterUtil.getParams();
     if (params !== undefined) {
       const idObj: Object | undefined = params['heritageId'];
       if (idObj !== undefined && idObj !== null) {
@@ -147,7 +147,7 @@ struct EventDetail {
           .accessibilityText('返回')
           .accessibilityLevel('yes')
           .onClick(() => {
-            router.back();
+            RouterUtil.back();
           })
         Text(this.heritage === null ? '事件专题' : `${this.heritage.name} · 事件专题`)
           .fontSize(18)

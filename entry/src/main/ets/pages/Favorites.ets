@@ -28,7 +28,6 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
@@ -37,6 +36,7 @@ import { HeritageRepository, HeritageLoadResult } from '../data/HeritageReposito
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDate } from '../utils/TimeFormat';
 import { ThemeTokens } from '../utils/ThemeTokens';
+import { RouterUtil } from '../utils/RouterUtil';
 
 const DOMAIN = 0x0000;
 const TAG = 'Favorites';
@@ -232,13 +232,9 @@ export struct Favorites {
 
   // ==================== 弹层状态与操作 ====================
 
-  /** 打开「我的笔记」列表（M2.5；try/catch 防 may throw 告警） */
+  /** 打开「我的笔记」列表（M2.5；统一走 RouterUtil 的异常处理） */
   private openMyNotes(): void {
-    try {
-      router.pushUrl({ url: 'pages/MyNotes' });
-    } catch (err) {
-      hilog.error(DOMAIN, TAG, 'open my notes failed: %{public}s', JSON.stringify(err));
-    }
+    RouterUtil.push('pages/MyNotes');
   }
 
   private openMenu(itemId: string, name: string): void {
@@ -604,7 +600,7 @@ export struct Favorites {
       .layoutWeight(1)
       .onClick(() => {
         if (card.heritage !== null) {
-          router.pushUrl({ url: 'pages/Detail', params: { id: card.favorite.itemId } });
+          RouterUtil.push('pages/Detail', { id: card.favorite.itemId });
         }
       })
 
