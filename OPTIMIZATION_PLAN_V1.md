@@ -56,6 +56,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M6 | M6.11 无障碍、触控目标与对比度 | 2026-10-23 | `5732dc5` + 补强 `0c9b973` / `f354d52` / `3524d00` | 代码 + 构建 + 对比度核算；TalkBack/字体缩放待 O28 设备验证 | 已完成（代码/构建/核算） |
 | M7 | M6.12 深色模式口径：锁定浅色 + 系统栏内容色 | 2026-10-23 | `0f3fcc6` | 代码 + 构建；系统深浅切换/状态栏可读性待 O29 设备验证 | 已完成（代码/构建） |
 | M8 | M6.13 节点信息卡自动滚入视野 + 大屏正文限宽 | 2026-10-25 | `1326225` | 代码 + 构建；手机点选滚动与平板行宽待 O30 设备验证 | 已完成（代码/构建） |
+| M9 | M6.14 拓展推荐节点收藏并归入主题闭环 | 2026-10-25 | `2eff641` | 代码 + 构建；一键收藏/归类即时刷新待 O31 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -193,12 +194,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-25，commit `1326225`，执行编号 M6.13）：① **自动滚动**——页面外层 Scroll 绑定 `Scroller`；信息卡外包一层测量容器，`onAreaChange` 的 `position.y`（相对父组件 = 滚动内容坐标，不受滚动偏移影响）记录卡片位置，选中节点后若信息卡不在可视区则 `scrollTo` 到卡片顶部上方 12vp（240ms `Curve.EaseOut`）。② **不打断连续点选**——先用 `currentOffset().yOffset` + 视口高度（Scroll 的 `onAreaChange` 记录）判断信息卡是否已可见，已可见不滚动；首次渲染未测量时挂起，由 `onAreaChange` 回调补滚。③ **大屏限宽**——新增 `CONTENT_MAX_WIDTH = 680`；详情页介绍/考古/事件/文旅/笔记 5 个页签内容列、英雄横幅内部文字列均 `.width('100%') + constraintSize({ maxWidth: 680 })`；英雄横幅渐变仍全宽，`Scroll.align(Alignment.Top)` 使限宽内容水平居中；手机（<680vp）布局不变。④ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（行号漂移：KnowledgeGraph pushUrl 539、Detail getParams 63 / pushUrl 128/143/178 / back 197）。⑤ **验证范围**——当前无连接设备；手机/平板三类节点（主题/已归类/拓展推荐）点选后的滚动落点、连续点选是否抖动、平板横竖屏与分屏行宽登记 O30，未冒充通过。
   - 依赖：无。
 
-- [ ] **M9 拓展推荐节点缺少“收藏并归入主题”闭环**
+- [x] **M9 拓展推荐节点缺少“收藏并归入主题”闭环**（已完成：代码/构建；一键收藏/归类即时刷新待设备验证）
   - 位置：[NodeInfoPanel.ets](entry/src/main/ets/components/graph/NodeInfoPanel.ets#L123-L142)
   - 问题：RECOMMEND 只有“查看详情”。
   - 建议：增加“收藏并归入当前主题”动作。
   - 验收：推荐节点一键收藏并归入当前主题，图谱即时刷新。
-  - 依赖：H2/M1（同步一致性）。
+  - 完成记录（2026-10-25，commit `2eff641`，执行编号 M6.14）：① **入口**——推荐节点信息卡按钮区新增主操作「收藏并归类」（实心棕底，`accessibilityText('收藏并归入当前主题')`），「查看详情」在同节点降为浅底次要操作；HERITAGE/THEME 节点按钮层级不变。② **闭环**——`KnowledgeGraph.addRecommendToTheme`：先用 `FavoriteService.isFavorite` 判重、`addFavorite` 新增收藏，再用 `getFavorite` 取记录追加当前 `themeId` 并 `updateFavoriteThemes` 提交；不调用 `toggleFavorite`，避免远端合并已收藏时反向取消。③ **一次刷新**——两次服务写入期间用 `addingRecommend` 暂挂 `favChangedHandler`，结束后 `refreshSelected()` 整体重算（themedHeritages / recommendations / graphVersion）一次；成功后选中种类由 `RECOMMEND` 切为 `HERITAGE`，信息卡原地变为「已归类」并显示查看详情/移出主题，推荐节点转实心。④ **构建**——clean + 增量均 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（KnowledgeGraph pushUrl 539→579 行号漂移）。⑤ **验证范围**——当前无连接设备；一键收藏后图谱节点实心化、当前主题计数与归类列表即时更新、收藏页/详情页同步可见、重复点击不产生重复收藏登记 O31，未冒充通过。
+  - 依赖：H2/M1（已完成）。
 
 - [ ] **M10 应用元信息仍为模板占位**
   - 位置：[app.json5](AppScope/app.json5#L3-L9)、[string.json](AppScope/resources/base/element/string.json#L1-L8)、[entry string.json](entry/src/main/resources/base/element/string.json#L1-L20)
@@ -277,7 +279,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M8 已完成（代码/构建；设备验证待 O23~O30/O7），下一步 M9 拓展推荐节点收藏并归入主题。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M9 已完成（代码/构建；设备验证待 O23~O31/O7），下一步 M10 应用元信息定稿。
 
 ---
 
@@ -357,3 +359,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-23 | 第二轮 M6 完成并记录（commit `5732dc5` + 触控补强 `0c9b973` + 复核补强 `f354d52` / `3524d00`，M6.11）：关键触控区 ≥44vp；次要文字与徽标对比度提升至 ≥4.5:1（#7A5C52/#77635C/#7D655B、年代 mid 下调、白字徽标）；glyph 控件补 accessibilityText/Level/Selected，Canvas 补说明；未用 API 18 的 accessibilityRole；TalkBack/字体缩放待 O28 | 原次要文字最低 2.07:1、多处触控区 <44vp、glyph 无播报文本；按 WCAG 与最低 API 16 约束补齐可读性与可操作性 |
 | 2026-10-23 | 第二轮 M7 完成并记录（commit `0f3fcc6`，M6.12）：明确只支持浅色，`setColorMode(COLOR_MODE_LIGHT)` 移到 loadContent 成功回调；系统栏设置浅底深字（#FAF6F0/#000000）；dark 启动底保留；系统深浅切换待 O29 | UI 全为浅色硬编码，跟随系统深色会出现启动窗深、页面浅的割裂且状态栏图标可能不可读；L1 token 未完成，选择浅色分支成本最低、可读性最稳 |
 | 2026-10-25 | 第二轮 M8 完成并记录（commit `1326225`，M6.13）：知识图谱外层 Scroll 绑定 Scroller，信息卡测量容器记录滚动内容坐标，点选节点后仅在卡片不可见时自动滚入视野；详情页 5 个页签与英雄横幅文字列限宽 680vp 居中，手机布局不变；手机滚动落点与平板行宽待 O30 | 信息卡固定在画布下方，手机首屏常看不到；平板 15vp 正文横跨整屏导致单行过长。选择自动滚动而非改浮层，保持现有信息架构与 O16 图谱结构不变；限宽用 constraintSize（优先级高于 width）与 Scroll 顶部居中，避免固定宽度在手机上溢出 |
+| 2026-10-25 | 第二轮 M9 完成并记录（commit `2eff641`，M6.14）：推荐节点信息卡新增「收藏并归类」主操作（查看详情降为次要），`addFavorite` + `updateFavoriteThemes` 组合完成收藏与归入当前主题，期间暂挂订阅并只刷新一次；成功后选中由 RECOMMEND 切 HERITAGE，信息卡原地显示已归类；一键闭环待 O31 | 推荐节点此前只能查看详情，无法把「拓展」直接转化为主题藏品，闭环断裂；用 isFavorite 判重 + addFavorite 而非 toggleFavorite，避免远端已收藏时反向取消；两次写入合并刷新符合 M6.10 单通道约定 |

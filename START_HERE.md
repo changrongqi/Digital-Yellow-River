@@ -6,7 +6,7 @@
 
 ## 阅读顺序（只按需深入，勿一次通读全部）
 1. 本文件（全部）
-2. `PITFALLS.md`（编码前必读全文，36 条硬坑）
+2. `PITFALLS.md`（编码前必读全文，37 条硬坑）
 3. `PROJECT_PLAN.md` §0 速记 + §5 里程碑（要改计划才读全文）
 4. 按任务：写内容 → `CONTENT_METHODOLOGY.md`；排障/构建告警 → `ISSUES_RISKS.md`；推进优化 → `OPTIMIZATION_PLAN_V1.md`；查决策史 → `REVISION_LOG.md`
 
@@ -27,6 +27,7 @@
 - 色彩模式：本应用只支持浅色；`setColorMode(COLOR_MODE_LIGHT)` 必须在 `loadContent` 成功回调内调用；系统栏浅底深字；要支持深色必须先完成 L1 token + 全套 dark 资源
 - 滚动定位：滚动容器内让指定内容进入视野时，用 `onAreaChange` 的 `position`（父坐标系=滚动内容坐标，不用 globalPosition 换算）作为 `scrollTo` 目标；已可见不滚，首次渲染未测量时由回调补滚
 - 大屏限宽：正文内容列用 `.width('100%') + constraintSize({ maxWidth: 680 })`，靠 Scroll `.align(Alignment.Top)` 居中；禁止写死 `.width(680)`（手机窄屏溢出）
+- 推荐转收藏：推荐节点转主题藏品必须「判重 `isFavorite` → `addFavorite` → 取记录追加 themeId → `updateFavoriteThemes`」，禁用 `toggleFavorite`；两次通知用暂挂标志合并为一次刷新；成功后把选中种类从 `RECOMMEND` 切为 `HERITAGE` 再刷新，否则信息卡会被清空
 - 预置数据加载统一走 `HeritageRepository`（`{list,byId,isMock}`）；JSON 字段统一 `JsonField`；`detail` 缺失/null/非对象降级为空 detail，不得丢整条
 - API 口径以 `build-profile.json5` 为准：最低 API16（任务书要求 ≥12），文档禁写死 12；下调最低版本必须配套 SDK 与安装回归
 - 零网络；图片只能放 `resources/rawfile/images/` 并由 `path` 引用
