@@ -92,6 +92,8 @@ struct FilterRow {
 @Component
 export struct Discovery {
   @State heritageList: Heritage[] = [];
+  /** L5：筛选结果缓存（关键词/维度/数据源变化时重算一次，build 内不再重复调用 filterList） */
+  @State filteredList: Heritage[] = [];
   @State isLoading: boolean = true;
   @State loadFailed: boolean = false;
   @State isMockData: boolean = false;
@@ -127,13 +129,19 @@ export struct Discovery {
     this.loadFailed = result.isMock;
     this.isMockData = result.isMock;
     this.isLoading = false;
+    this.applyFilters();
     hilog.info(DOMAIN, TAG, 'render %{public}d heritages (mock=%{public}s)',
       result.list.length, result.isMock ? 'true' : 'false');
   }
 
+  /** L5：把筛选结果整体写入 @State，避免 build 中多处重复计算 */
+  private applyFilters(): void {
+    this.filteredList = this.filterList();
+  }
+
   /**
    * 三维度组合筛选 + 关键词检索。
-   * 在 build 中调用，@State 变更自动触发重算。
+   * 由 applyFilters 在关键词/筛选维度/数据源变化时调用，结果缓存到 filteredList。
    */
   private filterList(): Heritage[] {
     const kw: string = this.keyword.trim();
@@ -171,7 +179,7 @@ export struct Discovery {
           .fontWeight(FontWeight.Bold)
           .fontColor(ThemeTokens.TEXT_PRIMARY)
         Blank()
-        Text(`${this.filterList().length} 处遗产`)
+        Text(`${this.filteredList.length} 处遗产`)
           .fontSize(13)
           .fontColor(ThemeTokens.TEXT_SECONDARY)
       }
@@ -187,6 +195,7 @@ export struct Discovery {
           .borderRadius(20)
           .onChange((value: string) => {
             this.keyword = value;
+            this.applyFilters();
           })
       }
       .width('100%')
@@ -201,6 +210,7 @@ export struct Discovery {
           selected: this.selectedEra,
           onSelect: (v: string) => {
             this.selectedEra = v;
+            this.applyFilters();
           }
         })
         FilterRow({
@@ -209,6 +219,7 @@ export struct Discovery {
           selected: this.selectedType,
           onSelect: (v: string) => {
             this.selectedType = v;
+            this.applyFilters();
           }
         })
         FilterRow({
@@ -217,6 +228,7 @@ export struct Discovery {
           selected: this.selectedCity,
           onSelect: (v: string) => {
             this.selectedCity = v;
+            this.applyFilters();
           }
         })
       }
@@ -271,7 +283,7 @@ export struct Discovery {
           .margin({ bottom: 10 })
         }
 
-        if (this.filterList().length === 0) {
+        if (this.filteredList.length === 0) {
           // 有数据但筛选/检索无结果
           Column() {
             Text('没有符合条件的遗产')
@@ -288,7 +300,7 @@ export struct Discovery {
           .width('100%')
         } else {
           List({ space: 12 }) {
-            ForEach(this.filterList(), (item: Heritage) => {
+            ForEach(this.filteredList, (item: Heritage) => {
               ListItem() {
                 this.HeritageCard(item)
               }

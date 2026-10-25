@@ -59,6 +59,8 @@ struct Detail {
   private allHeritage: Heritage[] = [];
   /** 用户数据变化监听句柄（远端合并/本地变更时刷新本页，M3.2；消失时注销防泄漏） */
   private dataChangedHandler: () => void = (): void => {};
+  /** L5：已收藏 itemId 签名（笔记/标签变化不影响推荐，集合未变时不重算） */
+  private favSignature: string = '';
 
   aboutToAppear(): void {
     const params = router.getParams() as Record<string, Object> | undefined;
@@ -77,11 +79,11 @@ struct Detail {
     this.isFav = FavoriteService.isFavorite(this.targetId);
     this.notes = FavoriteService.getNotesByItem(this.targetId);
     // M3.2：远端 LWW 合并（或其他页面变更）时刷新收藏状态与笔记列表
-    // M4.2：收藏集合变化影响推荐微调，一并重算（heritage 未加载完成时安全跳过）
+    // L5：推荐只依赖收藏集合，笔记/标签变化不再触发重算
     this.dataChangedHandler = (): void => {
       this.isFav = FavoriteService.isFavorite(this.targetId);
       this.notes = FavoriteService.getNotesByItem(this.targetId);
-      this.refreshRecommendations();
+      this.refreshRecommendationsIfFavoritesChanged();
     };
     FavoriteService.onDataChanged(this.dataChangedHandler);
     this.loadData();
@@ -95,7 +97,7 @@ struct Detail {
   onPageShow(): void {
     this.isFav = FavoriteService.isFavorite(this.targetId);
     this.notes = FavoriteService.getNotesByItem(this.targetId);
-    this.refreshRecommendations();
+    this.refreshRecommendationsIfFavoritesChanged();
   }
 
   private async loadData(): Promise<void> {
@@ -106,6 +108,29 @@ struct Detail {
     this.heritage = found === undefined ? null : found;
     this.isMockData = result.isMock;
     this.isLoading = false;
+    // 数据源刚就绪：记录当前收藏签名并完整重算一次推荐
+    this.favSignature = this.buildFavSignature();
+    this.refreshRecommendations();
+  }
+
+  /** L5：已收藏 itemId 集合签名（排序后拼接；只关心集合，不关心标签/顺序） */
+  private buildFavSignature(): string {
+    const favs: Favorite[] = FavoriteService.getAllFavorites();
+    const ids: string[] = [];
+    for (let i = 0; i < favs.length; i++) {
+      ids.push(favs[i].itemId);
+    }
+    ids.sort();
+    return ids.join('|');
+  }
+
+  /** L5：仅当收藏集合变化时才重算推荐（笔记增删、标签编辑不触发） */
+  private refreshRecommendationsIfFavoritesChanged(): void {
+    const signature: string = this.buildFavSignature();
+    if (signature === this.favSignature) {
+      return;
+    }
+    this.favSignature = signature;
     this.refreshRecommendations();
   }
 

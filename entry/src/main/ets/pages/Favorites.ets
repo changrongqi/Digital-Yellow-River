@@ -32,6 +32,7 @@ import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { Heritage } from '../model/Heritage';
 import { Favorite } from '../model/Favorite';
+import { Note } from '../model/Note';
 import { HeritageRepository, HeritageLoadResult } from '../data/HeritageRepository';
 import { FavoriteService } from '../service/FavoriteService';
 import { formatDate } from '../utils/TimeFormat';
@@ -156,6 +157,14 @@ export struct Favorites {
   private refreshGroups(): void {
     const favorites: Favorite[] = FavoriteService.getAllFavorites();
     const tags: string[] = FavoriteService.getAllTags();
+    // L5：笔记数一次聚合为 itemId→count，避免每张卡片/每个标签分组重复扫描全部笔记（O(F×tags×N)）
+    const notes: Note[] = FavoriteService.getAllNotes();
+    const noteCounts: Map<string, number> = new Map();
+    for (let i = 0; i < notes.length; i++) {
+      const itemId: string = notes[i].itemId;
+      const count: number = noteCounts.get(itemId) ?? 0;
+      noteCounts.set(itemId, count + 1);
+    }
     const groups: TagGroup[] = [];
     for (let i = 0; i < tags.length; i++) {
       const tag: string = tags[i];
@@ -163,7 +172,7 @@ export struct Favorites {
       for (let j = 0; j < favorites.length; j++) {
         const fav: Favorite = favorites[j];
         if (fav.tags.indexOf(tag) >= 0) {
-          cards.push(this.makeCard(fav));
+          cards.push(this.makeCard(fav, noteCounts));
         }
       }
       if (cards.length > 0) {
@@ -174,7 +183,7 @@ export struct Favorites {
     for (let i = 0; i < favorites.length; i++) {
       const fav: Favorite = favorites[i];
       if (fav.tags.length === 0) {
-        untagged.push(this.makeCard(fav));
+        untagged.push(this.makeCard(fav, noteCounts));
       }
     }
     if (untagged.length > 0) {
@@ -182,15 +191,15 @@ export struct Favorites {
     }
     this.groups = groups;
     this.favoriteCount = favorites.length;
-    this.noteCount = FavoriteService.getAllNotes().length;
+    this.noteCount = notes.length;
   }
 
-  private makeCard(fav: Favorite): FavoriteCard {
+  private makeCard(fav: Favorite, noteCounts: Map<string, number>): FavoriteCard {
     const heritage: Heritage | undefined = this.heritageMap.get(fav.itemId);
     return new FavoriteCard(
       fav,
       heritage === undefined ? null : heritage,
-      FavoriteService.getNotesByItem(fav.itemId).length
+      noteCounts.get(fav.itemId) ?? 0
     );
   }
 
