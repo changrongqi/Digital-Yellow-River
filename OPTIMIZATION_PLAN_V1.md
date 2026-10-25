@@ -55,6 +55,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | M5 | M6.10 状态刷新收敛为单通道 | 2026-10-23 | `6e79281` | 代码 + 构建；单通道刷新行为待 O27 设备验证 | 已完成（代码/构建） |
 | M6 | M6.11 无障碍、触控目标与对比度 | 2026-10-23 | `5732dc5` + 补强 `0c9b973` / `f354d52` / `3524d00` | 代码 + 构建 + 对比度核算；TalkBack/字体缩放待 O28 设备验证 | 已完成（代码/构建/核算） |
 | M7 | M6.12 深色模式口径：锁定浅色 + 系统栏内容色 | 2026-10-23 | `0f3fcc6` | 代码 + 构建；系统深浅切换/状态栏可读性待 O29 设备验证 | 已完成（代码/构建） |
+| M8 | M6.13 节点信息卡自动滚入视野 + 大屏正文限宽 | 2026-10-25 | `1326225` | 代码 + 构建；手机点选滚动与平板行宽待 O30 设备验证 | 已完成（代码/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -184,11 +185,12 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 完成记录（2026-10-23，commit `0f3fcc6`，执行编号 M6.12）：① **决策**——当前 UI 为 402 处硬编码浅色且 L1 token 未完成，补齐全套 dark 资源成本与回归风险高，按 M7 建议选择「明确只支持浅色」：页面/画布/系统栏统一浅色体系，深色主题留待 L1 token 完成后另立任务。② **调用时机**——官方 `ApplicationContext.setColorMode` 要求窗口已创建且 `loadContent` 完成，原实现紧跟 `loadContent(...)` 调用属于过早且被 try/catch 吞掉；改为在 loadContent 成功回调内执行 `COLOR_MODE_LIGHT`。③ **系统栏**——`getMainWindowSync().setWindowSystemBarProperties` 设置 `statusBarColor/navigationBarColor = #FAF6F0`、`statusBarContentColor/navigationBarContentColor = #000000`，保证浅底深字；所有 SDK 调用包 try/catch。④ **启动窗**——dark 资源仅 `start_window_background`，保留深色启动底（系统深色模式下白字状态栏仍可读），页面加载后立即切浅色；不补全套 dark 资源。⑤ **构建**——`BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线一致零新增。⑥ **验证范围**——当前无连接设备；系统深/浅切换后页面与状态栏可读性、启动到页面的切换观感登记 O29，未冒充通过。
   - 依赖：L1（token）——本次选择浅色分支，暂不依赖 L1；若后续要深色主题，必须先完成 L1 token + dark 资源。
 
-- [ ] **M8 节点信息卡在首屏下方，平板正文行宽过长**
+- [x] **M8 节点信息卡在首屏下方，平板正文行宽过长**（已完成：代码/构建；手机滚动与平板行宽待设备验证）
   - 位置：[KnowledgeGraph.ets](entry/src/main/ets/pages/KnowledgeGraph.ets#L718-L780)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L407-L412)
   - 问题：点选节点后信息卡常在首屏下方；平板长文全宽。
   - 建议：信息卡改 Sheet/浮层或自动滚动；正文 `maxWidth` 居中。
   - 验收：手机点选节点立即可见反馈；平板行宽适中。
+  - 完成记录（2026-10-25，commit `1326225`，执行编号 M6.13）：① **自动滚动**——页面外层 Scroll 绑定 `Scroller`；信息卡外包一层测量容器，`onAreaChange` 的 `position.y`（相对父组件 = 滚动内容坐标，不受滚动偏移影响）记录卡片位置，选中节点后若信息卡不在可视区则 `scrollTo` 到卡片顶部上方 12vp（240ms `Curve.EaseOut`）。② **不打断连续点选**——先用 `currentOffset().yOffset` + 视口高度（Scroll 的 `onAreaChange` 记录）判断信息卡是否已可见，已可见不滚动；首次渲染未测量时挂起，由 `onAreaChange` 回调补滚。③ **大屏限宽**——新增 `CONTENT_MAX_WIDTH = 680`；详情页介绍/考古/事件/文旅/笔记 5 个页签内容列、英雄横幅内部文字列均 `.width('100%') + constraintSize({ maxWidth: 680 })`；英雄横幅渐变仍全宽，`Scroll.align(Alignment.Top)` 使限宽内容水平居中；手机（<680vp）布局不变。④ **构建**——clean 构建 `BUILD SUCCESSFUL`，16 条 WARN 与 O3 基线按「文件+类型」一致零新增（行号漂移：KnowledgeGraph pushUrl 539、Detail getParams 63 / pushUrl 128/143/178 / back 197）。⑤ **验证范围**——当前无连接设备；手机/平板三类节点（主题/已归类/拓展推荐）点选后的滚动落点、连续点选是否抖动、平板横竖屏与分屏行宽登记 O30，未冒充通过。
   - 依赖：无。
 
 - [ ] **M9 拓展推荐节点缺少“收藏并归入主题”闭环**
@@ -275,7 +277,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-23）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M7 已完成（代码/构建；设备验证待 O23~O29/O7），下一步 M8 节点信息卡位置与平板行宽。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M8 已完成（代码/构建；设备验证待 O23~O30/O7），下一步 M9 拓展推荐节点收藏并归入主题。
 
 ---
 
@@ -354,3 +356,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-23 | 第二轮 M5 完成并记录（commit `6e79281`，M6.10）：移除 Index 刷新 tick 与匿名数据订阅（消除双通道与监听累积）；Favorites 直接订阅 FavoriteService（成对注册/注销），标签保存期间合并刷新；KnowledgeGraph 删除 tick、保留 Favorite/Theme 订阅，归类操作只重建弹层候选；单通道刷新待 O27 | Index tick 与 KG 服务订阅同时生效导致一次收藏变化刷新两次；Favorites 只靠 tick；Index 匿名监听未注销且重建会累积。统一为各 Tab 直接订阅服务 |
 | 2026-10-23 | 第二轮 M6 完成并记录（commit `5732dc5` + 触控补强 `0c9b973` + 复核补强 `f354d52` / `3524d00`，M6.11）：关键触控区 ≥44vp；次要文字与徽标对比度提升至 ≥4.5:1（#7A5C52/#77635C/#7D655B、年代 mid 下调、白字徽标）；glyph 控件补 accessibilityText/Level/Selected，Canvas 补说明；未用 API 18 的 accessibilityRole；TalkBack/字体缩放待 O28 | 原次要文字最低 2.07:1、多处触控区 <44vp、glyph 无播报文本；按 WCAG 与最低 API 16 约束补齐可读性与可操作性 |
 | 2026-10-23 | 第二轮 M7 完成并记录（commit `0f3fcc6`，M6.12）：明确只支持浅色，`setColorMode(COLOR_MODE_LIGHT)` 移到 loadContent 成功回调；系统栏设置浅底深字（#FAF6F0/#000000）；dark 启动底保留；系统深浅切换待 O29 | UI 全为浅色硬编码，跟随系统深色会出现启动窗深、页面浅的割裂且状态栏图标可能不可读；L1 token 未完成，选择浅色分支成本最低、可读性最稳 |
+| 2026-10-25 | 第二轮 M8 完成并记录（commit `1326225`，M6.13）：知识图谱外层 Scroll 绑定 Scroller，信息卡测量容器记录滚动内容坐标，点选节点后仅在卡片不可见时自动滚入视野；详情页 5 个页签与英雄横幅文字列限宽 680vp 居中，手机布局不变；手机滚动落点与平板行宽待 O30 | 信息卡固定在画布下方，手机首屏常看不到；平板 15vp 正文横跨整屏导致单行过长。选择自动滚动而非改浮层，保持现有信息架构与 O16 图谱结构不变；限宽用 constraintSize（优先级高于 width）与 Scroll 顶部居中，避免固定宽度在手机上溢出 |
