@@ -5,6 +5,7 @@
 
 | 日期 | 修订内容 |
 |---|---|
+| 2026-10-25 | **L12 路由注释同步（纯注释；构建 BUILD SUCCESSFUL，WARN 4 条，33 用例通过）**：Detail 头部与 `openRecommendedDetail`、EventDetail、NoteEdit（含 `leaving` 字段）的注释由 `router.pushUrl/back` 改为 `utils/RouterUtil.push/back`，删除「deprecate 告警 +1 / 更新 O3 基线」等过时说明；同段「诗词页签」「古风卡」按 O12 标注已移除。无代码行为变化。 |
 | 2026-10-25 | **L11 补齐 L1 漏扫色值并修正口径（全项目优化第三轮；构建 BUILD SUCCESSFUL，WARN 4 条，33 用例通过）**：L1 的「残留为 0」只覆盖已纳 token 的色值，实际仍有 **20 处字面量、10 个文件**（图谱缩放分隔线/关联虚线边/节点标签、归类弹层增删 chip、信息卡徽标与理由底、图集占位、系统栏内容色、文旅解读与事件评述正文、收藏卡缺失徽标与选中标签 ✕、删除主题按钮浅底）；且 token 实际 17 个而文档记 16 个。本轮新增 17 个语义 token（总数 34），20 处全部改为引用，**色值一律不变**；非数据文件 hex 字面量扫描归零，`rgba()` 半透明叠层登记为边界；文档 L1 记录与 O33 同步更正。UI 视觉回归并入 O33。 |
 | 2026-10-25 | **L10 KV 明文威胁模型与隐私提示（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `b764af2`）**：保持 `distributedKVStore` `encrypt:false`（仅建库时生效，已有 store 不能直接切换；Preferences 仍明文），登记威胁模型 O37（资产/存储面/攻击面/缓解/剩余风险）。SyncPanel 新增「隐私与存储说明」：私有目录 + 同账号 P2P 同步、未开启数据库加密、勿存密码/证件号、系统备份可在设置关闭；SyncService 注释迁移前提。UI 与备份行为回归登记 O38。 |
 | 2026-10-25 | **L9 ImageGallery PixelMap 释放（全项目优化第三轮；构建 BUILD SUCCESSFUL，33 用例通过；commit `812ec8d`）**：`aboutToDisappear` 整体摘除并逐个 release；异步迟到结果立即 release 不写回；异常时释放已创建的 PixelMap；`ImageSource` 在 finally 统一 release；解码前读原尺寸，长边 >1600px 按比例 desiredSize。当前图片 path 全空（O1），真实解码/内存回归登记 O38。 |

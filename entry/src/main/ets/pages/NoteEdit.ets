@@ -1,7 +1,7 @@
 /**
  * 笔记编辑页（M2.3）：文字笔记 + 自动时间戳。
  *
- * 路由：从详情页笔记入口进入（M2.4 接入），router.pushUrl('pages/NoteEdit', { id, noteId? })：
+ * 路由：从详情页笔记入口进入（M2.4 接入），utils/RouterUtil.push('pages/NoteEdit', { id, noteId? })：
  * - id = 所属文化条目 itemId（O2 约定：统一带 id）；
  * - noteId 缺省 = 新建笔记，带 noteId = 编辑已有笔记。
  *
@@ -53,7 +53,7 @@ struct NoteEdit {
   @State confirmDiscarding: boolean = false;
   /** 条目语境加载中 */
   @State isLoading: boolean = true;
-  /** 已进入离开流程（保存/删除/确认放弃后），防止 router.back 再次触发拦截 */
+  /** 已进入离开流程（保存/删除/确认放弃后），防止 RouterUtil.back 再次触发拦截 */
   private leaving: boolean = false;
 
   aboutToAppear(): void {

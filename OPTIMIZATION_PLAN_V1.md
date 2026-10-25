@@ -69,7 +69,8 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | L8 | TimelineTab 改为无参 Builder | 2026-10-25 | `6c965c2` | 代码 + 33 用例；无可见行为变化 | 已完成（代码/构建） |
 | L9 | ImageGallery PixelMap 释放与解码上限 | 2026-10-25 | `812ec8d` | 代码 + 33 用例；内存/图集回归待 O38 | 已完成（代码/构建） |
 | L10 | KV 明文存储威胁模型与隐私提示 | 2026-10-25 | `b764af2` | 代码/文档 + 33 用例；隐私说明回归待 O38 | 已完成（代码/文档） |
-| L11 | token 收口：补齐 L1 漏扫的 20 处色值字面量 | 2026-10-25 | 本轮 | 代码 + 构建 + 33 用例；token 34 个，hex 字面量清零；UI 回归归入 O33 | 已完成（代码/构建） |
+| L11 | token 收口：补齐 L1 漏扫的 20 处色值字面量 | 2026-10-25 | `ae65705` | 代码 + 构建 + 33 用例；token 34 个，hex 字面量清零；UI 回归归入 O33 | 已完成（代码/构建） |
+| L12 | 路由注释同步：页面头注释改指 RouterUtil | 2026-10-25 | 本轮 | 纯注释；构建 + 33 用例通过；无行为变化 | 已完成（注释/构建） |
 
 > 说明：状态 `已完成（代码/构建）` 不等于设备验证通过；必须在对应 O 项登记未验证范围。
 
@@ -303,6 +304,13 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
   - 验收：非数据文件 hex 字面量清零；构建与 33 用例通过；文档与统计一致。
   - 完成记录（2026-10-25，L11）：① **新增 17 个 token**（`BG_MISSING/TEXT_SUCCESS`、`BG_BADGE/BG_NOTE/BG_PLACEHOLDER/BORDER_PLACEHOLDER/DIVIDER_SOFT/TEXT_BODY`、`BG_ADD_CHIP/BORDER_ADD_CHIP/BG_REMOVE_CHIP/BORDER_REMOVE_CHIP/TEXT_ON_SELECTED/BG_DANGER_SOFT`、`SYSTEM_BAR_CONTENT/GRAPH_AFFINITY/GRAPH_LABEL`），token 总数 17→34；② **20 处替换**——图谱缩放控件分隔线、关联虚线边、节点标签文字；归类弹层增/删 chip 底与边框、绿色加号；节点信息卡徽标底与推荐理由底；图集占位底与虚线框；系统栏内容色；文旅解读/事件评述正文色；收藏卡缺失徽标底与选中标签 ✕；删除主题按钮浅底；③ **色值全部保持不变**，仅从字面量改为语义引用，无可见视觉变化；④ **验证**——非数据文件 hex 字面量扫描 0；clean 构建 `BUILD SUCCESSFUL`、WARN 4 条与基线一致、33 用例通过；⑤ **口径修正**——L1 的「16 个 token / 残留为 0」已更正为「17 个 token / 已纳 token 色值残留为 0」，并注明漏扫范围；`rgba()` 半透明叠层保留（alpha 无法用 6 位 hex token 表达，暂不纳入）；⑥ UI 视觉回归并入 O33。
 
+- [x] **L12 路由注释仍指向已废弃 API**（已完成：注释/构建；无行为变化）
+  - 位置：[Detail.ets](entry/src/main/ets/pages/Detail.ets#L4)、[Detail.ets](entry/src/main/ets/pages/Detail.ets#L186-L189)、[EventDetail.ets](entry/src/main/ets/pages/EventDetail.ets#L4-L5)、[NoteEdit.ets](entry/src/main/ets/pages/NoteEdit.ets#L4)、[NoteEdit.ets](entry/src/main/ets/pages/NoteEdit.ets#L56)
+  - 问题：L6 已把 7 页路由集中到 `RouterUtil`，但页面头注释仍写 `router.pushUrl` / `router.back`，并保留「同类型 deprecate 告警 +1、收尾同步更新 O3 基线」等过时说明，容易误导后续维护者重新引入直连调用。
+  - 建议：按现状改写为 `utils/RouterUtil.push/back`；顺带修正同段注释里已失效的描述（诗词页签、古风卡）。
+  - 验收：页面内不再出现 `router.` 字面描述；构建与 33 用例通过。
+  - 完成记录（2026-10-25，L12）：① Detail 头部与 `openRecommendedDetail` 注释改为 `RouterUtil.push`，删除 deprecated 告警的过时说明；② EventDetail、NoteEdit 的路由注释同步；NoteEdit 的 `leaving` 字段注释改为 `RouterUtil.back`；③ 同段注释中「诗词页签」「古风卡」按 O12 标注为已移除（仅注释，不改代码）；④ 纯注释改动，clean 构建 `BUILD SUCCESSFUL`、WARN 4 条与基线一致、33 用例通过，无可见行为变化。
+
 ---
 
 ## 4. 第一轮执行顺序
@@ -317,7 +325,7 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 
 **第一轮完成标准**：五项全部 `已完成`；`BUILD SUCCESSFUL`；O3 无新增；`PROJECT_PLAN/ISSUES_RISKS/REVISION_LOG/START_HERE` 同步；每项独立 commit。
 
-**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成；第三轮 L1~L11 全部完成（代码/构建/测试均通过；所有设备相关验收统一待 O7/O18~O38 真机/预览器验证）。优化总表除本文件后续追加的 L12/L13 外已收口，设备项与内容 backlog（O35）另列。
+**当前进度（2026-10-25）**：第一轮 B1、H1、H2、H3、H4 全部完成；第二轮 M1~M11 全部完成；第三轮 L1~L12 全部完成（代码/构建/测试均通过；所有设备相关验收统一待 O7/O18~O38 真机/预览器验证）。L13（合并纯函数单测）为当前进行项，设备项与内容 backlog（O35）另列。
 
 ---
 
@@ -411,3 +419,4 @@ O13~O15/O17 图谱设备验证、O16 图谱结构权衡（刻意保留）；C1.4
 | 2026-10-25 | 第三轮 L9 完成并记录（commit `812ec8d`）：ImageGallery 卸载/迟到/失败三路释放 PixelMap 与 ImageSource，长边 >1600px 按比例 desiredSize 解码 | PixelMap 占用原生内存且 Image 组件不会代为释放；当前图片 path 全空（O1），先补齐生命周期与解码上限，待真实图片接入后验证 |
 | 2026-10-25 | 第三轮 L10 完成并记录（commit `b764af2`）：保持 KV encrypt:false，登记威胁模型 O37；SyncPanel 新增隐私与存储说明；SyncService 注释迁移前提 | KV encrypt 仅创建时生效，直接切换需清库/迁移与设备验证，且 Preferences 仍为明文；先明确威胁模型与用户提示，避免未经验证的加密迁移 |
 | 2026-10-25 | 第三轮 L11 完成并记录：补齐 L1 漏扫的 20 处色值字面量，新增 17 个语义 token（总数 34），色值全部不变；非数据文件 hex 字面量扫描归零；构建 WARN 4 条与 33 用例通过；更正 L1「16 个 token / 残留为 0」口径 | L1 的「残留 0」只扫了已纳 token，漏掉图谱子组件/图集占位/系统栏等 20 处；文档统计与代码不一致会掩盖遗漏，token 收敛必须按「全量 hex + 业务色板豁免」双向核对 |
+| 2026-10-25 | 第三轮 L12 完成并记录：Detail/EventDetail/NoteEdit 的路由注释改为 `RouterUtil.push/back`，删除 deprecated 告警过时说明；同段「诗词页签/古风卡」按 O12 标注已移除；纯注释，构建与 33 用例通过 | L6 集中路由后页面注释仍指向 router，会诱导后续维护者重新引入直连调用；注释与代码口径必须同批修正 |

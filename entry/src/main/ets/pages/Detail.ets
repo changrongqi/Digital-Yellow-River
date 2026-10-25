@@ -1,16 +1,16 @@
 /**
  * 详情页（M1.5 建立骨架，M4.0 信息架构与视觉改版）。
  *
- * 路由：发现页/收藏页/我的笔记列表点击 router.pushUrl('pages/Detail', { id }) 进入；
+ * 路由：发现页/收藏页/我的笔记列表经 utils/RouterUtil.push('pages/Detail', { id }) 进入；
  * 本页按 id 从 HeritageRepository（内部 HeritageDataLoader）重新取数（数据单一来源，便于 M2/M3 联动）。
  *
  * M4.0 改版（用户反馈「详情页简陋」，方向经确认：布局重构 + 年代主题色，克制低饱和）：
  * - 英雄横幅：按年代取主题色渐变（utils/EraTheme：仰韶彩陶红/龙山黑陶灰/夏商青铜绿/
  *   周玄青/汉唐鎏金赭/宋青瓷），大号名称 + 半透明白底徽标 + 简介，一屏建立年代记忆点；
  * - 五层级 + 笔记改为顶部页签（Tabs + SubTabBarStyle，官方推荐「信息较多时分类聚焦」）：
- *   介绍 / 考古 / 事件 / 诗词 / 文旅 / 笔记，支持左右滑动切换，横幅常驻不随内容滚动；
+ *   介绍 / 考古 / 事件 / 文旅 / 笔记，支持左右滑动切换，横幅常驻不随内容滚动（诗词按 O12 移除）；
  * - 历史事件 → 时间轴（年份高亮 + 可点击条目，M1.8 起点击跳转事件子详情页做专题讲解）；
- * - 相关诗词 → 古风卡（浅主题底 + 标题作者居中 + 引文排版）；
+ * - 相关诗词 → 古风卡（O12 已随页签移除，页面不再渲染，此处仅保留历史说明）；
  * - M4.1/M4.2 起「介绍」页签底部接入「相关遗址推荐」横向卡片（M4.1 预留结构位置）：
  *   以本条目特征为锚，按余弦相似度 + 收藏微调取 Top-N（utils/Recommendation 纯函数），
  *   点击卡片带 id 跳转对应详情（O2 约定）；收藏变化（onPageShow / onDataChanged）时重算。
@@ -185,8 +185,7 @@ struct Detail {
 
   /**
    * 打开推荐遗址详情（M4.2：推荐卡点击，统一带 id 跳转，O2 约定——不带 id 会落
-   * 「未找到该遗产」）。router.pushUrl 第二调用点（M2.4 收敛后新增，同类型 deprecate
-   * 告警 +1，收尾同步更新 O3 基线）。
+   * 「未找到该遗产」）。L6 起统一走 utils/RouterUtil.push，页面不再直接调用 router。
    */
   private openRecommendedDetail(heritageId: string): void {
     RouterUtil.push('pages/Detail', { id: heritageId });

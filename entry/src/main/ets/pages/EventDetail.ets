@@ -1,7 +1,7 @@
 /**
  * 事件子详情页（M1.8）。
  *
- * 路由：遗址详情页「事件」页签点击某个历史事件 router.pushUrl('pages/EventDetail',
+ * 路由：遗址详情页「事件」页签经 utils/RouterUtil.push('pages/EventDetail',
  * { heritageId, eventIndex }) 进入；本页按 heritageId 从 HeritageRepository 重新取数
  * （数据单一来源，与 Detail 页一致），再取 events[eventIndex] 做专题讲解。
  *
